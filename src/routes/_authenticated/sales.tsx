@@ -93,7 +93,7 @@ function ReturnDialog({ sale, onClose, returned, onDone }: { sale: SaleRow | nul
     setBusy(true);
     const { data, error } = await supabase.rpc("process_return", { _sale_item_id: itemId, _qty: 1, _damaged: damaged, _kind: kind, _note: `${kind} from ${sale?.bill_no}` });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(kind === "exchange" ? "Pair back in stock — now bill the new size in POS (₹0 difference if same price)" : `Returned. Refund ${inr(Number(data))}`);
     onDone();
   }
