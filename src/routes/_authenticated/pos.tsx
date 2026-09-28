@@ -15,7 +15,7 @@ import { addSignedImages } from "@/lib/product-images";
 import { billMessage, shareText, smsLink } from "@/lib/messages";
 
 export const Route = createFileRoute("/_authenticated/pos")({
-  head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }] }),
+  head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: POS,
 });
 

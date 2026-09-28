@@ -12,7 +12,7 @@ import { sizeSort, useStock, type Product } from "@/lib/stock";
 import { arrivalMessage } from "@/lib/messages";
 
 export const Route = createFileRoute("/_authenticated/community")({
-  head: () => ({ meta: [{ title: "WhatsApp & Posters — SoleStack POS" }, { name: "description", content: "New stock messages for WhatsApp community and status posters." }] }),
+  head: () => ({ meta: [{ title: "WhatsApp & Posters — SoleStack POS" }, { name: "description", content: "New stock messages for WhatsApp community and status posters." }, { property: "og:title", content: "WhatsApp & Posters — SoleStack POS" }, { property: "og:description", content: "Create professional new-stock campaigns and posters." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Community,
 });
 

@@ -14,7 +14,7 @@ import { waLink } from "@/lib/pos";
 import { billMessage, dueMessage } from "@/lib/messages";
 
 export const Route = createFileRoute("/_authenticated/sales")({
-  head: () => ({ meta: [{ title: "Sales History — SoleStack POS" }, { name: "description", content: "All bills with re-print, WhatsApp and returns." }] }),
+  head: () => ({ meta: [{ title: "Sales History — SoleStack POS" }, { name: "description", content: "All bills with re-print, sharing, dues and returns." }, { property: "og:title", content: "Sales History — SoleStack POS" }, { property: "og:description", content: "Bills, returns and customer payment collections." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Sales,
 });
 

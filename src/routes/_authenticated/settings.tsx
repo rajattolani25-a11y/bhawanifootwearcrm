@@ -12,7 +12,7 @@ import { exportAll, importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data import." }] }),
+  head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data controls." }, { property: "og:title", content: "Settings — SoleStack POS" }, { property: "og:description", content: "Store, appearance and protected data controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: SettingsPage,
 });
 
