@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search } from "lucide-react";
+import { ImagePlus, Plus, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
+import { addSignedImages, uploadProductImage } from "@/lib/product-images";
 
 export const Route = createFileRoute("/_authenticated/products")({
   head: () => ({ meta: [{ title: "Products — SoleStack POS" }, { name: "description", content: "Articles with size-wise stock." }] }),
@@ -30,11 +31,11 @@ function Products() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id,brand,article,category,color,mrp,selling_price,product_variants(id,size,stock,rack,barcode)")
+        .select("id,brand,article,category,color,mrp,selling_price,image_url,product_variants(id,size,stock,rack,barcode)")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      return data;
+      return addSignedImages(data);
     },
   });
 
@@ -73,7 +74,12 @@ function Products() {
           const total = p.product_variants.reduce((s, v) => s + v.stock, 0);
           const sizes = [...p.product_variants].sort((a, b) => Number(a.size) - Number(b.size));
           return (
-            <div key={p.id} className="rounded-xl border bg-card p-4">
+            <div key={p.id} className="overflow-hidden rounded-lg border bg-card">
+              <div className="relative h-32 bg-muted">
+                {p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain p-2" /> : <div className="flex h-full items-center justify-center font-display text-3xl text-muted-foreground/30">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}
+                {isOwner && <label className="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-md bg-card/95 px-2 py-1 text-xs font-semibold shadow-sm"><ImagePlus className="h-3.5 w-3.5" /> Photo<input type="file" accept="image/*" hidden onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { await uploadProductImage(p.id, file); toast.success("Product photo saved"); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["stock-all"] }); qc.invalidateQueries({ queryKey: ["pos-products"] }); } catch (err) { toast.error((err as Error).message); } e.target.value = ""; }} /></label>}
+              </div>
+              <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-primary">{p.brand}</p>
@@ -99,6 +105,7 @@ function Products() {
                 ))}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">{total} pairs total</p>
+              </div>
             </div>
           );
         })}

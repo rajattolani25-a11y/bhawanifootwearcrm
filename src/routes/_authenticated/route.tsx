@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
+import { ThemeControl } from "@/components/ThemeControl";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -32,13 +33,13 @@ function AppShell() {
   }
 
   const nav = (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2">
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
       {items.map((m) => (
         <Link
           key={m.to}
           to={m.to}
           onClick={() => setOpen(false)}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium" }}
         >
           <m.icon className="h-4 w-4" />
@@ -49,10 +50,13 @@ function AppShell() {
   );
 
   const footer = (
-    <div className="border-t border-sidebar-border p-3">
-      <div className="px-3 pb-2">
+      <div className="border-t border-sidebar-border p-2.5">
+        <div className="flex items-start gap-1 px-2 pb-2">
+          <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-sidebar-accent-foreground">{user?.email}</p>
         <p className="text-xs uppercase tracking-wide text-sidebar-primary">{role ?? "…"}</p>
+          </div>
+          <ThemeControl compact />
       </div>
       <button onClick={signOut} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent">
         <LogOut className="h-4 w-4" /> Sign out
@@ -62,8 +66,11 @@ function AppShell() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar lg:flex">
-        <div className="px-6 py-5 font-display text-lg font-semibold text-sidebar-accent-foreground">SoleStack</div>
+      <aside className="sticky top-0 hidden h-screen w-52 shrink-0 flex-col bg-sidebar lg:flex">
+        <div className="border-b border-sidebar-border px-5 py-4">
+          <p className="font-display text-base font-bold text-sidebar-accent-foreground">SoleStack<span className="text-sidebar-primary">.</span></p>
+          <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/45">Bhawani Footwear</p>
+        </div>
         {nav}
         {footer}
       </aside>
@@ -87,7 +94,7 @@ function AppShell() {
           <button onClick={() => setOpen(true)} aria-label="Menu"><Menu className="h-6 w-6" /></button>
           <span className="font-display font-semibold">SoleStack POS</span>
         </header>
-        <main className={cn("flex-1 p-4 md:p-8")}>
+        <main className={cn("min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />
         </main>
       </div>

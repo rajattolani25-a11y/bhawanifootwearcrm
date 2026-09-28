@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export type Variant = { id: string; size: string; stock: number; damaged_stock: number; min_stock: number; rack: string | null; barcode: string | null; sku: string | null };
-export type Product = { id: string; brand: string; article: string; category: string; color: string | null; gender: string | null; mrp: number; selling_price: number; created_at: string; product_variants: Variant[] };
+export type Product = { id: string; brand: string; article: string; category: string; color: string | null; gender: string | null; mrp: number; selling_price: number; created_at: string; image_url: string | null; image_src?: string | null; product_variants: Variant[] };
 
 export const sizeSort = (a: string, b: string) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b);
 
@@ -12,11 +12,12 @@ export function useStock() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id,brand,article,category,color,gender,mrp,selling_price,created_at,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku)")
+        .select("id,brand,article,category,color,gender,mrp,selling_price,created_at,image_url,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku)")
         .order("created_at", { ascending: false })
         .limit(5000);
       if (error) throw error;
-      return data as unknown as Product[];
+      const { addSignedImages } = await import("@/lib/product-images");
+      return addSignedImages(data as unknown as Product[]);
     },
   });
 }
