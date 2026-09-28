@@ -182,6 +182,7 @@ function POS() {
     setSplitCash("");
     setGiveStamp(true);
     setPay("Cash");
+    setReceived("");
     clearCustomer();
   }
 
@@ -196,15 +197,15 @@ function POS() {
           payment_mode: pay,
           split_cash: pay === "Split" ? Number(splitCash) || 0 : 0,
           bill_type: billType,
-          tax_mode: "inclusive",
+          tax_mode: taxMode,
           subtotal: bill.subtotal,
           discount: bill.discount,
           taxable: bill.taxable,
           gst_rate: bill.rate,
           gst_amount: bill.gst,
           total: bill.total,
-          paid_amount: bill.total,
-          due_amount: 0,
+          paid_amount: paid,
+          due_amount: due,
           give_stamp: giveStamp,
           reward_id: reward && rewardOn ? reward.id : "",
           removed_reward_id: reward && !rewardOn ? reward.id : "",
@@ -456,6 +457,10 @@ function POS() {
                     <a href={waLink(done.mobile, waText)} target="_blank" rel="noreferrer">Send bill on WhatsApp</a>
                   </Button>
                 )}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button className="h-11" onClick={() => printBill(done.bill_no, design).catch((e) => toast.error(e.message))}>Print {design}</Button>
+                  <Button variant="outline" className="h-11" onClick={() => printBill(done.bill_no, design === "Thermal" ? "A4" : "Thermal").catch((e) => toast.error(e.message))}>Print {design === "Thermal" ? "A4" : "Thermal"}</Button>
+                </div>
                 <Button variant="outline" className="h-11" onClick={() => { setDone(null); searchRef.current?.focus(); }}>New bill</Button>
               </div>
             </div>
