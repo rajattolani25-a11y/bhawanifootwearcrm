@@ -6,3 +6,6 @@
 - [ ] Phase 4 — inventory matrix, CSV bulk upload, size finder, thermal bill, re-print, returns/exchange, barcodes, purchase, suppliers
 - [ ] Phase 5 — WhatsApp links, community, status poster, full dashboard, reports, accounting
 - [ ] Final testing
+- [ ] Fix GST totaling in POS (exclusive GST add)
+- [ ] POS layout + bill print exactly like old app
+- [ ] Stock poster, new-stock WhatsApp community message
