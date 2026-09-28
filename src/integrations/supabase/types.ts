@@ -20,9 +20,14 @@ export type Database = {
           created_at: string
           id: string
           is_premium: boolean
+          last_stamp_date: string | null
           legacy_id: string | null
           mobile: string
           name: string
+          premium_stamps: number
+          premium_visits: number
+          regular_stamps: number
+          regular_visits: number
           shoe_size: string | null
         }
         Insert: {
@@ -30,9 +35,14 @@ export type Database = {
           created_at?: string
           id?: string
           is_premium?: boolean
+          last_stamp_date?: string | null
           legacy_id?: string | null
           mobile: string
           name?: string
+          premium_stamps?: number
+          premium_visits?: number
+          regular_stamps?: number
+          regular_visits?: number
           shoe_size?: string | null
         }
         Update: {
@@ -40,12 +50,119 @@ export type Database = {
           created_at?: string
           id?: string
           is_premium?: boolean
+          last_stamp_date?: string | null
           legacy_id?: string | null
           mobile?: string
           name?: string
+          premium_stamps?: number
+          premium_visits?: number
+          regular_stamps?: number
+          regular_visits?: number
           shoe_size?: string | null
         }
         Relationships: []
+      }
+      loyalty_events: {
+        Row: {
+          action: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          note: string | null
+          reward_id: string | null
+          sale_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          note?: string | null
+          reward_id?: string | null
+          sale_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          note?: string | null
+          reward_id?: string | null
+          sale_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_events_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          amount: number
+          card: string
+          created_at: string
+          customer_id: string
+          expires_at: string
+          id: string
+          milestone: number
+          status: string
+          unlocked_at: string
+          used_sale_id: string | null
+        }
+        Insert: {
+          amount: number
+          card: string
+          created_at?: string
+          customer_id: string
+          expires_at?: string
+          id?: string
+          milestone: number
+          status?: string
+          unlocked_at?: string
+          used_sale_id?: string | null
+        }
+        Update: {
+          amount?: number
+          card?: string
+          created_at?: string
+          customer_id?: string
+          expires_at?: string
+          id?: string
+          milestone?: number
+          status?: string
+          unlocked_at?: string
+          used_sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_rewards_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_used_sale_id_fkey"
+            columns: ["used_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_costs: {
         Row: {
@@ -334,15 +451,20 @@ export type Database = {
           customer_name: string | null
           discount: number
           due_amount: number
+          give_stamp: boolean
           gst_amount: number
           gst_rate: number
           id: string
           legacy_id: string | null
           paid_amount: number
           payment_mode: string
+          reward_amount: number
+          reward_id: string | null
           sale_date: string
           split_cash: number | null
           staff_id: string | null
+          stamp_premium: boolean
+          stamp_regular: boolean
           subtotal: number
           tax_mode: string
           taxable: number
@@ -355,15 +477,20 @@ export type Database = {
           customer_name?: string | null
           discount?: number
           due_amount?: number
+          give_stamp?: boolean
           gst_amount?: number
           gst_rate?: number
           id?: string
           legacy_id?: string | null
           paid_amount?: number
           payment_mode?: string
+          reward_amount?: number
+          reward_id?: string | null
           sale_date?: string
           split_cash?: number | null
           staff_id?: string | null
+          stamp_premium?: boolean
+          stamp_regular?: boolean
           subtotal?: number
           tax_mode?: string
           taxable?: number
@@ -376,15 +503,20 @@ export type Database = {
           customer_name?: string | null
           discount?: number
           due_amount?: number
+          give_stamp?: boolean
           gst_amount?: number
           gst_rate?: number
           id?: string
           legacy_id?: string | null
           paid_amount?: number
           payment_mode?: string
+          reward_amount?: number
+          reward_id?: string | null
           sale_date?: string
           split_cash?: number | null
           staff_id?: string | null
+          stamp_premium?: boolean
+          stamp_regular?: boolean
           subtotal?: number
           tax_mode?: string
           taxable?: number
@@ -542,6 +674,7 @@ export type Database = {
         Returns: boolean
       }
       is_member: { Args: { _user_id: string }; Returns: boolean }
+      reward_amount: { Args: { _card: string; _m: number }; Returns: number }
     }
     Enums: {
       app_role: "owner" | "staff"
