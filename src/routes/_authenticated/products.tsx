@@ -1,0 +1,180 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Plus, Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { inr } from "@/lib/modules";
+
+export const Route = createFileRoute("/_authenticated/products")({
+  head: () => ({ meta: [{ title: "Products — SoleStack POS" }, { name: "description", content: "Articles with size-wise stock." }] }),
+  component: Products,
+});
+
+const SIZES = ["5", "6", "7", "8", "9", "10", "11", "12"];
+
+function Products() {
+  const qc = useQueryClient();
+  const { isOwner } = useAuth();
+  const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,brand,article,category,color,mrp,selling_price,product_variants(id,size,stock,rack,barcode)")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("products-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => qc.invalidateQueries({ queryKey: ["products"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => qc.invalidateQueries({ queryKey: ["products"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
+
+  const filtered = useMemo(() => {
+    const s = q.toLowerCase().trim();
+    if (!s) return products;
+    return products.filter((p) =>
+      [p.brand, p.article, p.category, p.color].some((f) => f?.toLowerCase().includes(s)) ||
+      p.product_variants.some((v) => v.barcode === s),
+    );
+  }, [products, q]);
+
+  return (
+    <div>
+      <PageHeader
+        title="Products"
+        subtitle="Each article with stock per size. Green = in stock, amber = low, red = out."
+        actions={isOwner && <Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Add article</Button>}
+      />
+      <div className="relative mb-4 max-w-md">
+        <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search brand, article, colour or scan barcode" value={q} onChange={(e) => setQ(e.target.value)} className="h-11 pl-9" />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((p) => {
+          const total = p.product_variants.reduce((s, v) => s + v.stock, 0);
+          const sizes = [...p.product_variants].sort((a, b) => Number(a.size) - Number(b.size));
+          return (
+            <div key={p.id} className="rounded-xl border bg-card p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">{p.brand}</p>
+                  <p className="font-display text-lg font-semibold">{p.article}</p>
+                  <p className="text-sm text-muted-foreground">{[p.category, p.color].filter(Boolean).join(" · ")}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display font-semibold">{inr(p.selling_price)}</p>
+                  <p className="text-xs text-muted-foreground line-through">{inr(p.mrp)}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {sizes.map((v) => (
+                  <span
+                    key={v.id}
+                    title={v.rack ? `Rack ${v.rack}` : undefined}
+                    className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                      v.stock === 0 ? "bg-destructive/15 text-destructive" : v.stock < 3 ? "bg-warning/25 text-warning-foreground" : "bg-success/15 text-success"
+                    }`}
+                  >
+                    {v.size} · {v.stock}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">{total} pairs total</p>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <p className="text-sm text-muted-foreground">No products yet. Add one, or import your old data from Settings.</p>}
+      </div>
+
+      {adding && <AddArticle onClose={() => setAdding(false)} />}
+    </div>
+  );
+}
+
+function AddArticle({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const [f, setF] = useState({ brand: "", article: "", category: "", color: "", mrp: "", selling_price: "", cost: "", rack: "" });
+  const [qty, setQty] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+
+  async function save() {
+    if (!f.article.trim()) return toast.error("Article name is required");
+    setBusy(true);
+    try {
+      const { data: p, error } = await supabase
+        .from("products")
+        .insert({ brand: f.brand.toUpperCase(), article: f.article, category: f.category, color: f.color, mrp: Number(f.mrp) || 0, selling_price: Number(f.selling_price) || 0 })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await supabase.from("product_costs").insert({ product_id: p.id, purchase_price: Number(f.cost) || 0 });
+      const rows = SIZES.filter((s) => Number(qty[s]) > 0).map((s) => ({
+        product_id: p.id,
+        size: s,
+        stock: Number(qty[s]),
+        rack: f.rack,
+        barcode: `${Date.now().toString().slice(-8)}${s.padStart(2, "0")}`,
+      }));
+      if (rows.length) {
+        const { data: vs, error: ve } = await supabase.from("product_variants").insert(rows).select("id,size,stock");
+        if (ve) throw ve;
+        await supabase.from("stock_movements").insert(
+          vs.map((v) => ({ type: "OPENING", variant_id: v.id, product_name: f.article, qty_in: v.stock, note: `Opening stock for size ${v.size}` })),
+        );
+      }
+      toast.success("Article saved");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>Add article</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          {([["brand", "Brand"], ["article", "Article"], ["category", "Category"], ["color", "Colour"], ["mrp", "MRP"], ["selling_price", "Selling price"], ["cost", "Purchase cost"], ["rack", "Rack"]] as const).map(([k, l]) => (
+            <div key={k} className="space-y-1">
+              <Label>{l}</Label>
+              <Input value={f[k]} onChange={set(k)} inputMode={["mrp", "selling_price", "cost"].includes(k) ? "decimal" : undefined} />
+            </div>
+          ))}
+        </div>
+        <Label className="mt-2">Quantity per size</Label>
+        <div className="grid grid-cols-4 gap-2">
+          {SIZES.map((s) => (
+            <div key={s} className="rounded-lg border p-2 text-center">
+              <p className="text-xs text-muted-foreground">Size {s}</p>
+              <Input className="mt-1 h-9 text-center" inputMode="numeric" value={qty[s] ?? ""} onChange={(e) => setQty({ ...qty, [s]: e.target.value })} />
+            </div>
+          ))}
+        </div>
+        <Button onClick={save} disabled={busy} className="mt-2 h-11">{busy ? "Saving…" : "Save article"}</Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
