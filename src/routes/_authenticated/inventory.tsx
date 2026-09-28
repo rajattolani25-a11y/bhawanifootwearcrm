@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { downloadCsv, parseCsv, sizeSort, useStock } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/inventory")({
-  head: () => ({ meta: [{ title: "Inventory Matrix — SoleStack POS" }, { name: "description", content: "Article × size stock grid, size finder and CSV bulk upload." }] }),
+  head: () => ({ meta: [{ title: "Inventory Matrix — SoleStack POS" }, { name: "description", content: "Article × size stock grid, size finder and CSV bulk upload." }, { property: "og:title", content: "Inventory Matrix — SoleStack POS" }, { property: "og:description", content: "Article and size-wise footwear inventory." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Inventory,
 });
 

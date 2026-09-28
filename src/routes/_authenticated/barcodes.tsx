@@ -10,7 +10,7 @@ import { printHtml } from "@/lib/print";
 import { useStock } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/barcodes")({
-  head: () => ({ meta: [{ title: "Barcodes — SoleStack POS" }, { name: "description", content: "Print barcode labels for shoe boxes." }] }),
+  head: () => ({ meta: [{ title: "Barcodes — SoleStack POS" }, { name: "description", content: "Print barcode labels for shoe boxes." }, { property: "og:title", content: "Barcodes — SoleStack POS" }, { property: "og:description", content: "Prepare and print footwear box barcode labels." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Barcodes,
 });
 

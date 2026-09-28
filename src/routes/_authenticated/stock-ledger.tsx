@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/stock-ledger")({
-  head: () => ({ meta: [{ title: "Stock Ledger — SoleStack POS" }, { name: "description", content: "Every stock movement in and out." }] }),
+  head: () => ({ meta: [{ title: "Stock Ledger — SoleStack POS" }, { name: "description", content: "Every stock movement in and out." }, { property: "og:title", content: "Stock Ledger — SoleStack POS" }, { property: "og:description", content: "Complete footwear stock movement history." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Ledger,
 });
 

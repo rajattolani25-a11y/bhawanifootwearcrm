@@ -16,7 +16,7 @@ import { inr } from "@/lib/modules";
 import { waLink } from "@/lib/pos";
 
 export const Route = createFileRoute("/_authenticated/customers")({
-  head: () => ({ meta: [{ title: "Customers — SoleStack POS" }, { name: "description", content: "Customer profiles, history and loyalty stamp cards." }] }),
+  head: () => ({ meta: [{ title: "Customers — SoleStack POS" }, { name: "description", content: "Customer profiles, dues, history and loyalty stamp cards." }, { property: "og:title", content: "Customers — SoleStack POS" }, { property: "og:description", content: "Customer purchase history, balances and loyalty cards." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Customers,
 });
 
@@ -30,17 +30,18 @@ function Customers() {
     queryFn: async () => {
       const [{ data: cs, error }, { data: sales }] = await Promise.all([
         supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(5000),
-        supabase.from("sales").select("customer_id,total,sale_date").not("customer_id", "is", null).limit(50000),
+        supabase.from("sales").select("customer_id,total,due_amount,sale_date").not("customer_id", "is", null).limit(50000),
       ]);
       if (error) throw error;
-      const agg = new Map<string, { spend: number; last: string }>();
+       const agg = new Map<string, { spend: number; due: number; last: string }>();
       for (const s of sales ?? []) {
-        const a = agg.get(s.customer_id!) ?? { spend: 0, last: "" };
+         const a = agg.get(s.customer_id!) ?? { spend: 0, due: 0, last: "" };
         a.spend += Number(s.total);
+         a.due += Number(s.due_amount);
         if (s.sale_date > a.last) a.last = s.sale_date;
         agg.set(s.customer_id!, a);
       }
-      return (cs ?? []).map((c) => ({ ...c, spend: agg.get(c.id)?.spend ?? 0, last: agg.get(c.id)?.last ?? "" }));
+       return (cs ?? []).map((c) => ({ ...c, spend: agg.get(c.id)?.spend ?? 0, due: agg.get(c.id)?.due ?? 0, last: agg.get(c.id)?.last ?? "" }));
     },
   });
 
@@ -59,7 +60,7 @@ function Customers() {
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
-            <tr><th className="p-3">Name</th><th className="p-3">Mobile</th><th className="p-3">Stamps</th><th className="p-3">Last visit</th><th className="p-3 text-right">Total spend</th></tr>
+             <tr><th className="p-3">Name</th><th className="p-3">Mobile</th><th className="p-3">Stamps</th><th className="p-3">Last visit</th><th className="p-3 text-right">Due</th><th className="p-3 text-right">Total spend</th></tr>
           </thead>
           <tbody>
             {list.map((c) => (
@@ -68,10 +69,11 @@ function Customers() {
                 <td className="p-3">{c.mobile}</td>
                 <td className="p-3">R {c.regular_stamps} · P {c.premium_stamps}</td>
                 <td className="p-3">{c.last ? new Date(c.last).toLocaleDateString("en-IN") : "—"}</td>
+                 <td className="p-3 text-right font-semibold text-destructive">{c.due ? inr(c.due) : "—"}</td>
                 <td className="p-3 text-right font-semibold">{inr(c.spend)}</td>
               </tr>
             ))}
-            {!list.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No customers yet.</td></tr>}
+             {!list.length && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No customers yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -114,7 +116,7 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
     queryFn: async () => {
       const [c, sales, rewards, events] = await Promise.all([
         supabase.from("customers").select("*").eq("id", id).single(),
-        supabase.from("sales").select("id,bill_no,sale_date,total,stamp_regular,stamp_premium,reward_amount,sale_items(product_name,size,qty)").eq("customer_id", id).order("sale_date", { ascending: false }),
+         supabase.from("sales").select("id,bill_no,sale_date,total,due_amount,stamp_regular,stamp_premium,reward_amount,sale_items(product_name,size,qty)").eq("customer_id", id).order("sale_date", { ascending: false }),
         supabase.from("loyalty_rewards").select("*").eq("customer_id", id).order("unlocked_at", { ascending: false }),
         supabase.from("loyalty_events").select("id,action,note,created_at").eq("customer_id", id).order("created_at", { ascending: false }).limit(20),
       ]);
@@ -145,6 +147,7 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
   const c = data?.c;
   const now = Date.now();
   const spend = (data?.sales ?? []).reduce((a, s) => a + Number(s.total), 0);
+  const due = (data?.sales ?? []).reduce((a, s) => a + Number(s.due_amount), 0);
   const active = (data?.rewards ?? []).filter((r) => r.status === "active" && new Date(r.expires_at).getTime() > now);
   const past = (data?.rewards ?? []).filter((r) => !active.includes(r));
 
@@ -154,13 +157,14 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
         <SheetHeader><SheetTitle className="flex items-center gap-2">{c?.name || "Customer"} {c?.is_premium && <span className="flex items-center gap-1 rounded-full bg-warning/25 px-2 py-0.5 text-xs text-warning-foreground"><Crown className="h-3 w-3" /> Premium member</span>}</SheetTitle></SheetHeader>
         {c && (
           <div className="mt-4 space-y-5 px-1 pb-6">
-            <div className="grid grid-cols-3 gap-2 text-center">
+             <div className="grid grid-cols-3 gap-2 text-center">
               <Stat k="Total spend" v={inr(spend)} />
+               <Stat k="Balance due" v={inr(due)} />
               <Stat k="Bills" v={String(data!.sales.length)} />
               <Stat k="Last visit" v={data!.sales[0] ? new Date(data!.sales[0].sale_date).toLocaleDateString("en-IN") : "—"} />
               <Stat k="Regular visits" v={String(c.regular_visits)} />
               <Stat k="Premium visits" v={String(c.premium_visits)} />
-              <Stat k="Size / Brand" v={`${c.shoe_size || "—"} / ${c.brand_preference || "—"}`} />
+               <Stat k="Size / Brand" v={`${c.shoe_size || "—"} / ${c.brand_preference || "—"}`} />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -202,7 +206,7 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
               <ul className="space-y-2 text-sm">
                 {data!.sales.map((s) => (
                   <li key={s.id} className="rounded-lg border p-2.5">
-                    <div className="flex justify-between"><span className="font-mono text-xs">{s.bill_no}</span><b>{inr(s.total)}</b></div>
+                     <div className="flex justify-between"><span className="font-mono text-xs">{s.bill_no}</span><span><b>{inr(s.total)}</b>{Number(s.due_amount) > 0 && <b className="ml-2 text-destructive">Due {inr(s.due_amount)}</b>}</span></div>
                     <p className="text-xs text-muted-foreground">{new Date(s.sale_date).toLocaleDateString("en-IN")} · {s.sale_items.map((i) => `${i.product_name} (${i.size})×${i.qty}`).join(", ")}{s.stamp_regular ? " · stamp" : ""}{Number(s.reward_amount) ? ` · reward −${inr(s.reward_amount)}` : ""}</p>
                   </li>
                 ))}
