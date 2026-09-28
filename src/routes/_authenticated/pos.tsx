@@ -369,27 +369,53 @@ function POS() {
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-3 gap-2">
-              <Input value={billDiscount} onChange={(e) => setBillDiscount(e.target.value)} inputMode="decimal" placeholder="Discount ₹" className="h-10" />
-              <select value={billType} onChange={(e) => setBillType(e.target.value as "gst" | "simple")} className="h-10 rounded-md border bg-background px-2 text-sm">
-                <option value="gst">GST bill</option>
-                <option value="simple">Simple bill</option>
-              </select>
-              <select value={rate} disabled={billType !== "gst"} onChange={(e) => setRate(Number(e.target.value))} className="h-10 rounded-md border bg-background px-2 text-sm">
-                {[5, 12, 18].map((r) => <option key={r} value={r}>GST {r}%</option>)}
-              </select>
+            <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-muted-foreground">
+              <label>Bill type
+                <select value={billType} onChange={(e) => setBillType(e.target.value as "gst" | "simple")} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                  <option value="gst">GST Invoice</option><option value="simple">Cash Memo</option>
+                </select>
+              </label>
+              <label>Tax mode
+                <select value={taxMode} disabled={billType !== "gst"} onChange={(e) => setTaxMode(e.target.value as "inclusive" | "exclusive")} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                  <option value="exclusive">Exclusive (Add)</option><option value="inclusive">Inclusive (Extract)</option>
+                </select>
+              </label>
+              <label>Print style
+                <select value={design} onChange={(e) => { setDesign(e.target.value as PrintDesign); localStorage.setItem("solestack-print", e.target.value); }} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                  <option>Thermal</option><option>A4</option><option>Premium</option>
+                </select>
+              </label>
             </div>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(["Cash", "UPI", "Card", "Split"] as const).map((m) => (
-                <button key={m} onClick={() => setPay(m)} className={`h-10 rounded-lg text-sm font-semibold ${pay === m ? "bg-foreground text-background" : "bg-muted"}`}>{m}</button>
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-muted-foreground">
+              <label>Bill discount ₹<Input value={billDiscount} onChange={(e) => setBillDiscount(e.target.value)} inputMode="decimal" placeholder="0" className="mt-0.5 h-9" /></label>
+              <label>GST %
+                <select value={billType === "gst" ? rate : 0} disabled={billType !== "gst"} onChange={(e) => setRate(Number(e.target.value))} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                  {billType !== "gst" && <option value={0}>No GST</option>}
+                  {[5, 12, 18].map((r) => <option key={r} value={r}>{r}%</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {(["Cash", "UPI", "Card", "Split", "Credit"] as const).map((m) => (
+                <button key={m} onClick={() => setPay(m)} className={`h-9 rounded-lg text-xs font-semibold ${pay === m ? "bg-foreground text-background" : "bg-muted"}`}>{m}</button>
               ))}
             </div>
-            {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" placeholder={`Cash part (rest ${inr(bill.total - (Number(splitCash) || 0))} by UPI/Card)`} className="h-10" />}
-            <div className="space-y-0.5 text-sm">
+            {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" placeholder={`Cash part (rest ${inr(bill.total - (Number(splitCash) || 0))} by UPI/Card)`} className="h-9" />}
+            <div>
+              <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" placeholder={pay === "Credit" ? "Advance received (rest = due)" : "Amount received (blank = exact)"} className="h-9" />
+              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+                {[["Exact", 0], ["+100", 100], ["+500", 500], ["+1000", 1000]].map(([l, v]) => (
+                  <button key={l} onClick={() => setReceived(String(v === 0 ? bill.total : (Number(received) || 0) + Number(v)))} className="h-7 rounded-md bg-muted text-xs font-semibold">{l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-0.5 rounded-lg bg-muted/50 p-2.5 text-sm">
               <Row k="Subtotal" v={inr(bill.subtotal)} />
-              {bill.discount > 0 && <Row k="Discount" v={`−${inr(bill.discount)}`} />}
-              {bill.rate > 0 && <Row k={`GST ${bill.rate}% (incl.)`} v={inr(bill.gst)} />}
-              <div className="flex items-end justify-between pt-1">
+              <Row k="Bill discount" v={`−${inr(bill.discount)}`} />
+              {bill.rate > 0 && <Row k="Taxable" v={inr(bill.taxable)} />}
+              {bill.rate > 0 && <Row k={`GST ${bill.rate}% ${taxMode === "inclusive" ? "(incl.)" : "(added)"}`} v={inr(bill.gst)} />}
+              <Row k={due > 0 ? "Due" : "Change"} v={inr(due > 0 ? due : change)} />
+              <div className="flex items-end justify-between border-t pt-1">
                 <span className="font-semibold">Total</span>
                 <span className="font-display text-3xl font-bold">{inr(bill.total)}</span>
               </div>
@@ -397,7 +423,7 @@ function POS() {
             <div className="grid grid-cols-[auto_1fr] gap-2">
               <Button variant="outline" className="h-12" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
               <Button className="h-12 bg-success text-base text-success-foreground hover:bg-success/90" onClick={complete} disabled={!cart.length || busy}>
-                {busy ? "Saving…" : `F8 · Complete ${inr(bill.total)}`}
+                {busy ? "Saving…" : `F8 · Complete Sale ${inr(bill.total)}`}
               </Button>
             </div>
           </div>
