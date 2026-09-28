@@ -62,6 +62,39 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          id: string
+          legacy_id: string | null
+          mode: string
+          note: string | null
+          spent_on: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          id?: string
+          legacy_id?: string | null
+          mode?: string
+          note?: string | null
+          spent_on?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          id?: string
+          legacy_id?: string | null
+          mode?: string
+          note?: string | null
+          spent_on?: string
+        }
+        Relationships: []
+      }
       loyalty_events: {
         Row: {
           action: string
@@ -443,6 +476,76 @@ export type Database = {
           },
         ]
       }
+      sale_returns: {
+        Row: {
+          created_at: string
+          damaged: boolean
+          id: string
+          kind: string
+          note: string | null
+          product_name: string
+          qty: number
+          refund: number
+          sale_id: string | null
+          sale_item_id: string | null
+          size: string
+          user_id: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          damaged?: boolean
+          id?: string
+          kind?: string
+          note?: string | null
+          product_name?: string
+          qty: number
+          refund?: number
+          sale_id?: string | null
+          sale_item_id?: string | null
+          size?: string
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          damaged?: boolean
+          id?: string
+          kind?: string
+          note?: string | null
+          product_name?: string
+          qty?: number
+          refund?: number
+          sale_id?: string | null
+          sale_item_id?: string | null
+          size?: string
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_returns_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_returns_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           bill_no: string
@@ -674,6 +777,25 @@ export type Database = {
         Returns: boolean
       }
       is_member: { Args: { _user_id: string }; Returns: boolean }
+      process_return: {
+        Args: {
+          _damaged: boolean
+          _kind: string
+          _note: string
+          _qty: number
+          _sale_item_id: string
+        }
+        Returns: number
+      }
+      receive_stock: {
+        Args: {
+          _invoice: string
+          _items: Json
+          _supplier_id: string
+          _supplier_name: string
+        }
+        Returns: number
+      }
       reward_amount: { Args: { _card: string; _m: number }; Returns: number }
     }
     Enums: {

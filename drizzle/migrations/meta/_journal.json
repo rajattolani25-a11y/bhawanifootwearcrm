@@ -15,6 +15,13 @@
       "when": 1790622696328,
       "tag": "0001_loyalty_phase3",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790623450844,
+      "tag": "0002_phase4_5_purchase_returns_expenses",
+      "breakpoints": true
     }
   ]
 }
