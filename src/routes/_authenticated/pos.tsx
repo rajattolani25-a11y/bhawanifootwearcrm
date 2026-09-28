@@ -261,7 +261,7 @@ function POS() {
   const waText = done ? billMessage({ shop: "BHAWANI FOOTWEAR", name: done.name, billNo: done.bill_no, total: done.total, paid: done.paid, due: done.due, stamp: done.stamp, rewards: done.unlocked }) : "";
 
   return (
-    <div className="grid min-h-[calc(100vh-2.5rem)] gap-3 lg:h-[calc(100vh-2.5rem)] lg:min-h-[520px] lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden">
+    <div className="grid min-h-[calc(100vh-2.5rem)] gap-3 md:h-[calc(100vh-4.5rem)] md:min-h-[460px] md:grid-cols-[minmax(0,1fr)_320px] md:overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
       {/* LEFT: products */}
       <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
@@ -314,8 +314,8 @@ function POS() {
       </section>
 
       {/* RIGHT: cart */}
-       <aside className="min-h-0 lg:h-full">
-         <div className="flex h-full min-h-[520px] flex-col overflow-hidden rounded-lg border bg-card">
+       <aside className="min-h-0 md:h-full">
+         <div className="flex h-full min-h-[460px] flex-col overflow-hidden rounded-lg border bg-card">
           {/* customer */}
            <div className="shrink-0 border-b p-3">
              <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Active transaction · {cart.reduce((a, i) => a + i.qty, 0)} pairs</p>{cart.length > 0 && <Button variant="ghost" size="sm" onClick={reset} className="h-6 px-2 text-[10px] text-destructive">Clear</Button>}</div>
