@@ -98,7 +98,7 @@ export async function importLegacy(db: any, log: (m: string) => void) {
 
 // Full backup in JSON (keeps export working like the old app).
 export async function exportAll() {
-  const tables = ["store_settings", "products", "product_costs", "product_variants", "customers", "suppliers", "sales", "sale_items", "sale_costs", "purchases", "stock_movements"] as const;
+  const tables = ["store_settings", "products", "product_costs", "product_variants", "customers", "suppliers", "sales", "sale_items", "sale_costs", "sale_returns", "credit_payments", "loyalty_rewards", "loyalty_events", "purchases", "stock_movements", "expenses"] as const;
   const out: Record<string, unknown> = { exportedAt: new Date().toISOString() };
   for (const t of tables) out[t] = (await supabase.from(t).select("*").limit(50000)).data;
   return out;
