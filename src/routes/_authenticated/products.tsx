@@ -118,7 +118,10 @@ function AddArticle({ onClose }: { onClose: () => void }) {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   async function save() {
-    if (!f.article.trim()) return toast.error("Article name is required");
+    if (!f.article.trim()) {
+      toast.error("Article name is required");
+      return;
+    }
     setBusy(true);
     try {
       const { data: p, error } = await supabase

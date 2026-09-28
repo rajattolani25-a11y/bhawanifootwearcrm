@@ -49,7 +49,7 @@ function SettingsPage() {
   if (!loading && !isOwner) return <p className="text-muted-foreground">Only the Owner can open Settings.</p>;
 
   async function save() {
-    const { error } = await supabase.from("store_settings").update({ ...f, daily_target: Number(f.daily_target) || 0 }).eq("id", 1);
+    const { error } = await supabase.from("store_settings").update({ ...f, daily_target: Number(f["daily_target"]) || 0 }).eq("id", 1);
     error ? toast.error(error.message) : toast.success("Settings saved");
   }
 
