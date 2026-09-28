@@ -2,18 +2,22 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/
 import { useState } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) throw redirect({ to: "/auth" });
+    return { user: data.session.user };
   },
-  component: AppShell,
+  component: () => (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  ),
 });
 
 function AppShell() {
