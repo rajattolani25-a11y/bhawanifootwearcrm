@@ -1,32 +1,37 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export type Role = "owner" | "staff" | null;
+type AuthState = { user: User | null; role: Role; isOwner: boolean; loading: boolean };
 
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<Role>(null);
-  const [loading, setLoading] = useState(true);
+const AuthCtx = createContext<AuthState>({ user: null, role: null, isOwner: false, loading: true });
+
+// Role is cached per user so the app opens instantly on repeat visits.
+const ROLE_KEY = "solestack-role";
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({ user: null, role: null, isOwner: false, loading: true });
 
   useEffect(() => {
     let active = true;
     async function load(u: User | null) {
-      setUser(u);
       if (!u) {
-        setRole(null);
-        setLoading(false);
+        setState({ user: null, role: null, isOwner: false, loading: false });
         return;
       }
+      const cached = localStorage.getItem(`${ROLE_KEY}:${u.id}`) as Role;
+      if (cached) setState({ user: u, role: cached, isOwner: cached === "owner", loading: false });
       const { data } = await supabase.from("user_roles").select("role").eq("user_id", u.id);
       if (!active) return;
       const roles = (data ?? []).map((r) => r.role);
-      setRole(roles.includes("owner") ? "owner" : roles.includes("staff") ? "staff" : null);
-      setLoading(false);
+      const role: Role = roles.includes("owner") ? "owner" : roles.includes("staff") ? "staff" : null;
+      if (role) localStorage.setItem(`${ROLE_KEY}:${u.id}`, role);
+      setState({ user: u, role, isOwner: role === "owner", loading: false });
     }
-    supabase.auth.getUser().then(({ data }) => load(data.user));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setTimeout(() => load(session?.user ?? null), 0);
+    supabase.auth.getSession().then(({ data }) => load(data.session?.user ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") setTimeout(() => load(session?.user ?? null), 0);
     });
     return () => {
       active = false;
@@ -34,5 +39,9 @@ export function useAuth() {
     };
   }, []);
 
-  return { user, role, isOwner: role === "owner", loading };
+  return <AuthCtx.Provider value={state}>{children}</AuthCtx.Provider>;
+}
+
+export function useAuth() {
+  return useContext(AuthCtx);
 }
