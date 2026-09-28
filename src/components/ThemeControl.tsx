@@ -12,8 +12,8 @@ export function ThemeControl({ compact = false }: { compact?: boolean }) {
   const { mode, setMode } = useTheme();
   if (compact) {
     const index = options.findIndex((item) => item.value === mode);
-    const next = options[(index + 1) % options.length] ?? options[0];
-    const current = options[index] ?? options[2];
+    const next = options[(index + 1) % options.length] ?? { value: "light" as const, label: "Light", icon: Sun };
+    const current = options[index] ?? { value: "system" as const, label: "System", icon: Monitor };
     const Icon = current.icon;
     return <Button variant="ghost" size="icon" onClick={() => setMode(next.value)} title={`Theme: ${current.label}`} aria-label={`Theme: ${current.label}`}><Icon className="h-4 w-4" /></Button>;
   }

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown } from "lucide-react";
+import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { inr } from "@/lib/modules";
 import { beep, computeBill, waLink, type CartItem } from "@/lib/pos";
 import { printBill, type PrintDesign } from "@/lib/print";
+import { addSignedImages } from "@/lib/product-images";
+import { billMessage, shareText, smsLink } from "@/lib/messages";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }] }),
@@ -47,7 +49,7 @@ function POS() {
   const [design, setDesign] = useState<PrintDesign>("Thermal");
   const [received, setReceived] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<null | { bill_no: string; total: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
+  const [done, setDone] = useState<null | { bill_no: string; total: number; paid: number; due: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
   useEffect(() => { const d = localStorage.getItem("solestack-print"); if (d) setDesign(d as PrintDesign); }, []);
 
@@ -64,11 +66,11 @@ function POS() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id,brand,article,category,color,selling_price,mrp,status,product_variants(id,size,stock,sku,barcode)")
+        .select("id,brand,article,category,color,selling_price,mrp,status,image_url,product_variants(id,size,stock,sku,barcode)")
         .eq("status", "Active")
         .limit(2000);
       if (error) throw error;
-      return data;
+      return addSignedImages(data);
     },
   });
 
@@ -188,6 +190,11 @@ function POS() {
 
   async function complete() {
     if (!cart.length || busy) return;
+    if (pay === "Credit" && !customer) {
+      toast.error("Credit bill ke liye customer mobile zaroori hai");
+      mobileRef.current?.focus();
+      return;
+    }
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("create_sale", {
@@ -214,7 +221,7 @@ function POS() {
       });
       if (error) throw error;
       const r = data as { bill_no: string; stamp_regular: boolean; unlocked: { card: string; amount: number }[] };
-      setDone({ bill_no: r.bill_no, total: bill.total, mobile: customer?.mobile ?? "", name: customer?.name ?? "", stamp: r.stamp_regular, unlocked: r.unlocked ?? [] });
+       setDone({ bill_no: r.bill_no, total: bill.total, paid, due, mobile: customer?.mobile ?? "", name: customer?.name ?? "", stamp: r.stamp_regular, unlocked: r.unlocked ?? [] });
       reset();
       qc.invalidateQueries();
     } catch (e) {
@@ -251,56 +258,49 @@ function POS() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const waText = done
-    ? `Hello ${done.name || "there"}, thank you for shopping with us.\nBill: ${done.bill_no}\nAmount: ${inr(done.total)}` +
-      (done.stamp ? `\nA loyalty stamp has been added to your card.` : "") +
-      (done.unlocked.length ? `\nReward unlocked: ${done.unlocked.map((u) => inr(u.amount)).join(" + ")} off on your next bill (valid 30 days).` : "") +
-      `\nSize exchange within 7 days with this bill.`
-    : "";
+  const waText = done ? billMessage({ shop: "BHAWANI FOOTWEAR", name: done.name, billNo: done.bill_no, total: done.total, paid: done.paid, due: done.due, stamp: done.stamp, rewards: done.unlocked }) : "";
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_400px]">
+    <div className="grid min-h-[calc(100vh-2.5rem)] gap-3 lg:h-[calc(100vh-2.5rem)] lg:min-h-[520px] lg:grid-cols-[minmax(0,1fr)_360px] lg:overflow-hidden">
       {/* LEFT: products */}
-      <section className="min-w-0">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold">POS Billing</h1>
-          <span className="hidden items-center gap-1.5 rounded-full bg-success/15 px-3 py-1 text-xs font-semibold text-success sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />Ready for scan</span>
+      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
+          <div><h1 className="text-lg font-bold">POS Billing</h1><p className="text-[11px] text-muted-foreground">Scan, choose size and complete the bill</p></div>
+          <span className="hidden items-center gap-1.5 rounded-md bg-success/15 px-2 py-1 text-[10px] font-semibold text-success sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />Ready</span>
         </div>
-        <Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search brand, article, colour…" className="h-12 text-base" />
-        <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+        <div className="shrink-0 p-3 pb-2"><div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search article" className="h-9 pl-9 text-sm" /></div></div>
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-1">
           {cats.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${cat === c ? "bg-primary text-primary-foreground" : "bg-muted"}`}>{c}</button>
+             <Button key={c} size="sm" variant={cat === c ? "default" : "secondary"} onClick={() => setCat(c)} className="h-7 shrink-0 px-2.5 text-xs">{c}</Button>
           ))}
         </div>
-        <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2">
           {brands.map((b) => (
-            <button key={b} onClick={() => setBrand(b)} className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold uppercase ${brand === b ? "border-primary text-primary" : "text-muted-foreground"}`}>{b}</button>
+             <Button key={b} size="sm" variant="outline" onClick={() => setBrand(b)} className={`h-7 shrink-0 px-2.5 text-[10px] uppercase ${brand === b ? "border-primary text-primary" : "text-muted-foreground"}`}>{b}</Button>
           ))}
         </div>
         {held.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2 px-3 pb-2">
             {held.map((h) => (
-              <button key={h.id} onClick={() => resume(h)} className="flex items-center gap-1.5 rounded-lg border border-warning bg-warning/15 px-3 py-1.5 text-xs font-medium">
+              <Button key={h.id} variant="outline" size="sm" onClick={() => resume(h)} className="h-7 border-warning bg-warning/15 px-2 text-xs">
                 <Play className="h-3 w-3" /> {h.label} · {h.cart.reduce((a, i) => a + i.qty, 0)} pairs
-              </button>
+              </Button>
             ))}
           </div>
         )}
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto px-3 pb-3 sm:grid-cols-2 xl:grid-cols-3">
           {list.map((p) => (
-            <div key={p.id} className="rounded-xl border bg-card p-3">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-primary">{p.brand}</p>
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold leading-tight">{p.article}</p>
-                <p className="font-display font-bold">{inr(p.selling_price)}</p>
+            <div key={p.id} className="overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary">
+              <div className="flex h-16 items-center gap-2 bg-muted/50 p-2">
+                <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-background">{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center font-display text-lg text-muted-foreground/35">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}</div>
+                <div className="min-w-0 flex-1"><p className="text-[9px] font-bold uppercase text-primary">{p.brand}</p><p className="truncate text-sm font-semibold">{p.article}</p><p className="text-xs font-bold">{inr(p.selling_price)}</p></div>
               </div>
-              <p className="text-xs text-muted-foreground">{[p.category, p.color].filter(Boolean).join(" · ")}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1 p-2">
                 {[...p.product_variants].sort((a, b) => Number(a.size) - Number(b.size)).map((v) => (
                   <button
                     key={v.id}
                     onClick={() => addVariant(p, v)}
-                    className={`min-w-11 rounded-lg px-2 py-2 text-sm font-bold transition active:scale-95 ${v.stock <= 0 ? "bg-destructive/15 text-destructive line-through" : "bg-success/15 text-success hover:bg-success hover:text-success-foreground"}`}
+                    className={`min-w-9 rounded-md px-1.5 py-1 text-xs font-bold transition active:scale-95 ${v.stock <= 0 ? "bg-destructive/15 text-destructive line-through" : "bg-success/15 text-success hover:bg-success hover:text-success-foreground"}`}
                   >
                     {v.size}
                     <span className="block text-[9px] font-medium opacity-80">{v.stock}</span>
@@ -314,10 +314,11 @@ function POS() {
       </section>
 
       {/* RIGHT: cart */}
-      <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-4rem)]">
-        <div className="flex h-full flex-col rounded-2xl border bg-card">
+       <aside className="min-h-0 lg:h-full">
+         <div className="flex h-full min-h-[520px] flex-col overflow-hidden rounded-lg border bg-card">
           {/* customer */}
-          <div className="border-b p-4">
+           <div className="shrink-0 border-b p-3">
+             <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Active transaction · {cart.reduce((a, i) => a + i.qty, 0)} pairs</p>{cart.length > 0 && <Button variant="ghost" size="sm" onClick={reset} className="h-6 px-2 text-[10px] text-destructive">Clear</Button>}</div>
             {customer ? (
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -343,9 +344,9 @@ function POS() {
           </div>
 
           {/* items */}
-          <div className="flex-1 space-y-2 overflow-y-auto p-4">
+           <div className="min-h-[76px] flex-1 space-y-1.5 overflow-y-auto p-3">
             {cart.map((i) => (
-              <div key={i.variant_id} className="flex items-center gap-2 rounded-lg bg-muted/60 p-2">
+               <div key={i.variant_id} className="flex items-center gap-1.5 rounded-md bg-muted/60 p-1.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{i.brand} {i.product_name}</p>
                   <p className="text-xs text-muted-foreground">Size <b className="text-foreground">{i.size}</b> · {inr(i.price)}</p>
@@ -363,7 +364,7 @@ function POS() {
           </div>
 
           {/* totals */}
-          <div className="space-y-3 border-t p-4">
+           <div className="shrink-0 space-y-1.5 border-t bg-muted/25 p-3">
             {reward && (
               <div className={`flex items-center justify-between rounded-lg p-2.5 text-sm ${rewardOn ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground line-through"}`}>
                 <span className="flex items-center gap-1.5"><Gift className="h-4 w-4" /> {reward.card === "premium" ? "Premium" : "Regular"} reward −{inr(reward.amount)}</span>
@@ -379,27 +380,27 @@ function POS() {
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-muted-foreground">
+             <div className="grid grid-cols-3 gap-1.5 text-[9px] font-medium text-muted-foreground">
               <label>Bill type
-                <select value={billType} onChange={(e) => setBillType(e.target.value as "gst" | "simple")} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                 <select value={billType} onChange={(e) => setBillType(e.target.value as "gst" | "simple")} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
                   <option value="gst">GST Invoice</option><option value="simple">Cash Memo</option>
                 </select>
               </label>
               <label>Tax mode
-                <select value={taxMode} disabled={billType !== "gst"} onChange={(e) => setTaxMode(e.target.value as "inclusive" | "exclusive")} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                 <select value={taxMode} disabled={billType !== "gst"} onChange={(e) => setTaxMode(e.target.value as "inclusive" | "exclusive")} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
                   <option value="exclusive">Exclusive (Add)</option><option value="inclusive">Inclusive (Extract)</option>
                 </select>
               </label>
               <label>Print style
-                <select value={design} onChange={(e) => { setDesign(e.target.value as PrintDesign); localStorage.setItem("solestack-print", e.target.value); }} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                 <select value={design} onChange={(e) => { setDesign(e.target.value as PrintDesign); localStorage.setItem("solestack-print", e.target.value); }} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
                   <option>Thermal</option><option>A4</option><option>Premium</option>
                 </select>
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-muted-foreground">
-              <label>Bill discount ₹<Input value={billDiscount} onChange={(e) => setBillDiscount(e.target.value)} inputMode="decimal" placeholder="0" className="mt-0.5 h-9" /></label>
+             <div className="grid grid-cols-2 gap-1.5 text-[9px] font-medium text-muted-foreground">
+               <label>Bill discount ₹<Input value={billDiscount} onChange={(e) => setBillDiscount(e.target.value)} inputMode="decimal" placeholder="0" className="mt-0.5 h-7 text-xs" /></label>
               <label>GST %
-                <select value={billType === "gst" ? rate : 0} disabled={billType !== "gst"} onChange={(e) => setRate(Number(e.target.value))} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1.5 text-sm text-foreground">
+                 <select value={billType === "gst" ? rate : 0} disabled={billType !== "gst"} onChange={(e) => setRate(Number(e.target.value))} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
                   {billType !== "gst" && <option value={0}>No GST</option>}
                   {[5, 12, 18].map((r) => <option key={r} value={r}>{r}%</option>)}
                 </select>
@@ -407,32 +408,32 @@ function POS() {
             </div>
             <div className="grid grid-cols-5 gap-1.5">
               {(["Cash", "UPI", "Card", "Split", "Credit"] as const).map((m) => (
-                <button key={m} onClick={() => setPay(m)} className={`h-9 rounded-lg text-xs font-semibold ${pay === m ? "bg-foreground text-background" : "bg-muted"}`}>{m}</button>
+                 <Button key={m} type="button" variant={pay === m ? "default" : "secondary"} onClick={() => setPay(m)} className="h-7 px-1 text-[10px]">{m}</Button>
               ))}
             </div>
-            {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" placeholder={`Cash part (rest ${inr(bill.total - (Number(splitCash) || 0))} by UPI/Card)`} className="h-9" />}
+             {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" placeholder={`Cash part · rest ${inr(bill.total - (Number(splitCash) || 0))}`} className="h-7 text-xs" />}
             <div>
-              <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" placeholder={pay === "Credit" ? "Advance received (rest = due)" : "Amount received (blank = exact)"} className="h-9" />
-              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+               <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" placeholder={pay === "Credit" ? "Advance received · customer required" : "Amount received · blank = exact"} className="h-7 text-xs" />
+               <div className="mt-1 grid grid-cols-4 gap-1">
                 {[["Exact", 0], ["+100", 100], ["+500", 500], ["+1000", 1000]].map(([l, v]) => (
-                  <button key={l} onClick={() => setReceived(String(v === 0 ? bill.total : (Number(received) || 0) + Number(v)))} className="h-7 rounded-md bg-muted text-xs font-semibold">{l}</button>
+                   <Button key={l} type="button" variant="secondary" onClick={() => setReceived(String(v === 0 ? bill.total : (Number(received) || 0) + Number(v)))} className="h-6 px-1 text-[10px]">{l}</Button>
                 ))}
               </div>
             </div>
-            <div className="space-y-0.5 rounded-lg bg-muted/50 p-2.5 text-sm">
+             <div className="grid grid-cols-2 gap-x-3 rounded-md bg-muted/60 p-2 text-[11px]">
               <Row k="Subtotal" v={inr(bill.subtotal)} />
               <Row k="Bill discount" v={`−${inr(bill.discount)}`} />
               {bill.rate > 0 && <Row k="Taxable" v={inr(bill.taxable)} />}
               {bill.rate > 0 && <Row k={`GST ${bill.rate}% ${taxMode === "inclusive" ? "(incl.)" : "(added)"}`} v={inr(bill.gst)} />}
               <Row k={due > 0 ? "Due" : "Change"} v={inr(due > 0 ? due : change)} />
-              <div className="flex items-end justify-between border-t pt-1">
+               <div className="col-span-2 mt-1 flex items-end justify-between border-t pt-1">
                 <span className="font-semibold">Total</span>
-                <span className="font-display text-3xl font-bold">{inr(bill.total)}</span>
+                 <span className="font-display text-xl font-bold">{inr(bill.total)}</span>
               </div>
             </div>
             <div className="grid grid-cols-[auto_1fr] gap-2">
-              <Button variant="outline" className="h-12" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
-              <Button className="h-12 bg-success text-base text-success-foreground hover:bg-success/90" onClick={complete} disabled={!cart.length || busy}>
+               <Button variant="outline" className="h-10" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
+               <Button className="h-10 text-sm" onClick={complete} disabled={!cart.length || busy}>
                 {busy ? "Saving…" : `F8 · Complete Sale ${inr(bill.total)}`}
               </Button>
             </div>
@@ -448,18 +449,19 @@ function POS() {
               <p className="font-mono text-sm">{done.bill_no}</p>
               <p className="font-display text-4xl font-bold">{inr(done.total)}</p>
               {done.stamp && <p className="text-sm text-success">Loyalty stamp added</p>}
-              {done.unlocked.map((u) => (
-                <p key={u.card} className="rounded-lg bg-accent p-2 text-sm font-medium text-accent-foreground">🎉 {u.card === "premium" ? "Premium" : "Regular"} reward unlocked: {inr(u.amount)} off</p>
+               {done.unlocked.map((u) => (
+                 <p key={u.card} className="rounded-lg bg-accent p-2 text-sm font-medium text-accent-foreground">{u.card === "premium" ? "Premium" : "Regular"} reward unlocked: {inr(u.amount)} off</p>
               ))}
               <div className="grid gap-2">
                 {done.mobile && (
-                  <Button asChild className="h-11 bg-success text-success-foreground hover:bg-success/90">
-                    <a href={waLink(done.mobile, waText)} target="_blank" rel="noreferrer">Send bill on WhatsApp</a>
+                   <Button asChild className="h-11">
+                     <a href={waLink(done.mobile, waText)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp</a>
                   </Button>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button className="h-11" onClick={() => printBill(done.bill_no, design).catch((e) => toast.error(e.message))}>Print {design}</Button>
-                  <Button variant="outline" className="h-11" onClick={() => printBill(done.bill_no, design === "Thermal" ? "A4" : "Thermal").catch((e) => toast.error(e.message))}>Print {design === "Thermal" ? "A4" : "Thermal"}</Button>
+                 <div className="grid grid-cols-3 gap-2">
+                   <Button variant="outline" className="h-10" onClick={() => printBill(done.bill_no, design).catch((e) => toast.error(e.message))}><Printer className="h-4 w-4" /> Print</Button>
+                   {done.mobile && <Button variant="outline" asChild className="h-10"><a href={smsLink(done.mobile, waText)}><Smartphone className="h-4 w-4" /> Text</a></Button>}
+                   <Button variant="outline" className="h-10" onClick={() => shareText(done.bill_no, waText).then(() => toast.success("Bill shared or copied")).catch(() => {})}><Share2 className="h-4 w-4" /> Share</Button>
                 </div>
                 <Button variant="outline" className="h-11" onClick={() => { setDone(null); searchRef.current?.focus(); }}>New bill</Button>
               </div>
