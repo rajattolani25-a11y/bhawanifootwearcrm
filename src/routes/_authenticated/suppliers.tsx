@@ -20,7 +20,7 @@ function Suppliers() {
   const [f, setF] = useState({ name: "", phone: "", gstin: "", address: "" });
   const { data = [] } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
   const { data: purchases = [] } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => (await supabase.from("purchases").select("supplier_id,total,paid_amount")).data ?? [] });
-  const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [0, 0]);
+  const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [0, 0]);
 
   async function add() {
     if (!f.name.trim()) { toast.error("Name required"); return; }
