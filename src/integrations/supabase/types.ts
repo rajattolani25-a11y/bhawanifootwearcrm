@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      credit_payments: {
+        Row: {
+          amount: number
+          collected_by: string | null
+          customer_id: string | null
+          id: string
+          note: string | null
+          paid_at: string
+          payment_mode: string
+          sale_id: string
+        }
+        Insert: {
+          amount: number
+          collected_by?: string | null
+          customer_id?: string | null
+          id?: string
+          note?: string | null
+          paid_at?: string
+          payment_mode?: string
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          collected_by?: string | null
+          customer_id?: string | null
+          id?: string
+          note?: string | null
+          paid_at?: string
+          payment_mode?: string
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           brand_preference: string | null
@@ -279,6 +327,7 @@ export type Database = {
           created_at: string
           gender: string | null
           id: string
+          image_url: string | null
           legacy_id: string | null
           mrp: number
           season: string | null
@@ -293,6 +342,7 @@ export type Database = {
           created_at?: string
           gender?: string | null
           id?: string
+          image_url?: string | null
           legacy_id?: string | null
           mrp?: number
           season?: string | null
@@ -307,6 +357,7 @@ export type Database = {
           created_at?: string
           gender?: string | null
           id?: string
+          image_url?: string | null
           legacy_id?: string | null
           mrp?: number
           season?: string | null
@@ -768,6 +819,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      collect_credit_payment: {
+        Args: {
+          _amount: number
+          _mode?: string
+          _note?: string
+          _sale_id: string
+        }
+        Returns: Json
+      }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
       has_role: {
         Args: {
@@ -796,6 +856,7 @@ export type Database = {
         }
         Returns: number
       }
+      reset_store_data: { Args: { _confirmation: string }; Returns: undefined }
       reward_amount: { Args: { _card: string; _m: number }; Returns: number }
     }
     Enums: {

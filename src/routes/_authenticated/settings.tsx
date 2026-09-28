@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { exportAll, importLegacy } from "@/lib/legacy-import";
+import { ThemeControl } from "@/components/ThemeControl";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data import." }] }),
+  head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data controls." }, { property: "og:title", content: "Settings — SoleStack POS" }, { property: "og:description", content: "Store, appearance and protected data controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: SettingsPage,
 });
 
@@ -20,6 +21,8 @@ function SettingsPage() {
   const [f, setF] = useState<Record<string, string>>({});
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [backupDone, setBackupDone] = useState(false);
+  const [confirm, setConfirm] = useState("");
 
   const { data: settings } = useQuery({
     queryKey: ["settings"],
@@ -76,6 +79,19 @@ function SettingsPage() {
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
     a.download = `solestack-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
+    URL.revokeObjectURL(a.href);
+    setBackupDone(true);
+    toast.success("Full backup downloaded");
+  }
+
+  async function resetData() {
+    if (!backupDone || confirm !== "RESET BHAWANI FOOTWEAR") return;
+    setBusy(true);
+    const { error } = await supabase.rpc("reset_store_data", { _confirmation: confirm });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setConfirm(""); setBackupDone(false);
+    toast.success("Store data reset completed");
   }
 
   const fields: [string, string][] = [
@@ -88,6 +104,12 @@ function SettingsPage() {
       <PageHeader title="Settings" subtitle="Store details, team and data." />
 
       <section className="rounded-xl border bg-card p-5">
+        <h2 className="mb-1 font-semibold">Appearance</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Choose the workspace appearance on this device.</p>
+        <ThemeControl />
+      </section>
+
+      <section className="rounded-xl border bg-card p-5">
         <h2 className="mb-4 font-semibold">Store details</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {fields.map(([k, l]) => (
@@ -98,6 +120,16 @@ function SettingsPage() {
           ))}
         </div>
         <Button onClick={save} className="mt-4">Save</Button>
+      </section>
+
+      <section className="rounded-xl border border-destructive/40 bg-card p-5">
+        <h2 className="font-semibold text-destructive">Reset store data</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Bills, stock, products, customers, purchases and accounting entries will be permanently removed. Your account, team and store settings remain.</p>
+        <ol className="my-3 list-inside list-decimal space-y-1 text-sm"><li>Download a fresh full backup.</li><li>Type the exact confirmation shown below.</li></ol>
+        <Button variant="outline" onClick={download}>{backupDone ? "Backup downloaded" : "1. Download required backup"}</Button>
+        <Label className="mt-4 block">Type: <b>RESET BHAWANI FOOTWEAR</b></Label>
+        <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-1 max-w-md" autoComplete="off" />
+        <Button variant="destructive" className="mt-3" disabled={!backupDone || confirm !== "RESET BHAWANI FOOTWEAR" || busy} onClick={resetData}>Permanently reset store data</Button>
       </section>
 
       <section className="rounded-xl border bg-card p-5">

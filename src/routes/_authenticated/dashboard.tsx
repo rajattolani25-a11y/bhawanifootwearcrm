@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — SoleStack POS" }, { name: "description", content: "Retail control room: sales, stock and alerts." }] }),
+  head: () => ({ meta: [{ title: "Dashboard — SoleStack POS" }, { name: "description", content: "Retail control room: sales, stock and alerts." }, { property: "og:title", content: "Dashboard — SoleStack POS" }, { property: "og:description", content: "Retail control room for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Dashboard,
 });
 
@@ -17,6 +17,12 @@ const dayKey = (d: Date) => d.toLocaleDateString("en-CA");
 function Dashboard() {
   const qc = useQueryClient();
   const { isOwner, user } = useAuth();
+  const [clock, setClock] = useState(new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { data } = useQuery({
     queryKey: ["dashboard", isOwner],
@@ -124,19 +130,21 @@ function Dashboard() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <section className="relative overflow-hidden rounded-2xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
-        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sidebar-primary/30 blur-3xl" />
+      <section className="relative overflow-hidden rounded-lg bg-sidebar p-6 text-sidebar-foreground md:p-8">
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sidebar-primary">Retail Control Room · {data?.settings?.business_name}</p>
             <h1 className="mt-2 text-2xl font-bold text-sidebar-accent-foreground md:text-3xl">{greet}{name ? `, ${name}` : ""}. Your shop pulse is ready.</h1>
             <p className="mt-1 text-sm text-sidebar-foreground/70">Sales, stock and alerts in one focused view.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+           <div className="flex items-center gap-4">
+             <div className="border-r border-sidebar-border pr-4 text-right"><p className="font-display text-xl font-bold text-sidebar-accent-foreground">{clock.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p><p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/60">{clock.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · IST</p></div>
+           <div className="flex flex-wrap gap-2">
             <Button asChild className="h-11"><Link to="/pos">New Bill</Link></Button>
             {isOwner && <Button asChild variant="secondary" className="h-11"><Link to="/purchase">Receive Stock</Link></Button>}
             <Button asChild variant="secondary" className="h-11"><Link to="/customers">Customers</Link></Button>
           </div>
+           </div>
         </div>
         <div className="relative mt-5 flex items-center gap-3 overflow-hidden rounded-lg bg-sidebar-accent px-3 py-2 text-sm">
           <span className="flex items-center gap-1.5 rounded bg-success px-2 py-0.5 text-xs font-bold text-success-foreground"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-foreground" />LIVE</span>

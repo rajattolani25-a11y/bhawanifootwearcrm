@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Printer, MessageCircle, Undo2 } from "lucide-react";
+import { Printer, MessageCircle, Undo2, IndianRupee } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { inr } from "@/lib/modules";
 import { printBill, type PrintDesign } from "@/lib/print";
 import { waLink } from "@/lib/pos";
+import { billMessage, dueMessage } from "@/lib/messages";
 
 export const Route = createFileRoute("/_authenticated/sales")({
-  head: () => ({ meta: [{ title: "Sales History — SoleStack POS" }, { name: "description", content: "All bills with re-print, WhatsApp and returns." }] }),
+  head: () => ({ meta: [{ title: "Sales History — SoleStack POS" }, { name: "description", content: "All bills with re-print, sharing, dues and returns." }, { property: "og:title", content: "Sales History — SoleStack POS" }, { property: "og:description", content: "Bills, returns and customer payment collections." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Sales,
 });
 
@@ -27,6 +28,9 @@ function Sales() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [ret, setRet] = useState<SaleRow | null>(null);
+  const [collect, setCollect] = useState<SaleRow | null>(null);
+  const [amount, setAmount] = useState("");
+  const [mode, setMode] = useState("Cash");
   const { data = [] } = useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
@@ -47,6 +51,14 @@ function Sales() {
   const s = q.toLowerCase();
   const list = data.filter((x) => !s || x.bill_no.toLowerCase().includes(s) || (x.customer_name ?? "").toLowerCase().includes(s) || x.customers?.mobile.includes(s));
   const reprint = (b: string, d: PrintDesign) => printBill(b, d, true).catch((e) => toast.error(e.message));
+  async function collectPayment() {
+    if (!collect) return;
+    const { data: result, error } = await supabase.rpc("collect_credit_payment", { _sale_id: collect.id, _amount: Number(amount), _mode: mode, _note: "Collected from Sales History" });
+    if (error) { toast.error(error.message); return; }
+    const r = result as { collected?: number; due?: number } | null;
+    toast.success(`${inr(Number(r?.collected ?? 0))} collected · ${inr(Number(r?.due ?? 0))} due`);
+    setCollect(null); setAmount(""); qc.invalidateQueries({ queryKey: ["sales"] }); qc.invalidateQueries({ queryKey: ["dashboard"] });
+  }
 
   return (
     <div>
@@ -70,8 +82,9 @@ function Sales() {
                     <Button size="sm" variant="outline" onClick={() => reprint(x.bill_no, "Thermal")} title="Re-print thermal"><Printer className="h-3.5 w-3.5" /></Button>
                     <Button size="sm" variant="outline" onClick={() => reprint(x.bill_no, "A4")}>A4</Button>
                     {x.customers?.mobile && (
-                      <Button size="sm" variant="outline" asChild><a target="_blank" rel="noreferrer" href={waLink(x.customers.mobile, `Hello ${x.customer_name}, your bill ${x.bill_no} of ${inr(x.total)}. Thank you for shopping with us!`)}><MessageCircle className="h-3.5 w-3.5" /></a></Button>
+                       <Button size="sm" variant="outline" asChild><a target="_blank" rel="noreferrer" href={waLink(x.customers.mobile, x.due_amount > 0 ? dueMessage("BHAWANI FOOTWEAR", x.customer_name ?? "", x.bill_no, x.due_amount) : billMessage({ shop: "BHAWANI FOOTWEAR", name: x.customer_name ?? "", billNo: x.bill_no, total: x.total }))}><MessageCircle className="h-3.5 w-3.5" /></a></Button>
                     )}
+                     {x.due_amount > 0 && <Button size="sm" onClick={() => { setCollect(x); setAmount(String(x.due_amount)); }} title="Collect due"><IndianRupee className="h-3.5 w-3.5" /></Button>}
                     <Button size="sm" variant="outline" onClick={() => setRet(x)} title="Return / exchange"><Undo2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </td>
@@ -82,6 +95,14 @@ function Sales() {
         </table>
       </div>
       <ReturnDialog sale={ret} onClose={() => setRet(null)} returned={returned} onDone={() => qc.invalidateQueries()} />
+      <Dialog open={!!collect} onOpenChange={(o) => !o && setCollect(null)}>
+        <DialogContent><DialogHeader><DialogTitle>Collect payment · {collect?.bill_no}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Current balance: {inr(collect?.due_amount ?? 0)}</p>
+          <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="Amount received" />
+          <div className="grid grid-cols-4 gap-2">{["Cash", "UPI", "Card", "Bank"].map((m) => <Button key={m} variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)}>{m}</Button>)}</div>
+          <Button onClick={collectPayment} disabled={!Number(amount)}>Save collection</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

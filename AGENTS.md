@@ -17,3 +17,5 @@
 - Old JSON data imports via `legacy_id` upserts so re-imports never duplicate.
 - Signed-in screens live under `src/routes/_authenticated/`; module list is defined once in `src/lib/modules.ts`.
 - Stock-in and returns go only through `receive_stock` / `process_return` DB functions so stock + ledger stay in sync; bills print from `src/lib/print.ts` (popup window, Thermal/A4/Premium like old app).
+- Credit repayments go only through `collect_credit_payment`; product photos stay in the private `product-images` bucket and are rendered with short-lived signed URLs.
+- Destructive store reset stays owner-only through `reset_store_data` and the UI requires a fresh downloaded backup plus exact typed confirmation.

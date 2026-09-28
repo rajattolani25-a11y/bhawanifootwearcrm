@@ -22,6 +22,20 @@
       "when": 1790623450844,
       "tag": "0002_phase4_5_purchase_returns_expenses",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790624731945,
+      "tag": "0003_retail_workspace_credit_images_reset",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790624767532,
+      "tag": "0004_product_image_storage_policies",
+      "breakpoints": true
     }
   ]
 }

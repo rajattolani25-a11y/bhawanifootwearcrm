@@ -9,12 +9,12 @@
 - [x] Fix GST totaling in POS (exclusive GST add)
 - [x] POS layout + bill print exactly like old app
 - [x] Stock poster, new-stock WhatsApp community message
-- [ ] Redesign POS for 942×570 counter screens with every billing control visible
-- [ ] Add professional bill sharing by WhatsApp, SMS/text and native share
-- [ ] Add customer credit/udhaar collection workflow and clear due tracking
-- [ ] Add product images to stock cards and 9:16 posters
-- [ ] Upgrade community messages, poster previews and share controls
-- [ ] Add owner-only safe reset with backup and typed confirmation
-- [ ] Add persistent light/dark/system appearance control
-- [ ] Redesign dashboard with live clock and denser visual insights
-- [ ] Complete responsive, metadata, accessibility and live-flow verification
+- [x] Redesign POS for 942×570 counter screens with every billing control visible
+- [x] Add professional bill sharing by WhatsApp, SMS/text and native share
+- [x] Add customer credit/udhaar collection workflow and clear due tracking
+- [x] Add product images to stock cards and 9:16 posters
+- [x] Upgrade community messages, poster previews and share controls
+- [x] Add owner-only safe reset with backup and typed confirmation
+- [x] Add persistent light/dark/system appearance control
+- [x] Redesign dashboard with live clock and denser visual insights
+- [x] Complete responsive, metadata, accessibility and live-flow verification
