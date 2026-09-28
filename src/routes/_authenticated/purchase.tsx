@@ -37,7 +37,7 @@ function Purchase() {
     const supplier = suppliers.find((x) => x.id === sup);
     const { data, error } = await supabase.rpc("receive_stock", { _supplier_id: sup || (null as unknown as string), _supplier_name: supplier?.name ?? "", _invoice: inv, _items: lines.map((l) => ({ variant_id: l.variant_id, qty: l.qty, price: l.price, gst_rate: gst })) });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`${data} pairs added to stock`);
     setLines([]); setInv("");
     qc.invalidateQueries();

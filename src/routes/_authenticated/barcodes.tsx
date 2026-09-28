@@ -34,7 +34,7 @@ function Barcodes() {
       const code = v.barcode || v.sku || v.id.slice(0, 12);
       for (let i = 0; i < n; i++) labels.push(`<div class="l"><b>${p.brand} ${p.article}</b><span>Size ${v.size} · MRP ${inr(p.mrp)}</span>${svgFor(code)}<strong>${inr(p.selling_price)}</strong></div>`);
     }
-    if (!labels.length) return toast.error("Choose label count first");
+    if (!labels.length) { toast.error("Choose label count first"); return; }
     try {
       printHtml("Labels", `<div class="g">${labels.join("")}</div>`, ".g{display:grid;grid-template-columns:repeat(3,50mm);gap:2mm;padding:3mm}.l{border:1px dashed #999;padding:2mm;text-align:center;font-size:10px;height:32mm;overflow:hidden}.l b,.l span,.l strong{display:block}.l svg{max-width:100%}@page{margin:3mm}");
     } catch (e) { toast.error((e as Error).message); }

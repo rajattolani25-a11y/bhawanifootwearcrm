@@ -35,7 +35,7 @@ function Control() {
 
   async function adjust(p: Product, v: Variant, patch: Partial<Variant>, note: string) {
     const { error } = await supabase.from("product_variants").update(patch).eq("id", v.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     const diff = (patch.stock ?? v.stock) - v.stock;
     if (diff) await supabase.from("stock_movements").insert({ type: "ADJUST", variant_id: v.id, product_name: `${p.brand} ${p.article} (${v.size})`, qty_in: Math.max(diff, 0), qty_out: Math.max(-diff, 0), note });
     toast.success("Saved");

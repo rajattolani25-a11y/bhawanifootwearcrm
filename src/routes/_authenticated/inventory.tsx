@@ -35,11 +35,12 @@ function Inventory() {
   async function upload(file: File) {
     setBusy(true);
     try {
-      const recs = parseCsv(await file.text()).filter((r) => r.article && r.size);
+      type R = { brand: string; article: string; category: string; color: string; gender: string; mrp: string; selling_price: string; price: string; size: string; qty: string; barcode: string; sku: string; rack: string; cost: string };
+      const recs = parseCsv(await file.text()).map((r) => r as unknown as R).filter((r) => r.article && r.size);
       if (!recs.length) throw new Error("CSV needs columns: brand, article, category, color, mrp, selling_price, size, qty, barcode, rack, cost");
       const key = (b: string, a: string) => `${b.toLowerCase()}|${a.toLowerCase()}`;
       const map = new Map(data.map((p) => [key(p.brand, p.article), p.id]));
-      const newProducts = new Map<string, Record<string, string>>();
+      const newProducts = new Map<string, R>();
       for (const r of recs) if (!map.has(key(r.brand ?? "", r.article))) newProducts.set(key(r.brand ?? "", r.article), r);
       const np = [...newProducts.values()];
       for (let i = 0; i < np.length; i += 500) {

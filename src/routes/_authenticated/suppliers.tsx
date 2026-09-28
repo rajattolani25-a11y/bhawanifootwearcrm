@@ -23,16 +23,16 @@ function Suppliers() {
   const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [0, 0]);
 
   async function add() {
-    if (!f.name.trim()) return toast.error("Name required");
+    if (!f.name.trim()) { toast.error("Name required"); return; }
     const { error } = await supabase.from("suppliers").insert(f);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setF({ name: "", phone: "", gstin: "", address: "" });
     qc.invalidateQueries({ queryKey: ["suppliers"] });
   }
   async function del(id: string) {
     if (!confirm("Delete supplier?")) return;
     const { error } = await supabase.from("suppliers").delete().eq("id", id);
-    if (error) return toast.error("Has purchases — cannot delete");
+    if (error) { toast.error("Has purchases — cannot delete"); return; }
     qc.invalidateQueries({ queryKey: ["suppliers"] });
   }
   return (

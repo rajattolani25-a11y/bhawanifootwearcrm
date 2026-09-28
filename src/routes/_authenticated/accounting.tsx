@@ -48,9 +48,9 @@ function Accounting() {
   const purchases = (data?.purch ?? []).reduce((a, p) => a + Number(p.total), 0);
 
   async function add() {
-    if (!Number(f.amount)) return toast.error("Enter amount");
+    if (!Number(f.amount)) { toast.error("Enter amount"); return; }
     const { error } = await supabase.from("expenses").insert({ ...f, amount: Number(f.amount) });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setF({ ...f, note: "", amount: "" });
     qc.invalidateQueries({ queryKey: ["acct"] });
   }
