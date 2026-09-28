@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { inr } from "@/lib/modules";
 import { beep, computeBill, waLink, type CartItem } from "@/lib/pos";
+import { printBill, type PrintDesign } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }] }),
@@ -40,11 +41,15 @@ function POS() {
   const [billDiscount, setBillDiscount] = useState("");
   const [billType, setBillType] = useState<"gst" | "simple">("gst");
   const [rate, setRate] = useState(5);
-  const [pay, setPay] = useState<"Cash" | "UPI" | "Card" | "Split">("Cash");
+  const [pay, setPay] = useState<"Cash" | "UPI" | "Card" | "Split" | "Credit">("Cash");
   const [splitCash, setSplitCash] = useState("");
+  const [taxMode, setTaxMode] = useState<"inclusive" | "exclusive">("exclusive");
+  const [design, setDesign] = useState<PrintDesign>("Thermal");
+  const [received, setReceived] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<null | { bill_no: string; total: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
+  useEffect(() => { const d = localStorage.getItem("solestack-print"); if (d) setDesign(d as PrintDesign); }, []);
 
   useEffect(() => {
     setHeld(JSON.parse(localStorage.getItem(HOLD_KEY) ?? "[]"));
@@ -163,7 +168,11 @@ function POS() {
 
   const reward = rewards[0];
   const rewardAmt = reward && rewardOn ? Number(reward.amount) : 0;
-  const bill = computeBill(cart, Number(billDiscount) || 0, rewardAmt, { billType, taxMode: "inclusive", rate });
+  const bill = computeBill(cart, Number(billDiscount) || 0, rewardAmt, { billType, taxMode, rate });
+  const recv = received.trim() === "" ? (pay === "Credit" ? 0 : bill.total) : Number(received) || 0;
+  const paid = Math.min(recv, bill.total);
+  const due = Math.max(bill.total - recv, 0);
+  const change = Math.max(recv - bill.total, 0);
   const stampedToday = customer?.last_stamp_date === todayIST();
   const stampPreview = customer && giveStamp && !stampedToday && bill.total >= 299 ? (bill.total >= 999 ? "Regular +1 and Premium +1" : "Regular +1") : null;
 
