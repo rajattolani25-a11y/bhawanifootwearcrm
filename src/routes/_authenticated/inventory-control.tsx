@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useStock, type Product, type Variant } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/inventory-control")({
-  head: () => ({ meta: [{ title: "Inventory Control — SoleStack POS" }, { name: "description", content: "Low stock, damaged, dead stock and stock adjustments." }] }),
+  head: () => ({ meta: [{ title: "Inventory Control — SoleStack POS" }, { name: "description", content: "Low stock, damaged, dead stock and stock adjustments." }, { property: "og:title", content: "Inventory Control — SoleStack POS" }, { property: "og:description", content: "Monitor low, damaged and inactive footwear stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Control,
 });
 

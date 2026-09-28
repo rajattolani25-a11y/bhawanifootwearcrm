@@ -14,7 +14,7 @@ import { inr } from "@/lib/modules";
 import { addSignedImages, uploadProductImage } from "@/lib/product-images";
 
 export const Route = createFileRoute("/_authenticated/products")({
-  head: () => ({ meta: [{ title: "Products — SoleStack POS" }, { name: "description", content: "Articles with size-wise stock." }] }),
+  head: () => ({ meta: [{ title: "Products — SoleStack POS" }, { name: "description", content: "Articles, photos and size-wise stock." }, { property: "og:title", content: "Products — SoleStack POS" }, { property: "og:description", content: "Footwear articles, photos, prices and size stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Products,
 });
 

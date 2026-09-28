@@ -11,7 +11,7 @@ import { inr } from "@/lib/modules";
 import { downloadCsv } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/accounting")({
-  head: () => ({ meta: [{ title: "Accounting — SoleStack POS" }, { name: "description", content: "Expenses, cash book and monthly profit & loss." }] }),
+  head: () => ({ meta: [{ title: "Accounting — SoleStack POS" }, { name: "description", content: "Expenses, cash book and monthly profit & loss." }, { property: "og:title", content: "Accounting — SoleStack POS" }, { property: "og:description", content: "Expenses, cash collections and monthly profit for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Accounting,
 });
 
@@ -27,14 +27,15 @@ function Accounting() {
       const a = `${month}-01`;
       const next = new Date(a); next.setMonth(next.getMonth() + 1);
       const b = next.toISOString().slice(0, 10);
-      const [e, s, c, p, r] = await Promise.all([
+       const [e, s, c, p, r, cp] = await Promise.all([
         supabase.from("expenses").select("*").gte("spent_on", a).lt("spent_on", b).order("spent_on", { ascending: false }),
         supabase.from("sales").select("id,total,gst_amount,payment_mode,due_amount,split_cash").gte("sale_date", a).lt("sale_date", b).limit(10000),
         supabase.from("sale_costs").select("sale_id,total_cost"),
         supabase.from("purchases").select("total,paid_amount").gte("purchase_date", a).lt("purchase_date", b),
         supabase.from("sale_returns").select("refund").gte("created_at", a).lt("created_at", b),
+         supabase.from("credit_payments").select("amount,payment_mode").gte("paid_at", a).lt("paid_at", b),
       ]);
-      return { exp: e.data ?? [], sales: s.data ?? [], cost: new Map((c.data ?? []).map((x) => [x.sale_id, Number(x.total_cost)])), purch: p.data ?? [], refunds: (r.data ?? []).reduce((t, x) => t + Number(x.refund), 0) };
+       return { exp: e.data ?? [], sales: s.data ?? [], cost: new Map((c.data ?? []).map((x) => [x.sale_id, Number(x.total_cost)])), purch: p.data ?? [], refunds: (r.data ?? []).reduce((t, x) => t + Number(x.refund), 0), collections: cp.data ?? [] };
     },
   });
   const sales = data?.sales ?? [];
@@ -44,7 +45,8 @@ function Accounting() {
   const expenses = (data?.exp ?? []).reduce((a, e) => a + Number(e.amount), 0);
   const refunds = data?.refunds ?? 0;
   const net = revenue - gst - cogs - expenses - refunds;
-  const cash = sales.reduce((a, s) => a + (s.payment_mode === "Cash" ? Number(s.total) - Number(s.due_amount) : s.payment_mode === "Split" ? Number(s.split_cash) : 0), 0);
+  const creditCash = (data?.collections ?? []).filter((p) => p.payment_mode === "Cash").reduce((a, p) => a + Number(p.amount), 0);
+  const cash = sales.reduce((a, s) => a + (s.payment_mode === "Cash" ? Number(s.total) - Number(s.due_amount) : s.payment_mode === "Split" ? Number(s.split_cash) : 0), 0) + creditCash;
   const purchases = (data?.purch ?? []).reduce((a, p) => a + Number(p.total), 0);
 
   async function add() {
@@ -74,7 +76,7 @@ function Accounting() {
           {pl.map(([k, v]) => <div key={k} className="flex justify-between border-t py-1.5 text-sm"><span>{k}</span><b>{inr(v)}</b></div>)}
           <div className={`mt-1 flex justify-between border-t-2 pt-2 text-lg font-bold ${net >= 0 ? "text-success" : "text-destructive"}`}><span>Net profit</span><span>{inr(net)}</span></div>
           <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-lg bg-muted p-2">Cash in hand (sales)<br /><b>{inr(cash)}</b></div>
+             <div className="rounded-lg bg-muted p-2">Cash received<br /><b>{inr(cash)}</b><span className="block text-xs text-muted-foreground">Includes {inr(creditCash)} due collection</span></div>
             <div className="rounded-lg bg-muted p-2">Stock purchased<br /><b>{inr(purchases)}</b></div>
           </div>
         </div>

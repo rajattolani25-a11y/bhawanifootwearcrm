@@ -11,7 +11,7 @@ import { inr } from "@/lib/modules";
 import { useStock } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/purchase")({
-  head: () => ({ meta: [{ title: "Purchase — SoleStack POS" }, { name: "description", content: "Receive new stock from suppliers." }] }),
+  head: () => ({ meta: [{ title: "Purchase — SoleStack POS" }, { name: "description", content: "Receive new stock from suppliers." }, { property: "og:title", content: "Purchase — SoleStack POS" }, { property: "og:description", content: "Receive and record supplier footwear stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Purchase,
 });
 

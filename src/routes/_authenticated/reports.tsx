@@ -9,7 +9,7 @@ import { inr } from "@/lib/modules";
 import { downloadCsv } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/reports")({
-  head: () => ({ meta: [{ title: "Reports — SoleStack POS" }, { name: "description", content: "Sales, GST, profit, brand and size reports." }] }),
+  head: () => ({ meta: [{ title: "Reports — SoleStack POS" }, { name: "description", content: "Sales, GST, profit, brand and size reports." }, { property: "og:title", content: "Reports — SoleStack POS" }, { property: "og:description", content: "Sales, tax and footwear performance reports." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Reports,
 });
 

@@ -11,7 +11,7 @@ import { inr } from "@/lib/modules";
 import { waLink } from "@/lib/pos";
 
 export const Route = createFileRoute("/_authenticated/suppliers")({
-  head: () => ({ meta: [{ title: "Suppliers — SoleStack POS" }, { name: "description", content: "Supplier list, dues and WhatsApp rate-list requests." }] }),
+  head: () => ({ meta: [{ title: "Suppliers — SoleStack POS" }, { name: "description", content: "Supplier list, dues and WhatsApp rate-list requests." }, { property: "og:title", content: "Suppliers — SoleStack POS" }, { property: "og:description", content: "Supplier balances and professional rate-list requests." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Suppliers,
 });
 
