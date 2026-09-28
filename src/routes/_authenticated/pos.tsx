@@ -344,7 +344,7 @@ function POS() {
           </div>
 
           {/* items */}
-           <div className="min-h-[76px] flex-1 space-y-1.5 overflow-y-auto p-3">
+           <div className="min-h-[36px] flex-1 space-y-1.5 overflow-y-auto p-2.5">
             {cart.map((i) => (
                <div key={i.variant_id} className="flex items-center gap-1.5 rounded-md bg-muted/60 p-1.5">
                 <div className="min-w-0 flex-1">
@@ -364,7 +364,7 @@ function POS() {
           </div>
 
           {/* totals */}
-           <div className="shrink-0 space-y-1.5 border-t bg-muted/25 p-3">
+           <div className="shrink-0 space-y-1 border-t bg-muted/25 p-2.5">
             {reward && (
               <div className={`flex items-center justify-between rounded-lg p-2.5 text-sm ${rewardOn ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground line-through"}`}>
                 <span className="flex items-center gap-1.5"><Gift className="h-4 w-4" /> {reward.card === "premium" ? "Premium" : "Regular"} reward −{inr(reward.amount)}</span>
@@ -432,8 +432,8 @@ function POS() {
               </div>
             </div>
             <div className="grid grid-cols-[auto_1fr] gap-2">
-               <Button variant="outline" className="h-10" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
-               <Button className="h-10 text-sm" onClick={complete} disabled={!cart.length || busy}>
+               <Button variant="outline" className="h-8" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
+               <Button className="h-8 text-sm" onClick={complete} disabled={!cart.length || busy}>
                 {busy ? "Saving…" : `F8 · Complete Sale ${inr(bill.total)}`}
               </Button>
             </div>
