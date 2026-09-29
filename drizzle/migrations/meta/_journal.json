@@ -78,6 +78,13 @@
       "when": 1790656883054,
       "tag": "0010_owner_only_sale_items_backup",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790657830112,
+      "tag": "0011_owner_manages_team_roles",
+      "breakpoints": true
     }
   ]
 }

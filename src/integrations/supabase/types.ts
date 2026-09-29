@@ -1106,6 +1106,13 @@ export type Database = {
       }
       reset_store_data: { Args: { _confirmation: string }; Returns: undefined }
       reward_amount: { Args: { _card: string; _m: number }; Returns: number }
+      set_team_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "staff"
