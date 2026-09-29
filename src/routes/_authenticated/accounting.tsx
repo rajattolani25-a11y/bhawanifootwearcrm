@@ -22,8 +22,8 @@ function Accounting() {
   const [tab, setTab] = useState<"Profit & Loss" | "Cash Book" | "Tax & Payables">("Profit & Loss");
   const [f, setF] = useState({ category: "Rent", note: "", amount: "", mode: "Cash" });
   const { data, error, isPending } = useQuery({ queryKey: ["acct", month], queryFn: async () => {
-    const [year, mon] = month.split("-").map(Number); const start = `${month}-01T00:00:00+05:30`; const end = `${year}-${String(mon+1>12?1:mon+1).padStart(2,"0")}-01T00:00:00+05:30`.replace(String(year)+"-01-01", String(year+1)+"-01-01");
-    const a = `${month}-01`; const b = `${mon===12?year+1:year}-${String(mon===12?1:mon+1).padStart(2,"0")}-01`;
+    const [year = 2026, mon = 1] = month.split("-").map(Number); const nextYear = mon === 12 ? year + 1 : year; const nextMonth = String(mon === 12 ? 1 : mon + 1).padStart(2,"0"); const start = `${month}-01T00:00:00+05:30`; const end = `${nextYear}-${nextMonth}-01T00:00:00+05:30`;
+    const a = `${month}-01`; const b = `${nextYear}-${nextMonth}-01`;
     const [e,s,c,p,r,cp,sp,allSales,allPurchases] = await Promise.all([
       supabase.from("expenses").select("*").gte("spent_on",a).lt("spent_on",b).order("spent_on",{ascending:false}),
       supabase.from("sales").select("id,total,taxable,gst_amount,payment_mode,paid_amount,due_amount,split_cash,sale_date").gte("sale_date",start).lt("sale_date",end).limit(10000),
