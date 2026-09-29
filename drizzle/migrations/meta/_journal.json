@@ -43,6 +43,13 @@
       "when": 1790654075397,
       "tag": "0005_retail_reconciliation_and_supplier_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790654244231,
+      "tag": "0006_protect_line_cost_from_staff",
+      "breakpoints": true
     }
   ]
 }

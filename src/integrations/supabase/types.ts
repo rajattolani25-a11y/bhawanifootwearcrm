@@ -479,6 +479,29 @@ export type Database = {
           },
         ]
       }
+      sale_item_costs: {
+        Row: {
+          sale_item_id: string
+          unit_cost: number
+        }
+        Insert: {
+          sale_item_id: string
+          unit_cost: number
+        }
+        Update: {
+          sale_item_id?: string
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_item_costs_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: true
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           discount: number
