@@ -29,6 +29,8 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const { isOwner } = useAuth();
   const [f, setF] = useState({ brand: "", article: "", category: "", color: "", mrp: "", selling_price: "", cost: "", rack: "" });
   const [sizeText, setSizeText] = useState("6-10");
+  const [sizeKind, setSizeKind] = useState<"adults" | "kids">("adults");
+  const [kidsSmall, setKidsSmall] = useState(false);
   const [defQty, setDefQty] = useState(mode === "purchase" ? "0" : "1");
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
