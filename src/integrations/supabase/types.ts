@@ -386,6 +386,7 @@ export type Database = {
       }
       purchases: {
         Row: {
+          free_sample: boolean
           gst_amount: number | null
           gst_rate: number | null
           id: string
@@ -402,6 +403,7 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
+          free_sample?: boolean
           gst_amount?: number | null
           gst_rate?: number | null
           id?: string
@@ -418,6 +420,7 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
+          free_sample?: boolean
           gst_amount?: number | null
           gst_rate?: number | null
           id?: string
@@ -486,6 +489,7 @@ export type Database = {
           sale_id: string
           size: string
           sku: string | null
+          unit_cost: number | null
           variant_id: string | null
         }
         Insert: {
@@ -497,6 +501,7 @@ export type Database = {
           sale_id: string
           size: string
           sku?: string | null
+          unit_cost?: number | null
           variant_id?: string | null
         }
         Update: {
@@ -508,6 +513,7 @@ export type Database = {
           sale_id?: string
           size?: string
           sku?: string | null
+          unit_cost?: number | null
           variant_id?: string | null
         }
         Relationships: [
@@ -529,8 +535,11 @@ export type Database = {
       }
       sale_returns: {
         Row: {
+          cash_refund: number
+          cost_reversal: number
           created_at: string
           damaged: boolean
+          gst_reversal: number
           id: string
           kind: string
           note: string | null
@@ -540,12 +549,16 @@ export type Database = {
           sale_id: string | null
           sale_item_id: string | null
           size: string
+          taxable_reversal: number
           user_id: string | null
           variant_id: string | null
         }
         Insert: {
+          cash_refund?: number
+          cost_reversal?: number
           created_at?: string
           damaged?: boolean
+          gst_reversal?: number
           id?: string
           kind?: string
           note?: string | null
@@ -555,12 +568,16 @@ export type Database = {
           sale_id?: string | null
           sale_item_id?: string | null
           size?: string
+          taxable_reversal?: number
           user_id?: string | null
           variant_id?: string | null
         }
         Update: {
+          cash_refund?: number
+          cost_reversal?: number
           created_at?: string
           damaged?: boolean
+          gst_reversal?: number
           id?: string
           kind?: string
           note?: string | null
@@ -570,6 +587,7 @@ export type Database = {
           sale_id?: string | null
           sale_item_id?: string | null
           size?: string
+          taxable_reversal?: number
           user_id?: string | null
           variant_id?: string | null
         }
@@ -766,6 +784,54 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_payments: {
+        Row: {
+          amount: number
+          id: string
+          note: string
+          paid_at: string
+          payment_mode: string
+          purchase_id: string | null
+          recorded_by: string | null
+          supplier_id: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          note?: string
+          paid_at?: string
+          payment_mode: string
+          purchase_id?: string | null
+          recorded_by?: string | null
+          supplier_id: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          note?: string
+          paid_at?: string
+          payment_mode?: string
+          purchase_id?: string | null
+          recorded_by?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -829,6 +895,7 @@ export type Database = {
         Returns: Json
       }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
+      ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -853,6 +920,16 @@ export type Database = {
           _items: Json
           _supplier_id: string
           _supplier_name: string
+        }
+        Returns: number
+      }
+      record_supplier_payment: {
+        Args: {
+          _amount: number
+          _mode: string
+          _note?: string
+          _purchase_id?: string
+          _supplier_id: string
         }
         Returns: number
       }
