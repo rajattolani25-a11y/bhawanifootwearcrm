@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type Variant = { id: string; size: string; stock: number; damaged_stock: number; min_stock: number; rack: string | null; barcode: string | null; sku: string | null };
@@ -7,8 +8,14 @@ export type Product = { id: string; brand: string; article: string; category: st
 export const sizeSort = (a: string, b: string) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b);
 
 export function useStock() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const channel = supabase.channel("stock-live").on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => qc.invalidateQueries({ queryKey: ["stock-all"] })).on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => qc.invalidateQueries({ queryKey: ["stock-all"] })).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
   return useQuery({
     queryKey: ["stock-all"],
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")

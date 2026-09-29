@@ -119,7 +119,7 @@ function Dashboard() {
 
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const name = (user?.user_metadata?.["full_name"] as string | undefined) ?? "";
+  const name = ((user?.user_metadata?.["full_name"] as string | undefined) ?? "").trim().split(/\s+/)[0];
   const maxTrend = Math.max(1, ...m.trend.map((t) => t.value));
   const maxSize = Math.max(1, ...m.sizes.map(([, n]) => n));
   const maxBrand = Math.max(1, ...m.brands.map((b) => b.value));
@@ -134,8 +134,8 @@ function Dashboard() {
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sidebar-primary">Retail Control Room · {data?.settings?.business_name}</p>
-            <h1 className="mt-2 text-2xl font-bold text-sidebar-accent-foreground md:text-3xl">{greet}{name ? `, ${name}` : ""}. Your shop pulse is ready.</h1>
-            <p className="mt-1 text-sm text-sidebar-foreground/70">Sales, stock and alerts in one focused view.</p>
+            <h1 className="mt-2 text-2xl font-bold text-sidebar-accent-foreground md:text-3xl">{greet}{name ? `, ${name}` : ""}. The counter is live.</h1>
+            <p className="mt-1 text-sm text-sidebar-foreground/70">Today’s sales, stock movement and urgent actions—updated as they happen.</p>
           </div>
            <div className="flex items-center gap-4">
              <div className="border-r border-sidebar-border pr-4 text-right"><p className="font-display text-xl font-bold text-sidebar-accent-foreground">{clock.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p><p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/60">{clock.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · IST</p></div>

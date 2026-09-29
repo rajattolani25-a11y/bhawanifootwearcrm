@@ -27,7 +27,7 @@ export function computeBill(items: CartItem[], billDiscount: number, reward: num
     total = taxable + gst;
   }
   const r = (n: number) => Math.round(n * 100) / 100;
-  return { subtotal: r(subtotal), discount: r(discount), taxable: r(taxable), gst: r(gst), total: Math.round(total), rate };
+  return { subtotal: r(subtotal), discount: r(discount), taxable: r(taxable), gst: r(total) - r(taxable), total: r(total), rate };
 }
 
 export function beep(ok = true) {
