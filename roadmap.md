@@ -1,5 +1,6 @@
 # SoleStack POS roadmap
 
+- [ ] Expand guide beyond section summaries into feature-by-feature steps across the entire app
 - [x] Optional three-language guide for every module, reachable from Settings and by staff
 - [x] Inventory Control groups sizes beneath each article
 - [x] Owner can safely assign owner/staff roles without removing the last owner
