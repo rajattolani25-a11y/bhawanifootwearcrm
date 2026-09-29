@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine } from "lucide-react";
+import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine, PackagePlus, Ticket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { beep, computeBill, waLink, type CartItem } from "@/lib/pos";
 import { printBill, type PrintDesign } from "@/lib/print";
 import { addSignedImages } from "@/lib/product-images";
 import { billMessage, shareText, smsLink } from "@/lib/messages";
+import { sizeSort } from "@/lib/stock";
+import { QuickAddProduct } from "@/components/QuickAddProduct";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -52,7 +54,11 @@ function POS() {
   const [done, setDone] = useState<null | { bill_no: string; total: number; paid: number; due: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
-  useEffect(() => { const d = localStorage.getItem("solestack-print"); if (d) setDesign(d as PrintDesign); }, []);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<null | { id: string; code: string; title: string; amount: number }>(null);
+  const { data: storeCfg } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
+  useEffect(() => { const d = storeCfg?.bill_design; if (d) setDesign(d as PrintDesign); }, [storeCfg?.bill_design]);
 
   useEffect(() => {
     setHeld(JSON.parse(localStorage.getItem(HOLD_KEY) ?? "[]"));
@@ -182,7 +188,26 @@ function POS() {
 
   const reward = rewards[0];
   const rewardAmt = reward && rewardOn ? Number(reward.amount) : 0;
-  const bill = computeBill(cart, Number(billDiscount) || 0, rewardAmt, { billType, taxMode, rate });
+  const cartSubtotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
+  const couponAmt = coupon ? Number(coupon.amount) : 0;
+  const bill = computeBill(cart, Number(billDiscount) || 0, rewardAmt + couponAmt, { billType, taxMode, rate });
+
+  async function checkCoupon(code: string, silent = false) {
+    const c = code.trim().toUpperCase();
+    if (!c) return;
+    const { data, error } = await supabase.rpc("coupon_discount", { _code: c, _customer: customer?.id ?? (null as unknown as string), _subtotal: cartSubtotal });
+    if (error) { setCoupon(null); if (!silent) { beep(false); toast.error(error.message); } else toast.error(`Coupon ${c} removed: ${error.message}`); return; }
+    const r = data as { id: string; code: string; title: string; amount: number };
+    setCoupon(r);
+    if (!silent) { beep(true); toast.success(`${r.code} applied · −${inr(r.amount)}`); }
+  }
+  // Re-check the coupon whenever the cart value or customer changes (percent / min-bill / customer-only rules).
+  useEffect(() => {
+    if (!coupon) return;
+    if (!cart.length) { setCoupon(null); return; }
+    void checkCoupon(coupon.code, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSubtotal, customer?.id]);
   const recv = received.trim() === "" ? (pay === "Credit" ? 0 : bill.total) : Number(received) || 0;
   const paid = Math.min(recv, bill.total);
   const due = Math.max(bill.total - recv, 0);
@@ -197,6 +222,8 @@ function POS() {
     setGiveStamp(true);
     setPay("Cash");
     setReceived("");
+    setCoupon(null);
+    setCouponInput("");
     clearCustomer();
   }
 
@@ -204,6 +231,11 @@ function POS() {
     if (!cart.length || busy) return;
     if (pay === "Credit" && !customer) {
       toast.error("Credit bill ke liye customer mobile zaroori hai");
+      mobileRef.current?.focus();
+      return;
+    }
+    if (due > 0 && !customer) {
+      toast.error("Baaki (due) amount ke liye customer mobile zaroori hai");
       mobileRef.current?.focus();
       return;
     }
@@ -229,6 +261,7 @@ function POS() {
           give_stamp: giveStamp,
           reward_id: reward && rewardOn ? reward.id : "",
           removed_reward_id: reward && !rewardOn ? reward.id : "",
+          coupon_code: coupon?.code ?? "",
         },
         _items: cart.map((i) => ({ variant_id: i.variant_id, product_name: i.product_name, size: i.size, sku: i.sku, price: i.price, qty: i.qty, discount: 0 })),
       });
@@ -281,7 +314,7 @@ function POS() {
           <div><h1 className="text-lg font-bold">POS Billing</h1><p className="text-[11px] text-muted-foreground">Scan, choose size and complete the bill</p></div>
           <span className="hidden items-center gap-1.5 rounded-md bg-success/15 px-2 py-1 text-[10px] font-semibold text-success sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />Ready</span>
         </div>
-        <div className="flex shrink-0 gap-2 p-3 pb-2"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search article" className="h-9 pl-9 text-sm" /></div><Button variant="outline" size="icon" className="h-9 w-9" title="Scan with phone camera" aria-label="Scan with phone camera" onClick={()=>setCameraOpen(true)}><ScanLine className="h-4 w-4"/></Button></div>
+        <div className="flex shrink-0 gap-2 p-3 pb-2"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search article" className="h-9 pl-9 text-sm" /></div><Button variant="outline" size="icon" className="h-9 w-9" title="Scan with phone camera" aria-label="Scan with phone camera" onClick={()=>setCameraOpen(true)}><ScanLine className="h-4 w-4"/></Button><Button variant="outline" className="h-9 px-2.5 text-xs" onClick={()=>setQuickOpen(true)}><PackagePlus className="h-4 w-4"/><span className="hidden sm:inline">Quick add</span></Button></div>
         <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-1">
           {cats.map((c) => (
              <Button key={c} size="sm" variant={cat === c ? "default" : "secondary"} onClick={() => setCat(c)} className="h-7 shrink-0 px-2.5 text-xs">{c}</Button>
@@ -309,7 +342,7 @@ function POS() {
                 <div className="min-w-0 flex-1"><p className="text-[9px] font-bold uppercase text-primary">{p.brand}</p><p className="truncate text-sm font-semibold">{p.article}</p><p className="text-xs font-bold">{inr(p.selling_price)}</p></div>
               </div>
               <div className="flex flex-wrap gap-1 p-2">
-                {[...p.product_variants].sort((a, b) => Number(a.size) - Number(b.size)).map((v) => (
+                {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => (
                   <button
                     key={v.id}
                     onClick={() => addVariant(p, v)}
@@ -384,6 +417,17 @@ function POS() {
                 <button className="text-xs font-semibold underline" onClick={() => setRewardOn(!rewardOn)}>{rewardOn ? "Remove" : "Apply"}</button>
               </div>
             )}
+            {coupon ? (
+              <div className="flex items-center justify-between rounded-lg bg-accent p-2 text-sm text-accent-foreground">
+                <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {coupon.code}{coupon.title ? ` · ${coupon.title}` : ""} −{inr(coupon.amount)}</span>
+                <button className="text-xs font-semibold underline" onClick={() => { setCoupon(null); setCouponInput(""); }}>Remove</button>
+              </div>
+            ) : (
+              <div className="flex gap-1.5">
+                <Input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") void checkCoupon(couponInput); }} placeholder="Coupon code" className="h-7 text-xs uppercase" aria-label="Coupon code" />
+                <Button type="button" variant="secondary" className="h-7 px-2 text-[11px]" disabled={!couponInput.trim() || !cart.length} onClick={() => checkCoupon(couponInput)}><Ticket className="h-3.5 w-3.5" /> Apply</Button>
+              </div>
+            )}
             {customer && (
               <div className="flex items-center justify-between text-sm">
                 <span>Give loyalty stamp</span>
@@ -405,7 +449,7 @@ function POS() {
                 </select>
               </label>
               <label>Print style
-                 <select value={design} onChange={(e) => { setDesign(e.target.value as PrintDesign); localStorage.setItem("solestack-print", e.target.value); }} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
+                 <select value={design} onChange={(e) => setDesign(e.target.value as PrintDesign)} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
                   <option>Thermal</option><option>A4</option><option>Premium</option>
                 </select>
               </label>
@@ -435,7 +479,7 @@ function POS() {
             </div>
              <div className="grid grid-cols-2 gap-x-3 rounded-md bg-muted/60 p-2 text-[11px]">
               <Row k="Subtotal" v={inr(bill.subtotal)} />
-              <Row k="Bill discount" v={`−${inr(bill.discount)}`} />
+              <Row k={couponAmt || rewardAmt ? "Discount (all)" : "Bill discount"} v={`−${inr(bill.discount)}`} />
               {bill.rate > 0 && <Row k="Taxable" v={inr(bill.taxable)} />}
               {bill.rate > 0 && <Row k={`GST ${bill.rate}% ${taxMode === "inclusive" ? "(incl.)" : "(added)"}`} v={inr(bill.gst)} />}
               <Row k={due > 0 ? "Due" : "Change"} v={inr(due > 0 ? due : change)} />
@@ -482,6 +526,7 @@ function POS() {
           )}
         </DialogContent>
       </Dialog>
+      <QuickAddProduct open={quickOpen} initialArticle={q && !/^[A-Z0-9]{8,}$/i.test(q) ? q : ""} onClose={() => setQuickOpen(false)} onAdded={(r) => { const first = r.variants.find((v) => (r.qty[v.size] ?? 0) > 0); toast.message(first ? "Ab size tap karke bill mein daalo" : "Stock 0 hai — pehle pairs add karo"); }} />
       <Dialog open={cameraOpen} onOpenChange={setCameraOpen}><DialogContent><DialogHeader><DialogTitle>Scan box label</DialogTitle></DialogHeader>{cameraOpen && <CameraScanner onScan={(code)=>{if(scanCode(code))setCameraOpen(false);}} />}</DialogContent></Dialog>
     </div>
   );

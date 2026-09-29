@@ -6,6 +6,12 @@
 - [x] Phase 4 — inventory matrix, CSV bulk upload, size finder, thermal bill, re-print, returns/exchange, barcodes, purchase, suppliers
 - [x] Phase 5 — WhatsApp links, community, status poster, full dashboard, reports, accounting
 - [ ] Final testing (live test by owner)
+- [x] Quick add product from POS, Purchase and Products
+- [x] Default bill size + thermal width in Settings
+- [x] Remove Inventory Matrix (CSV tools moved to Products)
+- [x] Brand-style labels with A4 sheet and label-roll layouts
+- [x] Custom coupons (flat/%, min bill, expiry, use limit, customer-only) applied at billing
+- [x] Calculation audit + recommendations
 - [x] Rewrite dashboard live welcome copy with a sharper retail pulse message
 - [x] Replace fragile phone popup printing with in-page bill, label and poster print/share flows
 - [x] Add QR alongside Code 128 and make scanner capture work from any POS field

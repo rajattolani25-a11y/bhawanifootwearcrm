@@ -14,6 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      coupon_redemptions: {
+        Row: {
+          amount: number
+          coupon_id: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          sale_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number
+          coupon_id: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          sale_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          coupon_id?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          sale_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          expires_at: string | null
+          id: string
+          kind: string
+          max_discount: number | null
+          min_bill: number
+          starts_at: string | null
+          title: string
+          usage_limit: number | null
+          used_count: number
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          max_discount?: number | null
+          min_bill?: number
+          starts_at?: string | null
+          title?: string
+          usage_limit?: number | null
+          used_count?: number
+          value: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          max_discount?: number | null
+          min_bill?: number
+          starts_at?: string | null
+          title?: string
+          usage_limit?: number | null
+          used_count?: number
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_payments: {
         Row: {
           amount: number
@@ -642,6 +756,9 @@ export type Database = {
         Row: {
           bill_no: string
           bill_type: string
+          coupon_amount: number
+          coupon_code: string | null
+          coupon_id: string | null
           customer_id: string | null
           customer_name: string | null
           discount: number
@@ -668,6 +785,9 @@ export type Database = {
         Insert: {
           bill_no: string
           bill_type?: string
+          coupon_amount?: number
+          coupon_code?: string | null
+          coupon_id?: string | null
           customer_id?: string | null
           customer_name?: string | null
           discount?: number
@@ -694,6 +814,9 @@ export type Database = {
         Update: {
           bill_no?: string
           bill_type?: string
+          coupon_amount?: number
+          coupon_code?: string | null
+          coupon_id?: string | null
           customer_id?: string | null
           customer_name?: string | null
           discount?: number
@@ -718,6 +841,13 @@ export type Database = {
           total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_customer_id_fkey"
             columns: ["customer_id"]
@@ -776,6 +906,7 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          bill_design: string
           bill_footer: string | null
           business_address: string | null
           business_name: string
@@ -783,9 +914,11 @@ export type Database = {
           daily_target: number | null
           gstin: string | null
           id: number
+          thermal_width: string
           updated_at: string
         }
         Insert: {
+          bill_design?: string
           bill_footer?: string | null
           business_address?: string | null
           business_name?: string
@@ -793,9 +926,11 @@ export type Database = {
           daily_target?: number | null
           gstin?: string | null
           id?: number
+          thermal_width?: string
           updated_at?: string
         }
         Update: {
+          bill_design?: string
           bill_footer?: string | null
           business_address?: string | null
           business_name?: string
@@ -803,6 +938,7 @@ export type Database = {
           daily_target?: number | null
           gstin?: string | null
           id?: number
+          thermal_width?: string
           updated_at?: string
         }
         Relationships: []
@@ -917,6 +1053,10 @@ export type Database = {
         }
         Returns: Json
       }
+      coupon_discount: {
+        Args: { _code: string; _customer: string; _subtotal: number }
+        Returns: Json
+      }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
       ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
       has_role: {
@@ -936,6 +1076,10 @@ export type Database = {
           _sale_item_id: string
         }
         Returns: number
+      }
+      quick_add_product: {
+        Args: { _cost?: number; _product: Json; _sizes: Json }
+        Returns: Json
       }
       receive_stock: {
         Args: {

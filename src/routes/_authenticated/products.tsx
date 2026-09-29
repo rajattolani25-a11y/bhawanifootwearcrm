@@ -2,16 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ImagePlus, Plus, Search } from "lucide-react";
+import { Download, ImagePlus, Plus, Search, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
 import { addSignedImages, uploadProductImage } from "@/lib/product-images";
+import { downloadCsv, parseCsv, sizeSort, useStock } from "@/lib/stock";
+import { QuickAddProduct } from "@/components/QuickAddProduct";
 
 export const Route = createFileRoute("/_authenticated/products")({
   validateSearch: (search: Record<string, unknown>) => ({ article: typeof search["article"] === "string" ? search["article"] : "" }),
@@ -19,7 +20,6 @@ export const Route = createFileRoute("/_authenticated/products")({
   component: Products,
 });
 
-const SIZES = ["5", "6", "7", "8", "9", "10", "11", "12"];
 
 function Products() {
   const { article } = Route.useSearch();
@@ -66,8 +66,8 @@ function Products() {
     <div>
       <PageHeader
         title="Products"
-        subtitle="Each article with stock per size. Green = in stock, amber = low, red = out."
-        actions={isOwner && <Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Add article</Button>}
+        subtitle="Size-wise stock for every article. Green = in stock, amber = low, red = out. Tap an article for its full profile."
+        actions={<div className="flex flex-wrap gap-2">{isOwner && <CsvTools />}<Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Quick add</Button></div>}
       />
       <div className="relative mb-4 max-w-md">
         <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
@@ -77,7 +77,7 @@ function Products() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((p) => {
           const total = p.product_variants.reduce((s, v) => s + v.stock, 0);
-          const sizes = [...p.product_variants].sort((a, b) => Number(a.size) - Number(b.size));
+          const sizes = [...p.product_variants].sort((a, b) => sizeSort(a.size, b.size));
           return (
             <div key={p.id} className="overflow-hidden rounded-lg border bg-card">
               <div className="relative h-32 bg-muted">
@@ -117,80 +117,42 @@ function Products() {
         {filtered.length === 0 && <p className="text-sm text-muted-foreground">No products yet. Add one, or import your old data from Settings.</p>}
       </div>
 
-      {adding && <AddArticle onClose={() => setAdding(false)} />}
+      <QuickAddProduct open={adding} initialArticle={q} onClose={() => setAdding(false)} />
       <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{p.category} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
     </div>
   );
 }
 
-function AddArticle({ onClose }: { onClose: () => void }) {
+function CsvTools() {
   const qc = useQueryClient();
-  const [f, setF] = useState({ brand: "", article: "", category: "", color: "", mrp: "", selling_price: "", cost: "", rack: "" });
-  const [qty, setQty] = useState<Record<string, string>>({});
+  const { data = [] } = useStock();
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
-
-  async function save() {
-    if (!f.article.trim()) {
-      toast.error("Article name is required");
-      return;
-    }
+  async function upload(file: File) {
     setBusy(true);
     try {
-      const { data: p, error } = await supabase
-        .from("products")
-        .insert({ brand: f.brand.toUpperCase(), article: f.article, category: f.category, color: f.color, mrp: Number(f.mrp) || 0, selling_price: Number(f.selling_price) || 0 })
-        .select("id")
-        .single();
-      if (error) throw error;
-      await supabase.from("product_costs").insert({ product_id: p.id, purchase_price: Number(f.cost) || 0 });
-      const rows = SIZES.filter((s) => Number(qty[s]) > 0).map((s) => ({
-        product_id: p.id,
-        size: s,
-        stock: Number(qty[s]),
-        rack: f.rack,
-        barcode: `${Date.now().toString().slice(-8)}${s.padStart(2, "0")}`,
-      }));
-      if (rows.length) {
-        const { data: vs, error: ve } = await supabase.from("product_variants").insert(rows).select("id,size,stock");
-        if (ve) throw ve;
-        await supabase.from("stock_movements").insert(
-          vs.map((v) => ({ type: "OPENING", variant_id: v.id, product_name: f.article, qty_in: v.stock, note: `Opening stock for size ${v.size}` })),
-        );
+      type R = Record<string, string>;
+      const recs = parseCsv(await file.text()).filter((r) => r["article"] && r["size"]);
+      if (!recs.length) throw new Error("CSV needs columns: brand, article, category, color, mrp, selling_price, size, qty, barcode, rack, cost");
+      const key = (b: string, a: string) => `${b.toLowerCase()}|${a.toLowerCase()}`;
+      const map = new Map(data.map((p) => [key(p.brand, p.article), p.id]));
+      const fresh = new Map<string, R>();
+      for (const r of recs) if (!map.has(key(r["brand"] ?? "", r["article"]!))) fresh.set(key(r["brand"] ?? "", r["article"]!), r);
+      const np = [...fresh.values()];
+      for (let i = 0; i < np.length; i += 500) {
+        const { data: ins, error } = await supabase.from("products").insert(np.slice(i, i + 500).map((r) => ({ brand: (r["brand"] ?? "").toUpperCase(), article: r["article"]!, category: r["category"] ?? "", color: r["color"] ?? "", mrp: Number(r["mrp"]) || 0, selling_price: Number(r["selling_price"] || r["price"]) || Number(r["mrp"]) || 0 }))).select("id,brand,article");
+        if (error) throw error;
+        ins.forEach((p) => map.set(key(p.brand, p.article), p.id));
       }
-      toast.success("Article saved");
-      qc.invalidateQueries({ queryKey: ["products"] });
-      onClose();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+      const costs = new Map<string, number>();
+      const variants = recs.map((r) => { const pid = map.get(key(r["brand"] ?? "", r["article"]!))!; if (Number(r["cost"])) costs.set(pid, Number(r["cost"])); return { product_id: pid, size: r["size"]!, stock: Math.max(0, Number(r["qty"]) || 0), barcode: r["barcode"] || null, sku: r["sku"] || null, rack: r["rack"] ?? "" }; });
+      for (let i = 0; i < variants.length; i += 500) { const { error } = await supabase.from("product_variants").upsert(variants.slice(i, i + 500), { onConflict: "product_id,size" }); if (error) throw error; }
+      if (costs.size) { const { error } = await supabase.from("product_costs").upsert([...costs].map(([product_id, purchase_price]) => ({ product_id, purchase_price }))); if (error) throw error; }
+      toast.success(`Uploaded ${variants.length} size rows (${np.length} new articles)`);
+      qc.invalidateQueries();
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   }
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle>Add article</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          {([["brand", "Brand"], ["article", "Article"], ["category", "Category"], ["color", "Colour"], ["mrp", "MRP"], ["selling_price", "Selling price"], ["cost", "Purchase cost"], ["rack", "Rack"]] as const).map(([k, l]) => (
-            <div key={k} className="space-y-1">
-              <Label>{l}</Label>
-              <Input value={f[k]} onChange={set(k)} inputMode={["mrp", "selling_price", "cost"].includes(k) ? "decimal" : undefined} />
-            </div>
-          ))}
-        </div>
-        <Label className="mt-2">Quantity per size</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {SIZES.map((s) => (
-            <div key={s} className="rounded-lg border p-2 text-center">
-              <p className="text-xs text-muted-foreground">Size {s}</p>
-              <Input className="mt-1 h-9 text-center" inputMode="numeric" value={qty[s] ?? ""} onChange={(e) => setQty({ ...qty, [s]: e.target.value })} />
-            </div>
-          ))}
-        </div>
-        <Button onClick={save} disabled={busy} className="mt-2 h-11">{busy ? "Saving…" : "Save article"}</Button>
-      </DialogContent>
-    </Dialog>
-  );
+  return (<>
+    <Button variant="outline" className="h-11" onClick={() => downloadCsv("stock.csv", [["brand", "article", "category", "color", "mrp", "selling_price", "size", "qty", "damaged", "barcode", "rack"], ...data.flatMap((p) => [...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => [p.brand, p.article, p.category, p.color ?? "", p.mrp, p.selling_price, v.size, v.stock, v.damaged_stock, v.barcode ?? "", v.rack ?? ""]))])}><Download className="h-4 w-4" /> CSV</Button>
+    <Button asChild variant="outline" className="h-11" disabled={busy}><label className="cursor-pointer"><Upload className="h-4 w-4" /> {busy ? "Uploading…" : "Bulk CSV"}<input type="file" accept=".csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} /></label></Button>
+  </>);
 }

@@ -46,6 +46,7 @@ function SettingsPage() {
         business_name: settings.business_name ?? "", business_phone: settings.business_phone ?? "",
         business_address: settings.business_address ?? "", gstin: settings.gstin ?? "",
         bill_footer: settings.bill_footer ?? "", daily_target: String(settings.daily_target ?? ""),
+        bill_design: settings.bill_design ?? "Thermal", thermal_width: settings.thermal_width ?? "80",
       });
   }, [settings]);
 
@@ -120,6 +121,30 @@ function SettingsPage() {
           ))}
         </div>
         <Button onClick={save} className="mt-4">Save</Button>
+      </section>
+
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="mb-1 font-semibold">Bill printing</h2>
+        <p className="mb-4 text-sm text-muted-foreground">Billing aur reprint mein yahi size pehle se chuna rahega. Billing screen par ek bill ke liye badal bhi sakte ho.</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Default bill size</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {([["Thermal", "Roll printer"], ["A4", "Full page"], ["Premium", "Framed A4"]] as const).map(([d, hint]) => (
+                <button key={d} type="button" onClick={() => setF({ ...f, bill_design: d })} className={`rounded-lg border p-3 text-left text-sm ${f["bill_design"] === d ? "border-primary bg-primary/10" : ""}`}><b className="block">{d}</b><span className="text-xs text-muted-foreground">{hint}</span></button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Thermal roll width</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {([["58", "58 mm · 2 inch"], ["80", "80 mm · 3 inch"]] as const).map(([w, l]) => (
+                <button key={w} type="button" disabled={f["bill_design"] !== "Thermal"} onClick={() => setF({ ...f, thermal_width: w })} className={`rounded-lg border p-3 text-left text-sm disabled:opacity-50 ${f["thermal_width"] === w ? "border-primary bg-primary/10" : ""}`}><b className="block">{w} mm</b><span className="text-xs text-muted-foreground">{l}</span></button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <Button onClick={save} className="mt-4">Save print settings</Button>
       </section>
 
       <section className="rounded-xl border border-destructive/40 bg-card p-5">
