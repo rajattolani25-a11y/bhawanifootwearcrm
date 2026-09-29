@@ -7,7 +7,7 @@ const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&
 type Sale = {
   bill_no: string; sale_date: string; customer_name: string | null; payment_mode: string; bill_type: string; tax_mode: string;
   subtotal: number; discount: number; taxable: number; gst_rate: number; gst_amount: number; total: number; paid_amount: number; due_amount: number;
-  reward_amount: number; sale_items: { product_name: string; size: string; sku: string | null; price: number; qty: number }[];
+  reward_amount: number; coupon_code: string | null; coupon_amount: number; sale_items: { product_name: string; size: string; sku: string | null; price: number; qty: number }[];
 };
 
 // Same line split as old app: discount spread by value, last line absorbs rounding.
@@ -51,13 +51,15 @@ td:not(:first-child),th:not(:first-child){text-align:right}
 @page{margin:4mm}@media print{.noprint{display:none}}
 `;
 
-export async function printBill(billNo: string, design: PrintDesign = "Thermal", duplicate = false) {
+export async function printBill(billNo: string, designArg?: PrintDesign, duplicate = false) {
   const [{ data: s, error }, { data: st }] = await Promise.all([
-    supabase.from("sales").select("bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,sale_items(product_name,size,sku,price,qty)").eq("bill_no", billNo).maybeSingle(),
+    supabase.from("sales").select("bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,coupon_code,coupon_amount,sale_items(product_name,size,sku,price,qty)").eq("bill_no", billNo).maybeSingle(),
     supabase.from("store_settings").select("*").eq("id", 1).maybeSingle(),
   ]);
   if (error || !s) { throw new Error("Bill not found"); }
   const sale = s as unknown as Sale;
+  const design: PrintDesign = designArg ?? ((st?.bill_design as PrintDesign) || "Thermal");
+  const narrow = design === "Thermal" && st?.thermal_width === "58";
   const gstBill = sale.bill_type === "gst" && Number(sale.gst_rate) > 0;
   const rows = lines(sale).map(({ it, d, taxable, gst, amount }) => {
     const name = `<td><strong>${esc(it.product_name)}</strong><br><small>${esc(it.sku ?? "")} | Size ${esc(it.size)}${d ? ` | Disc ${money(d)}` : ""}</small></td>`;
@@ -68,7 +70,7 @@ export async function printBill(billNo: string, design: PrintDesign = "Thermal",
   const head = gstBill && design !== "Thermal" ? "<th>Item</th><th>Qty</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Amount</th>" : "<th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th>";
   const change = Math.max(Number(sale.paid_amount) - Number(sale.total), 0);
   const footer = st?.bill_footer ?? "";
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(sale.bill_no)}</title><style>${CSS}</style></head><body>
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(sale.bill_no)}</title><style>${CSS}${narrow ? ".thermal{width:54mm;padding:3px}.thermal table,.thermal .t{font-size:11px}.thermal .t.g{font-size:15px}" : ""}${design === "Thermal" ? `@page{size:${narrow ? "58mm" : "80mm"} auto;margin:2mm}` : ""}</style></head><body>
   <section class="paper ${design.toLowerCase()}">
     ${duplicate ? '<div class="dup">DUPLICATE COPY</div>' : ""}
     <div class="ribbon">${gstBill ? "TAX INVOICE" : "CASH MEMO"}</div>
@@ -77,7 +79,8 @@ export async function printBill(billNo: string, design: PrintDesign = "Thermal",
     <section class="party"><div><span>Bill To</span><strong>${esc(sale.customer_name || "Walk-in Customer")}</strong></div><div><span>Payment</span><strong>${esc(sale.payment_mode)}</strong></div><div><span>Copy</span><strong>${duplicate ? "Duplicate" : "Customer Copy"}</strong></div></section>
     <table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>
     <div class="t"><span>Subtotal</span><strong>${money(sale.subtotal)}</strong></div>
-    ${Number(sale.discount) > 0 ? `<div class="t"><span>Discount${Number(sale.reward_amount) > 0 ? " (incl. reward)" : ""}</span><strong>-${money(sale.discount)}</strong></div>` : ""}
+    ${Number(sale.discount) > 0 ? `<div class="t"><span>Discount${Number(sale.reward_amount) > 0 ? " (incl. reward)" : ""}${Number(sale.coupon_amount) > 0 ? " (incl. coupon)" : ""}</span><strong>-${money(sale.discount)}</strong></div>` : ""}
+    ${Number(sale.coupon_amount) > 0 ? `<div class="t"><small>Coupon ${esc(sale.coupon_code)} included above</small><small>-${money(sale.coupon_amount)}</small></div>` : ""}
     ${gstBill ? `<div class="t"><span>Taxable</span><strong>${money(sale.taxable)}</strong></div><div class="t"><span>GST ${sale.gst_rate}% ${sale.tax_mode === "inclusive" ? "(incl.)" : ""}</span><strong>${money(sale.gst_amount)}</strong></div>` : ""}
     ${gstBill ? `<div class="t"><span>CGST ${Number(sale.gst_rate) / 2}% + SGST ${Number(sale.gst_rate) / 2}%</span><strong>${money(Number(sale.gst_amount) / 2)} + ${money(Number(sale.gst_amount) / 2)}</strong></div>` : ""}
     <div class="t g"><span>Total</span><strong>${money(sale.total)}</strong></div>
