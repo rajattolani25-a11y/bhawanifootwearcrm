@@ -48,8 +48,6 @@ export function GuidedTour() {
     } catch { /* Ignore an outdated guide request. */ }
   }, [pathname, isOwner, module?.ownerOnly]);
 
-  useEffect(() => { setTour(null); setTarget(null); }, [pathname]);
-
   useEffect(() => {
     const startHere = (event: Event) => {
       const detail = (event as CustomEvent<{ path: string; language: Language }>).detail;
