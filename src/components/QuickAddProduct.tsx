@@ -35,6 +35,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
+  useEffect(() => { setF((x) => ({ ...x, category: sizeKind === "kids" ? "Boys" : "Gents" })); }, [sizeKind]);
   const sizes = sizeKind === "kids"
     ? [...Array.from({ length: 13 }, (_, i) => String(i + 1)), ...(kidsSmall ? Array.from({ length: 5 }, (_, i) => `${i + 1}K`) : [])]
     : parseSizes(sizeText);
@@ -63,7 +64,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
     onClose();
   }
 
-  const fields = ([["brand", "Brand"], ["article", "Article *"], ["category", "Category"], ["color", "Colour"], ["selling_price", "Selling price *"], ["mrp", "MRP"], ...(isOwner ? [["cost", "Purchase cost"]] : []), ["rack", "Rack"]] as [keyof typeof f, string][]);
+  const fields = ([["brand", "Brand"], ["article", "Article *"], ["color", "Colour"], ["selling_price", "Selling price *"], ["mrp", "MRP"], ...(isOwner ? [["cost", "Purchase cost"]] : []), ["rack", "Rack"]] as [keyof typeof f, string][]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -84,6 +85,13 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
           {(["adults", "kids"] as const).map((k) => (
             <button key={k} type="button" onClick={() => setSizeKind(k)} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${sizeKind === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
               {k === "adults" ? "Adults" : "Kids"}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          {(sizeKind === "adults" ? ["Gents", "Ladies"] : ["Boys", "Girls"]).map((k) => (
+            <button key={k} type="button" onClick={() => setF({ ...f, category: k })} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${f.category === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+              {k}
             </button>
           ))}
         </div>
