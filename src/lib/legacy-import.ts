@@ -98,8 +98,26 @@ export async function importLegacy(db: any, log: (m: string) => void) {
 
 // Full backup in JSON (keeps export working like the old app).
 export async function exportAll() {
-  const tables = ["store_settings", "products", "product_costs", "product_variants", "customers", "suppliers", "sales", "sale_items", "sale_costs", "sale_returns", "credit_payments", "loyalty_rewards", "loyalty_events", "purchases", "stock_movements", "expenses"] as const;
+  const tables = ["store_settings", "products", "product_costs", "product_variants", "customers", "suppliers", "sales", "sale_items", "sale_costs", "sale_item_costs", "sale_returns", "credit_payments", "loyalty_rewards", "loyalty_events", "purchases", "supplier_payments", "stock_movements", "expenses", "coupons", "coupon_redemptions"] as const;
   const out: Record<string, unknown> = { exportedAt: new Date().toISOString() };
-  for (const t of tables) out[t] = (await supabase.from(t).select("*").limit(50000)).data;
+  for (const t of tables) {
+    const rows: unknown[] = [];
+    for (let from = 0; ; from += 1000) {
+      if (t === "sale_items") {
+        const { data, error } = await supabase.rpc("backup_sale_items", { _offset: from, _limit: 1000 });
+        if (error) throw new Error(`Backup failed on ${t}: ${error.message}`);
+        if (!data) throw new Error(`Backup failed on ${t}`);
+        rows.push(...data);
+        if (data.length < 1000) break;
+        continue;
+      }
+      const { data, error } = await supabase.from(t).select("*").range(from, from + 999);
+      if (error) throw new Error(`Backup failed on ${t}: ${error.message}`);
+      if (!data) throw new Error(`Backup failed on ${t}`);
+      rows.push(...data);
+      if (data.length < 1000) break;
+    }
+    out[t] = rows;
+  }
   return out;
 }

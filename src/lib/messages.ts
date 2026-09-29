@@ -23,16 +23,16 @@ export function billMessage(x: BillMessage) {
 
 export function arrivalMessage(shop: string, p: { brand: string; article: string; color?: string | null; selling_price: number }, sizes: string[], phone?: string | null) {
   return [
-    `NEW ARRIVAL | ${shop}`,
+    `*${shop} | New in store*`,
     "",
-    `${p.brand.toUpperCase()} ${p.article}`,
+    `*${p.brand.toUpperCase()} ${p.article}*`,
     p.color ? `Colour: ${p.color}` : "",
     `Price: ${inr(p.selling_price)}`,
     `Available sizes: ${sizes.join(", ")}`,
     "",
-    "Reply with your required size to reserve your pair.",
+    "Interested? Reply with your size and we'll confirm availability.",
     phone ? `Call / WhatsApp: ${phone}` : "",
-    "Limited stock available.",
+    "Visit us in store to try your pair.",
   ].filter(Boolean).join("\n");
 }
 

@@ -1044,6 +1044,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backup_sale_items: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: Json[]
+      }
       collect_credit_payment: {
         Args: {
           _amount: number

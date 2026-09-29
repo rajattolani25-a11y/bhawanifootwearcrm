@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import JsBarcode from "jsbarcode";
@@ -26,11 +25,9 @@ function svgFor(code: string) {
 const LABEL_CSS = `
 *{box-sizing:border-box}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .grid{display:grid;grid-template-columns:repeat(3,64mm);gap:2mm;padding:3mm}
-.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:1.5mm;overflow:hidden;display:grid;grid-template-rows:5.2mm 1fr 13mm;page-break-inside:avoid;background:#fff}
-.bar{background:#111;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 2mm;font-size:6.5px;letter-spacing:1.6px;font-weight:700;text-transform:uppercase}
-.bar i{font-style:normal;color:#f28c38;letter-spacing:1px}
+.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:1mm;overflow:hidden;display:grid;grid-template-rows:1fr 13mm;page-break-inside:avoid;background:#fff}
 .mid{display:grid;grid-template-columns:1fr 15mm;gap:1.5mm;padding:1.2mm 2mm 0}
-.brand{font-size:7px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:#555}
+.brand{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#111;border-bottom:0.2mm solid #aaa;padding-bottom:.6mm;margin-bottom:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .art{font-size:13px;font-weight:800;line-height:1.05;margin:.3mm 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
 .meta{font-size:6.5px;color:#555;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .price{display:flex;align-items:baseline;gap:1.5mm;margin-top:.8mm}.price b{font-size:14px;font-weight:900}.price s{font-size:7px;color:#777}.price small{font-size:5.5px;color:#777;letter-spacing:.6px}
@@ -46,7 +43,6 @@ const LABEL_CSS = `
 
 function Barcodes() {
   const { data = [] } = useStock();
-  const { data: shop } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
   const [q, setQ] = useState("");
   const [pick, setPick] = useState<Record<string, number>>({});
   const [layout, setLayout] = useState<Layout>("sheet");
@@ -60,7 +56,6 @@ function Barcodes() {
     if (!selected.length) { toast.error("Pehle label count chuno"); return; }
     setBusy(true);
     try {
-      const shopName = esc(shop?.business_name || "BHAWANI FOOTWEAR");
       const labels: string[] = [];
       for (const { p, v, n } of selected) {
         let code = v.barcode || v.sku;
@@ -69,7 +64,7 @@ function Barcodes() {
         const qr = await QRCode.toDataURL(code, { margin: 0, width: 120, errorCorrectionLevel: "M" });
         const meta = [p.category, p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
         const mrp = Number(p.mrp) > Number(p.selling_price) ? `<s>MRP ${esc(rs(p.mrp))}</s>` : `<small>MRP INCL. OF ALL TAXES</small>`;
-        const html = `<div class="label"><div class="bar"><span>${shopName}</span><i>GENUINE</i></div><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
+        const html = `<div class="label"><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
         for (let i = 0; i < n; i++) labels.push(html);
       }
       printHtml("Footwear box labels", `<div class="${layout}"><div class="grid">${labels.join("")}</div></div>`, LABEL_CSS + (layout === "roll" ? "@page{size:50mm 38mm;margin:0}" : ""));

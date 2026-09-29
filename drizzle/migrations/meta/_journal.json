@@ -64,6 +64,20 @@
       "when": 1790655458250,
       "tag": "0008_coupons_quick_add_bill_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790656517130,
+      "tag": "0009_prevent_repeat_coupon_redemptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790656883054,
+      "tag": "0010_owner_only_sale_items_backup",
+      "breakpoints": true
     }
   ]
 }
