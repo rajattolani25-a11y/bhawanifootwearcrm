@@ -24,7 +24,7 @@ export function WorkspaceGuide({ collapsible = false }: { collapsible?: boolean 
           {(["hinglish", "english", "hindi"] as const).map((lang) => <Button key={lang} size="sm" variant={language === lang ? "default" : "outline"} onClick={() => setLanguage(lang)} aria-pressed={language === lang}>{lang === "hindi" ? "हिन्दी" : lang === "english" ? "English" : "Hinglish"}</Button>)}
         </div>
         <div className="divide-y border-y">
-          {MODULES.filter((m) => !m.ownerOnly || isOwner).map((module) => <div key={module.to}>
+           {MODULES.filter((m) => m.to !== "/guide" && (!m.ownerOnly || isOwner)).map((module) => <div key={module.to}>
              <Button asChild variant="ghost" className="h-auto min-h-12 w-full justify-start whitespace-normal py-3 text-left">
                <Link to={module.to} onClick={() => { if (pathname === module.to) window.dispatchEvent(new CustomEvent("solestack-guide-start", { detail: { path: module.to, language } })); else sessionStorage.setItem("solestack-guide-request", JSON.stringify({ path: module.to, language })); }}>
                  <module.icon /> <span className="flex-1">{module.label}</span> <ChevronRight />

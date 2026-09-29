@@ -95,7 +95,7 @@ export function GuidedTour() {
         <div className="absolute left-0 bg-foreground/55" style={{ top: Math.max(0, target.top - 5), height: target.height + 10, width: Math.max(0, target.left - 5) }} />
         <div className="absolute right-0 bg-foreground/55" style={{ top: Math.max(0, target.top - 5), height: target.height + 10, left: target.right + 5 }} />
       </div> : <div className="pointer-events-none fixed inset-0 z-40 bg-foreground/50" aria-hidden="true" />}
-      {target && <div className="pointer-events-none fixed z-50 rounded border-2 border-primary shadow-[0_0_0_5px_var(--background)]" aria-hidden="true" style={{ top: Math.max(0, target.top - 5), left: Math.max(0, target.left - 5), width: target.width + 10, height: target.height + 10 }} />}
+      {target && <div className="pointer-events-none fixed z-50 rounded border-2 border-primary" aria-hidden="true" style={{ top: Math.max(0, target.top - 5), left: Math.max(0, target.left - 5), width: target.width + 10, height: target.height + 10 }} />}
       <div role="dialog" aria-modal="true" aria-label={`${module.label} ${t.guide}`} className="fixed bottom-3 left-3 right-3 z-50 mx-auto max-w-md rounded-md border bg-card p-4 text-card-foreground shadow-xl sm:bottom-6">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold">{module.label} <span className="font-normal text-muted-foreground">· {t.step} {tour.index + 1}/{steps.length}</span></p>
