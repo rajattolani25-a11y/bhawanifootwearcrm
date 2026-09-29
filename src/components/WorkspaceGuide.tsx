@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { MODULES } from "@/lib/modules";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
 import { copy, type Language } from "@/lib/guide-data";
 
 export function WorkspaceGuide({ collapsible = false }: { collapsible?: boolean }) {
   const { isOwner } = useAuth();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(!collapsible);
   const [language, setLanguage] = useState<Language>("hinglish");
   const text = copy[language];
@@ -24,7 +26,7 @@ export function WorkspaceGuide({ collapsible = false }: { collapsible?: boolean 
         <div className="divide-y border-y">
           {MODULES.filter((m) => !m.ownerOnly || isOwner).map((module) => <div key={module.to}>
              <Button asChild variant="ghost" className="h-auto min-h-12 w-full justify-start whitespace-normal py-3 text-left">
-               <Link to={module.to} onClick={() => { sessionStorage.setItem("solestack-guide-request", JSON.stringify({ path: module.to, language })); }}>
+               <Link to={module.to} onClick={() => { if (pathname === module.to) window.dispatchEvent(new CustomEvent("solestack-guide-start", { detail: { path: module.to, language } })); else sessionStorage.setItem("solestack-guide-request", JSON.stringify({ path: module.to, language })); }}>
                  <module.icon /> <span className="flex-1">{module.label}</span> <ChevronRight />
                </Link>
              </Button>

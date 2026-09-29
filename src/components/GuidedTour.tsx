@@ -35,8 +35,6 @@ export function GuidedTour() {
   const [language, setLanguage] = useState<Language>("hinglish");
 
   useEffect(() => {
-    setTour(null);
-    setTarget(null);
     const request = sessionStorage.getItem("solestack-guide-request");
     if (!request) return;
     sessionStorage.removeItem("solestack-guide-request");
@@ -48,6 +46,20 @@ export function GuidedTour() {
         setTour({ path: pathname, language: lang, index: 0 });
       }
     } catch { /* Ignore an outdated guide request. */ }
+  }, [pathname, isOwner, module?.ownerOnly]);
+
+  useEffect(() => { setTour(null); setTarget(null); }, [pathname]);
+
+  useEffect(() => {
+    const startHere = (event: Event) => {
+      const detail = (event as CustomEvent<{ path: string; language: Language }>).detail;
+      if (detail?.path === pathname && (!module?.ownerOnly || isOwner)) {
+        setLanguage(detail.language);
+        setTour({ ...detail, index: 0 });
+      }
+    };
+    window.addEventListener("solestack-guide-start", startHere);
+    return () => window.removeEventListener("solestack-guide-start", startHere);
   }, [pathname, isOwner, module?.ownerOnly]);
 
   const steps = tour ? copy[tour.language].entries[tour.path]?.split("\n") ?? [] : [];
@@ -77,7 +89,12 @@ export function GuidedTour() {
   return <>
     {!tour && <Button type="button" variant="secondary" size="icon" className="fixed bottom-5 right-5 z-30 size-11 rounded-full border shadow-lg" aria-label={`${module.label} ${t.guide}`} title={`${module.label} ${t.guide}`} onClick={() => setTour({ path: pathname, language, index: 0 })}><BookOpen className="size-5" /></Button>}
     {tour && <>
-      <div className="fixed inset-0 z-40 bg-foreground/50" aria-hidden="true" />
+      {target ? <div className="pointer-events-none fixed inset-0 z-40" aria-hidden="true">
+        <div className="absolute left-0 right-0 top-0 bg-foreground/55" style={{ height: Math.max(0, target.top - 5) }} />
+        <div className="absolute left-0 right-0 bottom-0 bg-foreground/55" style={{ top: target.bottom + 5 }} />
+        <div className="absolute left-0 bg-foreground/55" style={{ top: Math.max(0, target.top - 5), height: target.height + 10, width: Math.max(0, target.left - 5) }} />
+        <div className="absolute right-0 bg-foreground/55" style={{ top: Math.max(0, target.top - 5), height: target.height + 10, left: target.right + 5 }} />
+      </div> : <div className="pointer-events-none fixed inset-0 z-40 bg-foreground/50" aria-hidden="true" />}
       {target && <div className="pointer-events-none fixed z-50 rounded border-2 border-primary shadow-[0_0_0_5px_var(--background)]" aria-hidden="true" style={{ top: Math.max(0, target.top - 5), left: Math.max(0, target.left - 5), width: target.width + 10, height: target.height + 10 }} />}
       <div role="dialog" aria-modal="true" aria-label={`${module.label} ${t.guide}`} className="fixed bottom-3 left-3 right-3 z-50 mx-auto max-w-md rounded-md border bg-card p-4 text-card-foreground shadow-xl sm:bottom-6">
         <div className="flex items-center justify-between gap-2">
