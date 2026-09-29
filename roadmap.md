@@ -1,5 +1,7 @@
 # SoleStack POS roadmap
 
+- [ ] Replace written-only guide with optional in-page walkthroughs for every module in Hinglish, English and Hindi
+- [ ] Verify navigation and walkthrough controls on desktop and mobile
 - [x] Expand guide beyond section summaries into feature-by-feature steps across the entire app
 - [x] Optional three-language guide for every module, reachable from Settings and by staff
 - [x] Inventory Control groups sizes beneath each article
