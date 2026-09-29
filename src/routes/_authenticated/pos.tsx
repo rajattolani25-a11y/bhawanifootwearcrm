@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine } from "lucide-react";
+import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine, PackagePlus, Ticket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { beep, computeBill, waLink, type CartItem } from "@/lib/pos";
 import { printBill, type PrintDesign } from "@/lib/print";
 import { addSignedImages } from "@/lib/product-images";
 import { billMessage, shareText, smsLink } from "@/lib/messages";
+import { sizeSort } from "@/lib/stock";
+import { QuickAddProduct } from "@/components/QuickAddProduct";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -52,7 +54,11 @@ function POS() {
   const [done, setDone] = useState<null | { bill_no: string; total: number; paid: number; due: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
-  useEffect(() => { const d = localStorage.getItem("solestack-print"); if (d) setDesign(d as PrintDesign); }, []);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<null | { id: string; code: string; title: string; amount: number }>(null);
+  const { data: storeCfg } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
+  useEffect(() => { const d = localStorage.getItem("solestack-print") ?? storeCfg?.bill_design; if (d) setDesign(d as PrintDesign); }, [storeCfg?.bill_design]);
 
   useEffect(() => {
     setHeld(JSON.parse(localStorage.getItem(HOLD_KEY) ?? "[]"));
