@@ -29,6 +29,17 @@ const KID_GROUPS: [string, string[]][] = [
   ["2-5", ["2", "3", "4", "5"]],
 ];
 
+/** Ladies size categories: 5-9 (normal), 10-12 (badi size). */
+const LADY_GROUPS: [string, string[], string][] = [
+  ["5-9", ["5", "6", "7", "8", "9"], "Normal"],
+  ["10-12", ["10", "11", "12"], "Badi size"],
+];
+
+/** Dedupe + sort a merged size list. */
+function combine(list: string[]) {
+  return [...new Set(list)].sort(sizeSort);
+}
+
 export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initialArticle = "" }: {
   open: boolean; onClose: () => void; onAdded?: (r: QuickAddResult) => void; mode?: "stock" | "purchase"; initialArticle?: string;
 }) {
@@ -38,14 +49,18 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const [sizeText, setSizeText] = useState("6-10");
   const [sizeKind, setSizeKind] = useState<"adults" | "kids">("adults");
   const [kidCats, setKidCats] = useState<string[]>(["5-10"]);
+  const [ladyCats, setLadyCats] = useState<string[]>(["5-9"]);
+  const [extraSizes, setExtraSizes] = useState("");
   const [defQty, setDefQty] = useState(mode === "purchase" ? "0" : "1");
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
   useEffect(() => { setF((x) => ({ ...x, category: sizeKind === "kids" ? "Boys" : "Gents" })); }, [sizeKind]);
   const sizes = sizeKind === "kids"
-    ? KID_GROUPS.filter(([g]) => kidCats.includes(g)).flatMap(([, list]) => list).filter((s, i, a) => a.indexOf(s) === i)
-    : parseSizes(sizeText);
+    ? combine(KID_GROUPS.filter(([g]) => kidCats.includes(g)).flatMap(([, list]) => list))
+    : sizeKind === "adults" && f.category === "Ladies"
+      ? combine([...LADY_GROUPS.filter(([g]) => ladyCats.includes(g)).flatMap(([, list]) => list), ...parseSizes(extraSizes)])
+      : parseSizes(sizeText);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   async function save() {
@@ -97,15 +112,13 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
         </div>
         <div className="flex gap-2">
           {(sizeKind === "adults" ? ["Gents", "Ladies"] : ["Boys", "Girls"]).map((k) => (
-            <button key={k} type="button" onClick={() => setF({ ...f, category: k })} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${f.category === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+            <button key={k} type="button" onClick={() => { setF({ ...f, category: k }); if (k === "Ladies") setLadyCats((c) => (c.length ? c : ["5-9"])); }} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${f.category === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
               {k}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-[1fr_90px] gap-2.5">
-          {sizeKind === "adults" ? (
-            <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
-          ) : (
+          {sizeKind === "kids" ? (
             <div className="space-y-1">
               <Label className="text-xs">Kids size category</Label>
               <div className="flex gap-1.5">
@@ -116,9 +129,29 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
                 ))}
               </div>
             </div>
+          ) : sizeKind === "adults" && f.category === "Ladies" ? (
+            <div className="space-y-1">
+              <Label className="text-xs">Ladies size category</Label>
+              <div className="flex gap-1.5">
+                {LADY_GROUPS.map(([g, , hint]) => (
+                  <button key={g} type="button" onClick={() => setLadyCats((c) => (c.includes(g) ? c.filter((x) => x !== g) : [...c, g]))} className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-semibold ${ladyCats.includes(g) ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+                    {g}
+                    <span className="block text-[10px] font-normal leading-tight opacity-80">{hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
           )}
           {mode !== "purchase" && <div className="space-y-1"><Label className="text-xs">Pairs / size</Label><Input value={defQty} onChange={(e) => setDefQty(e.target.value)} inputMode="numeric" className="h-9" /></div>}
         </div>
+        {sizeKind === "adults" && f.category === "Ladies" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Extra size (optional)</Label>
+            <Input value={extraSizes} onChange={(e) => setExtraSizes(e.target.value)} className="h-9" placeholder="jaise 13 ya 4" />
+          </div>
+        )}
         {mode !== "purchase" && sizes.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {sizes.map((s) => (
