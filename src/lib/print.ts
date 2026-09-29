@@ -108,12 +108,33 @@ function previewDocument(title: string, html: string) {
   toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border)";
   const heading = document.createElement("strong"); heading.textContent = title; heading.style.cssText = "margin-right:auto";
   const frame = document.createElement("iframe"); frame.title = title; frame.srcdoc = html.replace(/<script>window\.onload=function\(\)\{window\.focus\(\);window\.print\(\);\}<\/script>/, ""); frame.style.cssText = "flex:1;width:100%;border:0;background:white";
-  const blob = new Blob([frame.srcdoc], { type: "text/html" });
-  const button = (label: string, action: () => void | Promise<void>) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.style.cssText = "border:1px solid var(--border);border-radius:6px;padding:8px 12px;background:var(--card);color:var(--foreground);cursor:pointer"; b.onclick = () => { void action(); }; return b; };
+  const fileName = title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "document";
+  const makePdf = async () => {
+    const doc = frame.contentDocument;
+    if (!doc?.body) throw new Error("Preview not ready");
+    const [{ toPng }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
+    const node = doc.body;
+    const w = Math.max(node.scrollWidth, 200), h = Math.max(node.scrollHeight, 200);
+    const png = await toPng(node, { pixelRatio: 2, backgroundColor: "#ffffff", width: w, height: h });
+    const pdf = new jsPDF({ orientation: w > h ? "landscape" : "portrait", unit: "px", format: [w, h], hotfixes: ["px_scaling"] });
+    pdf.addImage(png, "PNG", 0, 0, w, h);
+    return pdf.output("blob");
+  };
+  const saveBlob = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = name; a.rel = "noopener"; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+  const busy = async (b: HTMLButtonElement, label: string, fn: () => Promise<void>) => {
+    b.disabled = true; b.textContent = "Preparing…";
+    try { await fn(); } catch (e) { if ((e as Error)?.name !== "AbortError") alert("PDF nahi ban paya: " + ((e as Error)?.message ?? e)); }
+    finally { b.disabled = false; b.textContent = label; }
+  };
+  const button = (label: string, action: (b: HTMLButtonElement) => void | Promise<void>) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.style.cssText = "border:1px solid var(--border);border-radius:6px;padding:8px 12px;background:var(--card);color:var(--foreground);cursor:pointer"; b.onclick = () => { void action(b); }; return b; };
   toolbar.append(heading,
     button("Print", () => frame.contentWindow?.print()),
-    button("Share", async () => { const file = new File([blob], `${title}.html`, { type: "text/html" }); if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title }); else { const url = URL.createObjectURL(blob); window.open(url, "_blank"); setTimeout(() => URL.revokeObjectURL(url), 60000); } }),
-    button("Download", () => { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${title}.html`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }),
+    button("Share PDF", (b) => busy(b, "Share PDF", async () => { const blob = await makePdf(); const file = new File([blob], `${fileName}.pdf`, { type: "application/pdf" }); if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title }); else saveBlob(blob, `${fileName}.pdf`); })),
+    button("Download PDF", (b) => busy(b, "Download PDF", async () => saveBlob(await makePdf(), `${fileName}.pdf`))),
     button("Close", () => wrapper.remove()));
   wrapper.append(toolbar, frame);
   document.body.append(wrapper);

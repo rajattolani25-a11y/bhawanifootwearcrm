@@ -48,6 +48,9 @@ function Reports() {
   const bySize = Object.entries(items.reduce<Record<string, number>>((m, i) => ({ ...m, [i.size]: (m[i.size] ?? 0) + i.qty }), {})).sort((a, b) => Number(a[0]) - Number(b[0]));
   const gstBy = Object.entries(sales.filter((s) => Number(s.gst_rate) > 0).reduce<Record<string, [number, number]>>((m, s) => { const k = `${s.gst_rate}%`; const v = m[k] ?? [0, 0]; return { ...m, [k]: [v[0] + Number(s.taxable), v[1] + Number(s.gst_amount)] }; }, {}));
   const max = Math.max(1, ...byDay.map((d) => d[1]));
+  const dayMap = new Map(byDay);
+  const days: [string, number][] = [];
+  for (let t = new Date(from + "T12:00:00+05:30").getTime(), end = new Date(to + "T12:00:00+05:30").getTime(); t <= end && days.length < 400; t += 864e5) { const k = day(new Date(t)); days.push([k, dayMap.get(k) ?? 0]); }
 
   return (
     <div>
@@ -65,8 +68,18 @@ function Reports() {
         ))}
       </div>
       <div className="mt-4 rounded-xl border bg-card p-4">
-        <p className="mb-2 font-semibold">Daily sales</p>
-        <div className="flex h-40 items-end gap-1">{byDay.map(([d, v]) => <div key={d} title={`${d}: ${inr(v)}`} className="flex-1 rounded-t bg-primary" style={{ height: `${(v / max) * 100}%` }} />)}</div>
+        <div className="mb-3 flex items-baseline justify-between"><p className="font-semibold">Daily sales</p><p className="text-xs text-muted-foreground">Best day: {inr(max === 1 && !tot ? 0 : max)}</p></div>
+        <div className="overflow-x-auto">
+          <div className="flex h-48 items-stretch gap-1" style={{ minWidth: `${Math.max(days.length * 22, 280)}px` }}>
+            {days.map(([d, v]) => (
+              <div key={d} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d}: ${inr(v)}`}>
+                <div className="flex w-full flex-1 items-end"><div className="w-full rounded-t bg-primary" style={{ height: v ? `${Math.max((v / max) * 100, 3)}%` : "2px", opacity: v ? 1 : 0.25 }} /></div>
+                <span className="text-[10px] leading-none text-muted-foreground">{d.slice(8)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {!tot && <p className="mt-2 text-sm text-muted-foreground">In dates mein koi sale nahi hai.</p>}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Box title="Payment mode" rows={byPay.map(([k, v]) => [k, inr(v)])} />

@@ -41,3 +41,4 @@
 - [x] Add persistent light/dark/system appearance control
 - [x] Redesign dashboard with live clock and denser visual insights
 - [x] Complete responsive, metadata, accessibility and live-flow verification
+- [x] POS walk-in / new mobile customer auto-saves to Customers
