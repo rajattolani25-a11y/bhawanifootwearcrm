@@ -44,7 +44,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
   useEffect(() => { setF((x) => ({ ...x, category: sizeKind === "kids" ? "Boys" : "Gents" })); }, [sizeKind]);
   const sizes = sizeKind === "kids"
-    ? [...Array.from({ length: 13 }, (_, i) => String(i + 1)), ...(kidsSmall ? Array.from({ length: 5 }, (_, i) => `${i + 1}K`) : [])]
+    ? KID_GROUPS.filter(([g]) => kidCats.includes(g)).flatMap(([, list]) => list).filter((s, i, a) => a.indexOf(s) === i)
     : parseSizes(sizeText);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
@@ -90,7 +90,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
         </div>
         <div className="flex gap-2">
           {(["adults", "kids"] as const).map((k) => (
-            <button key={k} type="button" onClick={() => setSizeKind(k)} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${sizeKind === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+            <button key={k} type="button" onClick={() => { setSizeKind(k); if (k === "kids") setKidCats((c) => (c.length ? c : ["5-10"])); }} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${sizeKind === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
               {k === "adults" ? "Adults" : "Kids"}
             </button>
           ))}
