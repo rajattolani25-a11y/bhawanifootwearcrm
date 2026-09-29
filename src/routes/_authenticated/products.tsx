@@ -14,6 +14,7 @@ import { inr } from "@/lib/modules";
 import { addSignedImages, uploadProductImage } from "@/lib/product-images";
 
 export const Route = createFileRoute("/_authenticated/products")({
+  validateSearch: (search: Record<string, unknown>) => ({ article: typeof search.article === "string" ? search.article : "" }),
   head: () => ({ meta: [{ title: "Products — SoleStack POS" }, { name: "description", content: "Articles, photos and size-wise stock." }, { property: "og:title", content: "Products — SoleStack POS" }, { property: "og:description", content: "Footwear articles, photos, prices and size stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Products,
 });
@@ -21,9 +22,10 @@ export const Route = createFileRoute("/_authenticated/products")({
 const SIZES = ["5", "6", "7", "8", "9", "10", "11", "12"];
 
 function Products() {
+  const { article } = Route.useSearch();
   const qc = useQueryClient();
   const { isOwner } = useAuth();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(article);
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const { data: cost } = useQuery({ queryKey: ["product-profile-cost",selected], enabled: isOwner && !!selected, queryFn: async () => { const { data,error } = await supabase.from("product_costs").select("purchase_price").eq("product_id",selected ?? "").maybeSingle(); if(error) throw error; return data; } });
