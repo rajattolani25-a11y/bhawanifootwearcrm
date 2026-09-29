@@ -123,9 +123,9 @@ function NewCoupon({ open, onClose }: { open: boolean; onClose: () => void }) {
   async function save() {
     const code = f.code.trim().toUpperCase().replace(/\s+/g, "");
     const value = Number(f.value);
-    if (!/^[A-Z0-9-]{3,20}$/.test(code)) return toast.error("Code 3–20 letters/numbers ka rakho");
-    if (!(value > 0) || (f.kind === "percent" && value > 100)) return toast.error("Sahi discount value do");
-    if (f.mobile.trim() && !cust) return toast.error("Customer mobile check karo");
+    if (!/^[A-Z0-9-]{3,20}$/.test(code)) { toast.error("Code 3–20 letters/numbers ka rakho"); return; }
+    if (!(value > 0) || (f.kind === "percent" && value > 100)) { toast.error("Sahi discount value do"); return; }
+    if (f.mobile.trim() && !cust) { toast.error("Customer mobile check karo"); return; }
     setBusy(true);
     const { error } = await supabase.from("coupons").insert({
       code, title: f.title.trim(), kind: f.kind, value,
@@ -136,7 +136,7 @@ function NewCoupon({ open, onClose }: { open: boolean; onClose: () => void }) {
       customer_id: cust?.id ?? null,
     });
     setBusy(false);
-    if (error) return toast.error(error.message.includes("duplicate") ? "Ye code pehle se hai" : error.message);
+    if (error) { toast.error(error.message.includes("duplicate") ? "Ye code pehle se hai" : error.message); return; }
     toast.success(`Coupon ${code} ready`);
     qc.invalidateQueries({ queryKey: ["coupons"] });
     setF({ code: randomCode(), title: "", kind: "flat", value: "", max_discount: "", min_bill: "", expires: "", usage_limit: "", mobile: "" });

@@ -38,9 +38,9 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
 
   async function save() {
     const sp = Number(f.selling_price);
-    if (!f.article.trim()) return toast.error("Article name likho");
-    if (!(sp > 0)) return toast.error("Selling price likho");
-    if (!sizes.length) return toast.error("Kam se kam ek size do");
+    if (!f.article.trim()) { toast.error("Article name likho"); return; }
+    if (!(sp > 0)) { toast.error("Selling price likho"); return; }
+    if (!sizes.length) { toast.error("Kam se kam ek size do"); return; }
     const rows = sizes.map((s) => ({ size: s, qty: mode === "purchase" ? 0 : Math.max(0, Math.floor(Number(qty[s] ?? defQty) || 0)) }));
     setBusy(true);
     const { data, error } = await supabase.rpc("quick_add_product", {
@@ -49,7 +49,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
       _cost: isOwner && Number(f.cost) > 0 ? Number(f.cost) : (null as unknown as number),
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     const r = data as { product_id: string; variants: { id: string; size: string }[] };
     toast.success(`${f.brand.toUpperCase()} ${f.article} ready — ${rows.reduce((a, x) => a + x.qty, 0)} pairs added`);
     ["products", "stock-all", "pos-products"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
