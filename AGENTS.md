@@ -23,3 +23,4 @@
 - Coupons require a customer, validate in `coupon_discount` and redeem once per customer inside `create_sale` (row lock + redemption trigger), preventing repeated discounts.
 - New articles from POS/Purchase/Products go through `quick_add_product` so variants get a scan code and opening stock is ledgered; cost is saved only for owners.
 - Default bill size and thermal width live in `store_settings` (bill_design, thermal_width); POS uses them instead of device storage.
+- Password recovery goes through the public `/reset-password` route: the sign-in page calls `resetPasswordForEmail` with `redirectTo` origin + `/reset-password`, and the page saves via `updateUser({ password })` without `current_password` (recovery sessions are exempt).
