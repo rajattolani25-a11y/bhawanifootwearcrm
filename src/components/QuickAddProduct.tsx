@@ -35,7 +35,9 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
-  const sizes = parseSizes(sizeText);
+  const sizes = sizeKind === "kids"
+    ? [...Array.from({ length: 13 }, (_, i) => String(i + 1)), ...(kidsSmall ? Array.from({ length: 5 }, (_, i) => `${i + 1}K`) : [])]
+    : parseSizes(sizeText);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   async function save() {
