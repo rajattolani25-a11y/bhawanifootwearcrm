@@ -68,7 +68,7 @@ export function GuidedTour() {
   const steps = tour ? copy[tour.language].entries[tour.path]?.split("\n") ?? [] : [];
   const locate = useCallback(() => {
     if (!tour) return;
-    const node = getTarget(tour.path, tour.index);
+    const node = getTarget(tour.path, tour.index) ?? document.querySelector<HTMLElement>("main h1");
     if (node && node.getBoundingClientRect().width > 0) {
       setTarget(node.getBoundingClientRect());
     } else {
@@ -80,7 +80,7 @@ export function GuidedTour() {
     if (!tour) return;
     setTarget(null);
     let timer: ReturnType<typeof setTimeout>;
-    const node = getTarget(tour.path, tour.index);
+    const node = getTarget(tour.path, tour.index) ?? document.querySelector<HTMLElement>("main h1");
     if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
     timer = setTimeout(locate, 300);
     window.addEventListener("scroll", locate, true);
