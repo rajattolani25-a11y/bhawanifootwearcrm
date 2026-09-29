@@ -112,7 +112,7 @@ function couponMessage(shopName: string, c: Pick<Coupon, "code" | "kind" | "valu
 function NewCoupon({ open, onClose, shopName }: { open: boolean; onClose: () => void; shopName: string }) {
   const qc = useQueryClient();
   const [f, setF] = useState({ code: randomCode(), title: "", kind: "flat", value: "", max_discount: "", min_bill: "", expires: "", usage_limit: "", mobile: "" });
-  const [cust, setCust] = useState<{ id: string; name: string } | null>(null);
+  const [cust, setCust] = useState<{ id: string; name: string; mobile: string } | null>(null);
   const [ready, setReady] = useState<{ mobile: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
@@ -133,7 +133,7 @@ function NewCoupon({ open, onClose, shopName }: { open: boolean; onClose: () => 
     if (!/^[A-Z0-9-]{3,20}$/.test(code)) { toast.error("Code 3–20 letters/numbers ka rakho"); return; }
     if (!(value > 0) || (f.kind === "percent" && value > 100)) { toast.error("Sahi discount value do"); return; }
     const clean = f.mobile.replace(/\D/g, "");
-    const matched = clean ? (cust && "mobile" in cust && cust.mobile === clean ? cust : await findCustomer(clean)) : null;
+    const matched = clean ? (cust?.mobile === clean ? cust : await findCustomer(clean)) : null;
     if (clean && !matched) return;
     if (f.expires && new Date(`${f.expires}T23:59:59+05:30`).getTime() < Date.now()) { toast.error("Aage ki valid date chuno"); return; }
     setBusy(true);
