@@ -112,12 +112,13 @@ function previewDocument(title: string, html: string) {
   const makePdf = async () => {
     const doc = frame.contentDocument;
     if (!doc?.body) throw new Error("Preview not ready");
-    const [{ toPng }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas-pro"), import("jspdf")]);
+    await doc.fonts?.ready;
     const node = doc.body;
     const w = Math.max(node.scrollWidth, 200), h = Math.max(node.scrollHeight, 200);
-    const png = await toPng(node, { pixelRatio: 2, backgroundColor: "#ffffff", width: w, height: h });
+    const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true, width: w, height: h, windowWidth: w, windowHeight: h, logging: false });
     const pdf = new jsPDF({ orientation: w > h ? "landscape" : "portrait", unit: "px", format: [w, h], hotfixes: ["px_scaling"] });
-    pdf.addImage(png, "PNG", 0, 0, w, h);
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, w, h);
     return pdf.output("blob");
   };
   const saveBlob = (blob: Blob, name: string) => {
