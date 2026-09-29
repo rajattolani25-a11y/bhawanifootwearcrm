@@ -22,26 +22,26 @@ function Accounting() {
   const [tab, setTab] = useState<"Profit & Loss" | "Cash Book" | "Tax & Payables">("Profit & Loss");
   const [f, setF] = useState({ category: "Rent", note: "", amount: "", mode: "Cash" });
   const { data, error, isPending } = useQuery({ queryKey: ["acct", month], queryFn: async () => {
-    const [year, mon] = month.split("-").map(Number); const start = `${month}-01T00:00:00+05:30`; const end = `${year}-${String(mon+1>12?1:mon+1).padStart(2,"0")}-01T00:00:00+05:30`.replace(String(year)+"-01-01", String(year+1)+"-01-01");
-    const a = `${month}-01`; const b = `${mon===12?year+1:year}-${String(mon===12?1:mon+1).padStart(2,"0")}-01`;
+    const [year = 2026, mon = 1] = month.split("-").map(Number); const nextYear = mon === 12 ? year + 1 : year; const nextMonth = String(mon === 12 ? 1 : mon + 1).padStart(2,"0"); const start = `${month}-01T00:00:00+05:30`; const end = `${nextYear}-${nextMonth}-01T00:00:00+05:30`;
+    const a = `${month}-01`; const b = `${nextYear}-${nextMonth}-01`;
     const [e,s,c,p,r,cp,sp,allSales,allPurchases] = await Promise.all([
       supabase.from("expenses").select("*").gte("spent_on",a).lt("spent_on",b).order("spent_on",{ascending:false}),
       supabase.from("sales").select("id,total,taxable,gst_amount,payment_mode,paid_amount,due_amount,split_cash,sale_date").gte("sale_date",start).lt("sale_date",end).limit(10000),
       supabase.from("sale_costs").select("sale_id,total_cost").limit(10000),
       supabase.from("purchases").select("total,paid_amount,gst_amount,purchase_date").gte("purchase_date",start).lt("purchase_date",end).limit(10000),
       supabase.from("sale_returns").select("refund,kind,taxable_reversal,gst_reversal,cost_reversal,cash_refund,created_at").gte("created_at",start).lt("created_at",end).limit(10000),
-      supabase.from("credit_payments").select("amount,payment_mode,paid_at").gte("paid_at",start).lt("paid_at",end).limit(10000),
+      supabase.from("credit_payments").select("sale_id,amount,payment_mode,paid_at").limit(10000),
       supabase.from("supplier_payments").select("amount,payment_mode,paid_at").gte("paid_at",start).lt("paid_at",end).limit(10000),
       supabase.from("sales").select("due_amount").limit(10000),supabase.from("purchases").select("total,paid_amount").limit(10000),
     ]);
     for(const result of [e,s,c,p,r,cp,sp,allSales,allPurchases]) if(result.error) throw result.error;
-    return { exp:e.data??[], sales:s.data??[], cost:new Map((c.data??[]).map(x=>[x.sale_id,n(x.total_cost)])), purchases:p.data??[], returns:r.data??[], collections:cp.data??[], supplierPayments:sp.data??[], receivable:sum(allSales.data??[],x=>n(x.due_amount)), payable:sum(allPurchases.data??[],x=>n(x.total)-n(x.paid_amount)) };
+    return { exp:e.data??[], sales:s.data??[], cost:new Map((c.data??[]).map(x=>[x.sale_id,n(x.total_cost)])), purchases:p.data??[], returns:r.data??[], collections:(cp.data??[]).filter(x=>x.paid_at>=new Date(start).toISOString()&&x.paid_at<new Date(end).toISOString()), allCollections:cp.data??[], supplierPayments:sp.data??[], receivable:sum(allSales.data??[],x=>n(x.due_amount)), payable:sum(allPurchases.data??[],x=>n(x.total)-n(x.paid_amount)) };
   }});
   const sales = data?.sales??[]; const returns=(data?.returns??[]).filter(x=>x.kind!=="exchange");
   const gross=sum(sales,x=>n(x.total)); const output=sum(sales,x=>n(x.gst_amount)); const returned=sum(returns,x=>n(x.refund)); const returnedTax=sum(returns,x=>n(x.gst_reversal));
   const netRevenue=gross-output-returned+returnedTax; const cogs=sum(sales,x=>data?.cost.get(x.id)??0)-sum(returns,x=>n(x.cost_reversal));
   const expense=sum(data?.exp??[],x=>n(x.amount)); const profit=netRevenue-cogs-expense;
-  const cashSales=sum(sales,x=>x.payment_mode==="Cash"?n(x.paid_amount):x.payment_mode==="Split"?Math.min(n(x.split_cash),n(x.paid_amount)):0);
+  const cashSales=sum(sales,x=>{const initiallyPaid=Math.max(0,n(x.paid_amount)-sum((data?.allCollections??[]).filter(p=>p.sale_id===x.id),p=>n(p.amount)));return x.payment_mode==="Cash"?initiallyPaid:x.payment_mode==="Split"?Math.min(n(x.split_cash),initiallyPaid):0;});
   const cashCollections=sum((data?.collections??[]).filter(x=>x.payment_mode==="Cash"),x=>n(x.amount));
   const cashRefunds=sum(returns,x=>n(x.cash_refund)); const cashExpenses=sum((data?.exp??[]).filter(x=>x.mode==="Cash"),x=>n(x.amount)); const cashSuppliers=sum((data?.supplierPayments??[]).filter(x=>x.payment_mode==="Cash"),x=>n(x.amount));
   const cashNet=cashSales+cashCollections-cashRefunds-cashExpenses-cashSuppliers;
