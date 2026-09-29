@@ -13,9 +13,9 @@
 
 - Stock lives in `product_variants` (article × size); sales go only through the `create_sale` DB function so stock decrement is atomic and race-safe.
 - Cost/profit are in separate owner-only tables (`product_costs`, `sale_costs`, `sale_item_costs`) because RLS can't hide columns from staff; `sale_items` SELECT is column-restricted.
-- Roles in `user_roles` (owner/staff); first signup becomes owner via trigger, later signups staff.
+- Roles stay in `user_roles`: first signup owner, later staff; owner-only `set_team_role` serializes changes and keeps a last owner, so browser writes stay denied.
 - Old JSON data imports via `legacy_id` upserts so re-imports never duplicate.
-- Signed-in screens live under `src/routes/_authenticated/`; module list is defined once in `src/lib/modules.ts`.
+- Signed-in screens use `src/routes/_authenticated/`; `src/lib/modules.ts` defines the menu. Inventory Control groups sizes under articles while filtering individual variants.
 - Stock-in and returns go only through `receive_stock` / `process_return` DB functions so stock + ledger stay in sync; bills and labels use the in-page print preview in `src/lib/print.ts` (Thermal/A4/Premium), avoiding mobile popup blocking.
 - Supplier repayments go through `record_supplier_payment` to allocate against open purchases; QR and Code 128 encode the same variant scan code so both resolve to one size at checkout.
 - Credit repayments go only through `collect_credit_payment`; product photos stay in the private `product-images` bucket and are rendered with short-lived signed URLs.
