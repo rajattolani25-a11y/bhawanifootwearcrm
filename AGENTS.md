@@ -20,3 +20,6 @@
 - Supplier repayments go through `record_supplier_payment` to allocate against open purchases; QR and Code 128 encode the same variant scan code so both resolve to one size at checkout.
 - Credit repayments go only through `collect_credit_payment`; product photos stay in the private `product-images` bucket and are rendered with short-lived signed URLs.
 - Destructive store reset stays owner-only through `reset_store_data` and the UI requires a fresh downloaded backup plus exact typed confirmation.
+- Coupons are validated only in `coupon_discount` and redeemed inside `create_sale` (row lock + used_count), so limits/expiry/customer rules can't be bypassed from the client.
+- New articles from POS/Purchase/Products go through `quick_add_product` so variants get a scan code and opening stock is ledgered; cost is saved only for owners.
+- Default bill size and thermal width live in `store_settings` (bill_design, thermal_width); POS uses them instead of device storage.
