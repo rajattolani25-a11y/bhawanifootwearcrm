@@ -20,7 +20,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "up" | "reset">("in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +34,14 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate({ to: "/dashboard" });
+      } else if (mode === "reset") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Reset link sent. Check your email, and the spam folder if it is not in the inbox.");
+        setMode("in");
+        setPassword("");
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -69,9 +77,15 @@ function AuthPage() {
       <div className="flex items-center justify-center p-6">
         <form onSubmit={submit} className="w-full max-w-sm space-y-5">
           <div>
-            <h2 className="text-2xl font-bold">{mode === "in" ? "Sign in" : "Create account"}</h2>
+            <h2 className="text-2xl font-bold">
+              {mode === "in" ? "Sign in" : mode === "up" ? "Create account" : "Forgot password"}
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {mode === "in" ? "Owner or staff login." : "The first account becomes the Owner. Later accounts join as Staff."}
+              {mode === "in"
+                ? "Owner or staff login."
+                : mode === "up"
+                  ? "The first account becomes the Owner. Later accounts join as Staff."
+                  : "Enter your email and we will send a link to set a new password."}
             </p>
           </div>
           {mode === "up" && (
@@ -84,16 +98,44 @@ function AuthPage() {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="pw">Password</Label>
-            <Input id="pw" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required className="h-11" />
-          </div>
+          {mode !== "reset" && (
+            <div className="space-y-2">
+              <Label htmlFor="pw">Password</Label>
+              <Input id="pw" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required className="h-11" />
+            </div>
+          )}
           <Button type="submit" className="h-11 w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "in" ? "Sign in" : "Create account"}
+            {busy
+              ? "Please wait…"
+              : mode === "in"
+                ? "Sign in"
+                : mode === "up"
+                  ? "Create account"
+                  : "Send reset link"}
           </Button>
-          <button type="button" onClick={() => setMode(mode === "in" ? "up" : "in")} className="w-full text-sm text-muted-foreground hover:text-foreground">
-            {mode === "in" ? "New here? Create an account" : "Already have an account? Sign in"}
-          </button>
+          {mode === "in" && (
+            <button
+              type="button"
+              onClick={() => setMode("reset")}
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              Forgot password?
+            </button>
+          )}
+          {mode === "reset" && (
+            <button
+              type="button"
+              onClick={() => setMode("in")}
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              Remembered it? Back to sign in
+            </button>
+          )}
+          {mode !== "reset" && (
+            <button type="button" onClick={() => setMode(mode === "in" ? "up" : "in")} className="w-full text-sm text-muted-foreground hover:text-foreground">
+              {mode === "in" ? "New here? Create an account" : "Already have an account? Sign in"}
+            </button>
+          )}
         </form>
       </div>
     </div>
