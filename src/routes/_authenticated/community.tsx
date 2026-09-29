@@ -85,7 +85,7 @@ function Community() {
       if (!b) return;
       const file = new File([b], "poster.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: `${p.brand} ${p.article} ${inr(p.selling_price)}` }).catch(() => {});
-      else { poster(p); toast.info("Poster downloaded — attach it in WhatsApp status"); }
+       else { poster(p); toast.info("Poster preview is ready — download it and attach in WhatsApp status"); }
     });
     } catch { toast.error("Could not share this photo. Try uploading it again."); }
   }
