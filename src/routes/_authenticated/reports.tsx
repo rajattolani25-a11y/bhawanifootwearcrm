@@ -18,7 +18,7 @@ const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata
 function Reports() {
   const [from, setFrom] = useState(day(new Date(Date.now() - 29 * 864e5)));
   const [to, setTo] = useState(day(new Date()));
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ["report", from, to],
     queryFn: async () => {
       const a = new Date(from + "T00:00:00+05:30").toISOString();
@@ -26,15 +26,19 @@ function Reports() {
       const [s, c, r] = await Promise.all([
         supabase.from("sales").select("id,sale_date,payment_mode,total,taxable,gst_amount,gst_rate,discount,due_amount,sale_items(product_name,size,qty,price)").gte("sale_date", a).lte("sale_date", b).limit(10000),
         supabase.from("sale_costs").select("sale_id,profit,total_cost"),
-        supabase.from("sale_returns").select("refund,created_at").gte("created_at", a).lte("created_at", b),
+        supabase.from("sale_returns").select("refund,kind,gst_reversal,cost_reversal,created_at").gte("created_at", a).lte("created_at", b),
       ]);
-      return { sales: s.data ?? [], costs: new Map((c.data ?? []).map((x) => [x.sale_id, x])), refunds: (r.data ?? []).reduce((t, x) => t + Number(x.refund), 0) };
+      for (const result of [s,c,r]) if (result.error) throw result.error;
+      return { sales: s.data ?? [], costs: new Map((c.data ?? []).map((x) => [x.sale_id, x])), returns: (r.data ?? []).filter(x => x.kind !== "exchange") };
     },
   });
   const sales = data?.sales ?? [];
   const tot = sales.reduce((a, s) => a + Number(s.total), 0);
   const gst = sales.reduce((a, s) => a + Number(s.gst_amount), 0);
-  const profit = sales.reduce((a, s) => a + Number(data?.costs.get(s.id)?.profit ?? 0), 0);
+  const refunds = (data?.returns ?? []).reduce((a, x) => a + Number(x.refund), 0);
+  const gstReversed = (data?.returns ?? []).reduce((a, x) => a + Number(x.gst_reversal), 0);
+  const costReversed = (data?.returns ?? []).reduce((a, x) => a + Number(x.cost_reversal), 0);
+  const profit = tot - gst - refunds + gstReversed - sales.reduce((a,s) => a + Number(data?.costs.get(s.id)?.total_cost ?? 0),0) + costReversed;
   const pairs = sales.reduce((a, s) => a + s.sale_items.reduce((b, i) => b + i.qty, 0), 0);
   const group = (f: (s: (typeof sales)[number]) => string) => Object.entries(sales.reduce<Record<string, number>>((m, s) => ({ ...m, [f(s)]: (m[f(s)] ?? 0) + Number(s.total) }), {})).sort((a, b) => b[1] - a[1]);
   const byDay = group((s) => day(new Date(s.sale_date))).sort((a, b) => a[0].localeCompare(b[0]));
@@ -51,11 +55,12 @@ function Reports() {
         <div className="flex gap-2">
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
-          <Button variant="outline" onClick={() => downloadCsv(`sales-${from}-${to}.csv`, [["date", "mode", "total", "taxable", "gst", "discount", "due", "profit"], ...sales.map((s) => [s.sale_date, s.payment_mode, s.total, s.taxable, s.gst_amount, s.discount, s.due_amount, data?.costs.get(s.id)?.profit ?? 0])])}>CSV</Button>
+           <Button variant="outline" onClick={() => downloadCsv(`sales-${from}-${to}.csv`, [["date", "mode", "total", "taxable", "gst", "discount", "due", "gross_profit_before_returns"], ...sales.map((s) => [s.sale_date, s.payment_mode, s.total, s.taxable, s.gst_amount, s.discount, s.due_amount, Number(s.total)-Number(s.gst_amount)-Number(data?.costs.get(s.id)?.total_cost ?? 0)])])}>CSV</Button>
         </div>
       } />
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {[["Sales", inr(tot)], ["Bills", sales.length], ["Pairs", pairs], ["Profit", inr(profit)], ["GST collected", inr(gst)], ["Refunds", inr(data?.refunds ?? 0)]].map(([k, v]) => (
+       {error && <p role="alert" className="text-destructive">Unable to load reports: {error.message}</p>}
+       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+         {[["Sales", inr(tot)], ["Bills", sales.length], ["Pairs", pairs], ["Gross profit after returns", inr(profit)], ["GST net of returns", inr(gst-gstReversed)], ["Refunds", inr(refunds)]].map(([k, v]) => (
           <div key={k} className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">{k}</p><p className="font-display text-xl font-bold">{v}</p></div>
         ))}
       </div>
