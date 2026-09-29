@@ -24,6 +24,7 @@ const copy: Record<Language, { heading: string; note: string; entries: Record<st
       "/settings": "Shop, printing, team roles aur backup/reset controls yahan hain.",
       "/community": "WhatsApp messages aur product posters taiyar karke share karo.",
       "/stock-ledger": "Har stock-in, sale, return aur adjustment ka record dekho.",
+      "/guide": "Is guide ko kabhi bhi kholkar apni language mein kaam samjho.",
     },
   },
   english: {
@@ -44,6 +45,7 @@ const copy: Record<Language, { heading: string; note: string; entries: Record<st
       "/settings": "Manage shop details, printing, team roles and backup/reset controls.",
       "/community": "Prepare and share WhatsApp messages and product posters.",
       "/stock-ledger": "Trace every receipt, sale, return and adjustment to stock.",
+      "/guide": "Return to this guide anytime in your preferred language.",
     },
   },
   hindi: {
@@ -64,6 +66,7 @@ const copy: Record<Language, { heading: string; note: string; entries: Record<st
       "/settings": "दुकान, बिल छपाई, टीम की भूमिकाएँ और बैकअप/रीसेट संभालें।",
       "/community": "व्हाट्सऐप संदेश और सामान के पोस्टर बनाकर साझा करें।",
       "/stock-ledger": "स्टॉक आने, बिक्री, वापसी और बदलाव का हिसाब देखें।",
+      "/guide": "अपनी भाषा में जानकारी के लिए यह गाइड कभी भी खोलें।",
     },
   },
 };
