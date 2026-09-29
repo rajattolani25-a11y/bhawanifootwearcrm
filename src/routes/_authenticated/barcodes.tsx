@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import JsBarcode from "jsbarcode";
@@ -8,15 +9,100 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { printHtml } from "@/lib/print";
-import { useStock } from "@/lib/stock";
+import { sizeSort, useStock } from "@/lib/stock";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/barcodes")({ head: () => ({ meta: [{ title: "Barcodes & QR — SoleStack POS" }, { name: "description", content: "Code 128 and QR box labels." }, { property: "og:title", content: "Barcodes & QR — SoleStack POS" }, { property: "og:description", content: "Print scan-ready footwear box labels with barcode and QR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: Barcodes });
-const escapeHtml=(s:unknown)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]??c);
-function svgFor(code:string){const el=document.createElementNS("http://www.w3.org/2000/svg","svg");JsBarcode(el,code,{format:"CODE128",height:32,width:1.25,displayValue:true,fontSize:9,margin:0});return el.outerHTML;}
-function Barcodes(){
- const {data=[]}=useStock();const [q,setQ]=useState("");const [pick,setPick]=useState<Record<string,number>>({});const [busy,setBusy]=useState(false);
- const s=q.toLowerCase();const list=data.filter(p=>!s||`${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s)||p.product_variants.some(v=>v.barcode?.toLowerCase()===s||v.sku?.toLowerCase()===s)).slice(0,60);
- async function print(){const selected=data.flatMap(p=>p.product_variants.filter(v=>(pick[v.id]??0)>0).map(v=>({p,v,n:Math.min(500,Math.max(0,Math.floor(pick[v.id]??0)))})));if(!selected.length){toast.error("Choose label count first");return;}setBusy(true);try{const labels:string[]=[];for(const {p,v,n} of selected){let code=v.barcode||v.sku;if(!code){const r=await supabase.rpc("ensure_variant_code",{_variant_id:v.id});if(r.error)throw r.error;code=r.data;}if(!code)throw new Error("Could not assign a unique scan code");const qr=await QRCode.toDataURL(code,{margin:0,width:100,errorCorrectionLevel:"M"});for(let i=0;i<n;i++)labels.push(`<div class="label"><strong>${escapeHtml(p.brand)} ${escapeHtml(p.article)}</strong><span>Size ${escapeHtml(v.size)} · MRP ${escapeHtml(inr(p.mrp))}</span><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR code"></div><b>${escapeHtml(inr(p.selling_price))}</b></div>`);}printHtml("Footwear box labels",`<div class="grid">${labels.join("")}</div>`,`.grid{display:grid;grid-template-columns:repeat(3,62mm);gap:2mm;padding:3mm}.label{border:1px dashed #888;width:62mm;height:40mm;padding:2mm;overflow:hidden;text-align:center;font:10px Arial}.label strong,.label span,.label b{display:block}.codes{display:flex;justify-content:space-between;align-items:center;gap:2mm;height:23mm}.codes div{min-width:0;flex:1}.codes svg{max-width:100%;max-height:21mm}.codes img{width:21mm;height:21mm}@page{size:A4;margin:4mm}@media(max-width:650px){.grid{grid-template-columns:repeat(2,62mm)}}`);}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}}
- return <div><PageHeader title="Barcodes & QR" subtitle="Each size gets a unique saved scan code. Preview, print, share or download labels." actions={<Button onClick={print} disabled={busy}>{busy?"Preparing…":`Preview labels (${Object.values(pick).reduce((a,b)=>a+b,0)})`}</Button>}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Article or scan code" className="mb-3 h-10 max-w-sm"/><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{list.map(p=><div key={p.id} className="rounded-lg border bg-card p-3"><div className="flex justify-between gap-2"><p className="font-semibold">{p.brand} {p.article}</p><Button variant="link" size="sm" onClick={()=>setPick(x=>({...x,...Object.fromEntries(p.product_variants.map(v=>[v.id,v.stock]))}))}>Use stock qty</Button></div><div className="mt-2 flex flex-wrap gap-2">{p.product_variants.map(v=><label key={v.id} className="flex items-center gap-1 bg-muted px-2 py-1 text-xs">Size {v.size}<input type="number" min="0" max="500" value={pick[v.id]??0} onChange={e=>setPick({...pick,[v.id]:Math.max(0,Number(e.target.value)||0)})} className="w-12 border bg-background px-1"/></label>)}</div></div>)}</div></div>;
+export const Route = createFileRoute("/_authenticated/barcodes")({ head: () => ({ meta: [{ title: "Barcodes & QR — SoleStack POS" }, { name: "description", content: "Brand-style Code 128 and QR box labels." }, { property: "og:title", content: "Barcodes & QR — SoleStack POS" }, { property: "og:description", content: "Print scan-ready, brand-style footwear box labels with barcode and QR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: Barcodes });
+
+type Layout = "sheet" | "roll";
+const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+const rs = (n: number) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+function svgFor(code: string) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  JsBarcode(el, code, { format: "CODE128", height: 30, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, margin: 0 });
+  return el.outerHTML;
+}
+
+const LABEL_CSS = `
+*{box-sizing:border-box}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.grid{display:grid;grid-template-columns:repeat(3,64mm);gap:2mm;padding:3mm}
+.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:1.5mm;overflow:hidden;display:grid;grid-template-rows:5.2mm 1fr 13mm;page-break-inside:avoid;background:#fff}
+.bar{background:#111;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 2mm;font-size:6.5px;letter-spacing:1.6px;font-weight:700;text-transform:uppercase}
+.bar i{font-style:normal;color:#f28c38;letter-spacing:1px}
+.mid{display:grid;grid-template-columns:1fr 15mm;gap:1.5mm;padding:1.2mm 2mm 0}
+.brand{font-size:7px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:#555}
+.art{font-size:13px;font-weight:800;line-height:1.05;margin:.3mm 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
+.meta{font-size:6.5px;color:#555;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.price{display:flex;align-items:baseline;gap:1.5mm;margin-top:.8mm}.price b{font-size:14px;font-weight:900}.price s{font-size:7px;color:#777}.price small{font-size:5.5px;color:#777;letter-spacing:.6px}
+.size{border:0.5mm solid #111;border-radius:1mm;text-align:center;display:flex;flex-direction:column;justify-content:center;height:14mm}
+.size span{font-size:5.5px;letter-spacing:1.4px;font-weight:700}.size b{font-size:17px;line-height:1;font-weight:900}
+.codes{display:grid;grid-template-columns:1fr 12mm;gap:1.5mm;align-items:center;padding:0 2mm 1mm;border-top:0.2mm dashed #999}
+.codes svg{width:100%;height:11mm}.codes img{width:12mm;height:12mm}
+.roll .grid{grid-template-columns:50mm;gap:0;padding:0}.roll .label{width:50mm;height:38mm;border-radius:0;border:0;border-bottom:0.2mm dashed #bbb}
+.roll .mid{grid-template-columns:1fr 12mm}.roll .art{font-size:11px}.roll .size b{font-size:14px}
+@page{size:A4;margin:4mm}
+@media(max-width:650px){.grid{grid-template-columns:repeat(2,64mm)}}
+`;
+
+function Barcodes() {
+  const { data = [] } = useStock();
+  const { data: shop } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
+  const [q, setQ] = useState("");
+  const [pick, setPick] = useState<Record<string, number>>({});
+  const [layout, setLayout] = useState<Layout>("sheet");
+  const [busy, setBusy] = useState(false);
+  const s = q.toLowerCase();
+  const list = data.filter((p) => !s || `${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s) || p.product_variants.some((v) => v.barcode?.toLowerCase() === s || v.sku?.toLowerCase() === s)).slice(0, 60);
+  const count = Object.values(pick).reduce((a, b) => a + b, 0);
+
+  async function print() {
+    const selected = data.flatMap((p) => p.product_variants.filter((v) => (pick[v.id] ?? 0) > 0).map((v) => ({ p, v, n: Math.min(500, Math.max(0, Math.floor(pick[v.id] ?? 0))) })));
+    if (!selected.length) { toast.error("Pehle label count chuno"); return; }
+    setBusy(true);
+    try {
+      const shopName = esc(shop?.business_name || "BHAWANI FOOTWEAR");
+      const labels: string[] = [];
+      for (const { p, v, n } of selected) {
+        let code = v.barcode || v.sku;
+        if (!code) { const r = await supabase.rpc("ensure_variant_code", { _variant_id: v.id }); if (r.error) throw r.error; code = r.data; }
+        if (!code) throw new Error("Could not assign a unique scan code");
+        const qr = await QRCode.toDataURL(code, { margin: 0, width: 120, errorCorrectionLevel: "M" });
+        const meta = [p.category, p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
+        const mrp = Number(p.mrp) > Number(p.selling_price) ? `<s>MRP ${esc(rs(p.mrp))}</s>` : `<small>MRP INCL. OF ALL TAXES</small>`;
+        const html = `<div class="label"><div class="bar"><span>${shopName}</span><i>GENUINE</i></div><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
+        for (let i = 0; i < n; i++) labels.push(html);
+      }
+      printHtml("Footwear box labels", `<div class="${layout}"><div class="grid">${labels.join("")}</div></div>`, LABEL_CSS + (layout === "roll" ? "@page{size:50mm 38mm;margin:0}" : ""));
+    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+  }
+
+  return (
+    <div>
+      <PageHeader title="Barcodes & QR" subtitle="Brand-style box labels — har size ka apna permanent scan code. Barcode ya QR, dono se billing." actions={<Button onClick={print} disabled={busy}>{busy ? "Preparing…" : `Preview labels (${count})`}</Button>} />
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Article or scan code" className="h-10 max-w-sm" />
+        <div className="inline-flex rounded-lg border bg-card p-1">
+          {([["sheet", "A4 sheet · 3 across"], ["roll", "Label roll · 50×38mm"]] as const).map(([k, l]) => <Button key={k} size="sm" variant={layout === k ? "default" : "ghost"} onClick={() => setLayout(k)}>{l}</Button>)}
+        </div>
+        {count > 0 && <Button variant="ghost" size="sm" onClick={() => setPick({})}>Clear</Button>}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {list.map((p) => (
+          <div key={p.id} className="rounded-lg border bg-card p-3">
+            <div className="flex justify-between gap-2">
+              <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-widest text-primary">{p.brand}</p><p className="truncate font-semibold">{p.article}</p><p className="text-xs text-muted-foreground">{inr(p.selling_price)}{p.color ? ` · ${p.color}` : ""}</p></div>
+              <Button variant="link" size="sm" onClick={() => setPick((x) => ({ ...x, ...Object.fromEntries(p.product_variants.map((v) => [v.id, Math.max(0, v.stock)])) }))}>Use stock qty</Button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => (
+                <label key={v.id} className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs">Size {v.size}
+                  <input type="number" min="0" max="500" value={pick[v.id] ?? 0} onChange={(e) => setPick({ ...pick, [v.id]: Math.max(0, Number(e.target.value) || 0) })} className="w-12 rounded border bg-background px-1" aria-label={`Labels for size ${v.size}`} />
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
