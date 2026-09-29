@@ -118,9 +118,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
           ))}
         </div>
         <div className="grid grid-cols-[1fr_90px] gap-2.5">
-          {sizeKind === "adults" ? (
-            <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
-          ) : (
+          {sizeKind === "kids" ? (
             <div className="space-y-1">
               <Label className="text-xs">Kids size category</Label>
               <div className="flex gap-1.5">
@@ -131,9 +129,29 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
                 ))}
               </div>
             </div>
+          ) : sizeKind === "adults" && f.category === "Ladies" ? (
+            <div className="space-y-1">
+              <Label className="text-xs">Ladies size category</Label>
+              <div className="flex gap-1.5">
+                {LADY_GROUPS.map(([g, , hint]) => (
+                  <button key={g} type="button" onClick={() => setLadyCats((c) => (c.includes(g) ? c.filter((x) => x !== g) : [...c, g]))} className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-semibold ${ladyCats.includes(g) ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+                    {g}
+                    <span className="block text-[10px] font-normal leading-tight opacity-80">{hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
           )}
           {mode !== "purchase" && <div className="space-y-1"><Label className="text-xs">Pairs / size</Label><Input value={defQty} onChange={(e) => setDefQty(e.target.value)} inputMode="numeric" className="h-9" /></div>}
         </div>
+        {sizeKind === "adults" && f.category === "Ladies" && (
+          <div className="space-y-1">
+            <Label className="text-xs">Extra size (optional)</Label>
+            <Input value={extraSizes} onChange={(e) => setExtraSizes(e.target.value)} className="h-9" placeholder="jaise 13 ya 4" />
+          </div>
+        )}
         {mode !== "purchase" && sizes.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {sizes.map((s) => (
