@@ -1,5 +1,9 @@
 # SoleStack POS roadmap
 
+- [x] Expand guide beyond section summaries into feature-by-feature steps across the entire app
+- [x] Optional three-language guide for every module, reachable from Settings and by staff
+- [x] Inventory Control groups sizes beneath each article
+- [x] Owner can safely assign owner/staff roles without removing the last owner
 - [x] Phase 1 — audit of old app
 - [x] Phase 2 — cloud database, owner/staff login, roles, realtime, atomic stock, old JSON import/export, 14-module menu
 - [x] Phase 3 — POS billing (scanner, size chips, split pay, hold), customer CRM, loyalty stamps

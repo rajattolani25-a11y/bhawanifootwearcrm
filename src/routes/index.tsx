@@ -9,6 +9,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Billing, size-wise stock, customers and loyalty for footwear shops." },
       { property: "og:title", content: "SoleStack POS — Footwear Retail OS" },
       { property: "og:description", content: "Billing, size-wise stock, customers and loyalty for footwear shops." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,

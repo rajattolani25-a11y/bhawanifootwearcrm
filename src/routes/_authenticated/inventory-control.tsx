@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useStock, type Product, type Variant } from "@/lib/stock";
+import { sizeSort, useStock, type Product, type Variant } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/inventory-control")({
   head: () => ({ meta: [{ title: "Inventory Control — SoleStack POS" }, { name: "description", content: "Low stock, damaged, dead stock and stock adjustments." }, { property: "og:title", content: "Inventory Control — SoleStack POS" }, { property: "og:description", content: "Monitor low, damaged and inactive footwear stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -44,21 +44,28 @@ function Control() {
 
   const tabs = [["low", `Low stock (${low.length})`], ["damaged", `Damaged (${damaged.length})`], ["dead", `Dead 60d (${dead.length})`], ["adjust", "Adjust stock"]] as const;
   const list = tab === "low" ? low : tab === "damaged" ? damaged : tab === "dead" ? dead : adj;
+  const grouped = data.map((p) => ({
+    product: p,
+    variants: list.filter((entry) => entry.p.id === p.id).map((entry) => entry.v).sort((a, b) => sizeSort(a.size, b.size)),
+  })).filter((group) => group.variants.length);
   return (
     <div>
       <PageHeader title="Inventory Control" subtitle="Reorder, damaged bucket, dead stock and manual correction." />
       <div className="mb-3 flex flex-wrap gap-2">
-        {tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`rounded-full px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-primary text-primary-foreground" : "bg-muted"}`}>{l}</button>)}
+        {tabs.map(([k, l]) => <Button key={k} size="sm" variant={tab === k ? "default" : "outline"} onClick={() => setTab(k)}>{l}</Button>)}
         {tab === "adjust" && <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search / scan" className="h-9 w-56" />}
       </div>
-      <div className="overflow-x-auto rounded-xl border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Article</th><th className="p-3">Size</th><th className="p-3">Stock</th><th className="p-3">Min</th><th className="p-3">Damaged</th><th className="p-3">Rack</th><th className="p-3" /></tr></thead>
-          <tbody>
-            {list.map(({ p, v }) => <Row key={v.id} p={p} v={v} tab={tab} adjust={adjust} />)}
-            {!list.length && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Nothing here 👍</td></tr>}
-          </tbody>
-        </table>
+      <div className="divide-y border-y">
+        {grouped.map(({ product, variants }) => <section key={product.id} className="py-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-semibold"><span className="text-xs uppercase text-primary">{product.brand}</span> <span className="text-base">{product.article}</span></h2>
+            <span className="text-xs text-muted-foreground">{variants.length} sizes · {variants.reduce((total, variant) => total + variant.stock, 0)} pairs</span>
+          </div>
+          <div className="divide-y border-l-2 border-primary/40 pl-3">
+            {variants.map((v) => <Row key={v.id} p={product} v={v} tab={tab} adjust={adjust} />)}
+          </div>
+        </section>)}
+        {!grouped.length && <p className="py-6 text-center text-muted-foreground">Nothing here</p>}
       </div>
     </div>
   );
@@ -69,17 +76,14 @@ function Row({ p, v, tab, adjust }: { p: Product; v: Variant; tab: string; adjus
   const [min, setMin] = useState(String(v.min_stock));
   const [rack, setRack] = useState(v.rack ?? "");
   return (
-    <tr className="border-t">
-      <td className="p-3"><b className="text-xs uppercase text-primary">{p.brand}</b> {p.article}</td>
-      <td className="p-3 font-bold">{v.size}</td>
-      <td className="p-3">{tab === "adjust" ? <Input value={stock} onChange={(e) => setStock(e.target.value)} className="h-8 w-20" /> : v.stock}</td>
-      <td className="p-3">{tab === "adjust" ? <Input value={min} onChange={(e) => setMin(e.target.value)} className="h-8 w-16" /> : v.min_stock}</td>
-      <td className="p-3">{v.damaged_stock}</td>
-      <td className="p-3">{tab === "adjust" ? <Input value={rack} onChange={(e) => setRack(e.target.value)} className="h-8 w-20" /> : v.rack}</td>
-      <td className="p-3 text-right">
-        {tab === "adjust" && <Button size="sm" onClick={() => adjust(p, v, { stock: Number(stock) || 0, min_stock: Number(min) || 0, rack }, "Manual count")}>Save</Button>}
-        {tab === "damaged" && <Button size="sm" variant="outline" onClick={() => adjust(p, v, { damaged_stock: 0 }, "Damaged returned to supplier / written off")}>Clear (sent back)</Button>}
-      </td>
-    </tr>
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-sm">
+      <strong className="min-w-16">Size {v.size}</strong>
+      <label className="flex items-center gap-2 text-muted-foreground">Stock {tab === "adjust" ? <Input type="number" min="0" aria-label={`Size ${v.size} stock`} value={stock} onChange={(e) => setStock(e.target.value)} className="h-8 w-20 text-foreground" /> : <b className="text-foreground">{v.stock}</b>}</label>
+      <label className="flex items-center gap-2 text-muted-foreground">Min {tab === "adjust" ? <Input type="number" min="0" aria-label={`Size ${v.size} minimum stock`} value={min} onChange={(e) => setMin(e.target.value)} className="h-8 w-16 text-foreground" /> : <b className="text-foreground">{v.min_stock}</b>}</label>
+      <span className="text-muted-foreground">Damaged <b className="text-foreground">{v.damaged_stock}</b></span>
+      <label className="flex items-center gap-2 text-muted-foreground">Rack {tab === "adjust" ? <Input aria-label={`Size ${v.size} rack`} value={rack} onChange={(e) => setRack(e.target.value)} className="h-8 w-20 text-foreground" /> : <b className="text-foreground">{v.rack || "—"}</b>}</label>
+      {tab === "adjust" && <Button size="sm" onClick={() => { const nextStock = Number(stock), nextMin = Number(min); if (!Number.isInteger(nextStock) || nextStock < 0 || !Number.isInteger(nextMin) || nextMin < 0) { toast.error("Enter valid non-negative stock and minimum"); return; } void adjust(p, v, { stock: nextStock, min_stock: nextMin, rack }, "Manual count"); }}>Save</Button>}
+      {tab === "damaged" && <Button size="sm" variant="outline" onClick={() => adjust(p, v, { damaged_stock: 0 }, "Damaged returned to supplier / written off")}>Clear (sent back)</Button>}
+    </div>
   );
 }

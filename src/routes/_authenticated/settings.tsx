@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { exportAll, importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
+import { WorkspaceGuide } from "@/components/WorkspaceGuide";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data controls." }, { property: "og:title", content: "Settings — SoleStack POS" }, { property: "og:description", content: "Store, appearance and protected data controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -17,12 +18,14 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 function SettingsPage() {
-  const { isOwner, loading } = useAuth();
+  const { isOwner, loading, user } = useAuth();
+  const qc = useQueryClient();
   const [f, setF] = useState<Record<string, string>>({});
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [backupDone, setBackupDone] = useState(false);
   const [confirm, setConfirm] = useState("");
+  const [changingRole, setChangingRole] = useState<string | null>(null);
 
   const { data: settings } = useQuery({
     queryKey: ["settings"],
@@ -51,6 +54,19 @@ function SettingsPage() {
   }, [settings]);
 
   if (!loading && !isOwner) return <p className="text-muted-foreground">Only the Owner can open Settings.</p>;
+
+  async function changeRole(userId: string, role: "owner" | "staff") {
+    if (!window.confirm(`Change this team member to ${role}? Their access will change immediately.`)) return;
+    setChangingRole(userId);
+    try {
+      const { error } = await supabase.rpc("set_team_role", { _user_id: userId, _role: role });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["team"] });
+      toast.success(`Role changed to ${role}`);
+      if (userId === user?.id) window.location.reload();
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setChangingRole(null); }
+  }
 
   async function save() {
     const { error } = await supabase.from("store_settings").update({ ...f, daily_target: Number(f["daily_target"]) || 0 }).eq("id", 1);
@@ -116,6 +132,8 @@ function SettingsPage() {
     <div className="max-w-3xl space-y-6">
       <PageHeader title="Settings" subtitle="Store details, team and data." />
 
+      <WorkspaceGuide collapsible />
+
       <section className="rounded-xl border bg-card p-5">
         <h2 className="mb-1 font-semibold">Appearance</h2>
         <p className="mb-3 text-sm text-muted-foreground">Choose the workspace appearance on this device.</p>
@@ -171,12 +189,14 @@ function SettingsPage() {
 
       <section className="rounded-xl border bg-card p-5">
         <h2 className="font-semibold">Team</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Staff create their own account on the sign-in page and join as Staff automatically. Staff cannot see purchase cost, profit or settings.</p>
+        <p className="mb-3 text-sm text-muted-foreground">New accounts join as Staff. Only owners can assign roles; at least one owner must remain. Staff cannot see purchase cost, profit or settings.</p>
         <ul className="divide-y text-sm">
           {team.map((t) => (
-            <li key={t.user_id + t.role} className="flex justify-between py-2">
-              <span>{t.name || t.user_id.slice(0, 8)}</span>
-              <span className="text-xs uppercase tracking-wide text-primary">{t.role}</span>
+            <li key={t.user_id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span>{t.name || t.user_id.slice(0, 8)} {t.user_id === user?.id ? "(you)" : ""}</span>
+              <div className="flex gap-1" role="group" aria-label={`Role for ${t.name || t.user_id}`}>
+                {(["owner", "staff"] as const).map((role) => <Button key={role} type="button" size="sm" variant={t.role === role ? "default" : "outline"} disabled={!!changingRole || t.role === role} onClick={() => changeRole(t.user_id, role)} aria-label={`Make ${t.name || t.user_id} ${role}`}>{role === "owner" ? "Owner" : "Staff"}</Button>)}
+              </div>
             </li>
           ))}
         </ul>
