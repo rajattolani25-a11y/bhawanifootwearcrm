@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Download, MessageCircle, Share2 } from "lucide-react";
+import { Copy, Download, MessageCircle, Share2, Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { sizeSort, useStock, type Product } from "@/lib/stock";
 import { arrivalMessage } from "@/lib/messages";
+import { printHtml } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/community")({
   head: () => ({ meta: [{ title: "WhatsApp & Posters — SoleStack POS" }, { name: "description", content: "New stock messages for WhatsApp community and status posters." }, { property: "og:title", content: "WhatsApp & Posters — SoleStack POS" }, { property: "og:description", content: "Create professional new-stock campaigns and posters." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -55,6 +56,8 @@ function Community() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Product | null>(null);
   const [message, setMessage] = useState("");
+  const [posterUrl, setPosterUrl] = useState("");
+  const [posterName, setPosterName] = useState("");
   const { data: st } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle()).data });
   const { data: recentIds = new Set<string>() } = useQuery({
     queryKey: ["recent-purchase", days],
@@ -75,20 +78,18 @@ function Community() {
   }, [selected, fresh[0]?.id, shop, st?.business_phone]);
 
   async function poster(p: Product) {
-    const c = await drawPoster(p, shop, st?.business_phone ?? "", tag);
-    const a = document.createElement("a");
-    a.href = c.toDataURL("image/png");
-    a.download = `${p.brand}-${p.article}-poster.png`;
-    a.click();
+    try { const c = await drawPoster(p, shop, st?.business_phone ?? "", tag); setPosterUrl(c.toDataURL("image/png")); setPosterName(`${p.brand}-${p.article}-poster.png`); }
+    catch { toast.error("Could not render photo. Try uploading this product photo again."); }
   }
   async function sharePoster(p: Product) {
-    const c = await drawPoster(p, shop, st?.business_phone ?? "", tag);
+    try { const c = await drawPoster(p, shop, st?.business_phone ?? "", tag);
     c.toBlob(async (b) => {
       if (!b) return;
       const file = new File([b], "poster.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: `${p.brand} ${p.article} ${inr(p.selling_price)}` }).catch(() => {});
       else { poster(p); toast.info("Poster downloaded — attach it in WhatsApp status"); }
     });
+    } catch { toast.error("Could not share this photo. Try uploading it again."); }
   }
 
   return (
@@ -110,6 +111,7 @@ function Community() {
           <div className="grid gap-2 sm:grid-cols-2">{all.map((p) => <PCard key={p.id} p={p} selected={selected?.id === p.id} onSelect={() => setSelected(p)} onPoster={() => poster(p)} onShare={() => sharePoster(p)} />)}</div>
         </div>
         <div className="h-fit rounded-xl border bg-card p-4 lg:sticky lg:top-4">
+          {posterUrl && <div className="mb-5"><p className="mb-2 font-semibold">Poster preview</p><img src={posterUrl} alt="Selected product poster" className="mx-auto max-h-96 w-auto max-w-full border object-contain" /><div className="mt-2 flex gap-2"><Button variant="outline" asChild><a href={posterUrl} download={posterName}><Download className="h-4 w-4" /> Download</a></Button><Button variant="outline" onClick={() => printHtml("Poster", `<img src="${posterUrl}" alt="Poster" style="width:100%;max-width:190mm;height:auto;display:block;margin:auto">`, "@page{size:A4;margin:5mm}")}><Printer className="h-4 w-4" /> Print</Button></div></div>}
           <p className="mb-2 font-semibold">Community message</p>
            <textarea value={message} onChange={(e) => setMessage(e.target.value)} className="h-72 w-full rounded-lg border bg-muted/50 p-3 text-sm" />
           <div className="mt-2 grid grid-cols-2 gap-2">
