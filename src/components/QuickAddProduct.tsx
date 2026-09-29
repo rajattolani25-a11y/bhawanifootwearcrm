@@ -22,6 +22,13 @@ function parseSizes(text: string) {
   return [...new Set(out)].sort(sizeSort);
 }
 
+/** Kids size categories: 5-10 (chhote), 11-1 (11,12,13,1), 2-5 (bade kids). */
+const KID_GROUPS: [string, string[]][] = [
+  ["5-10", ["5", "6", "7", "8", "9", "10"]],
+  ["11-1", ["11", "12", "13", "1"]],
+  ["2-5", ["2", "3", "4", "5"]],
+];
+
 export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initialArticle = "" }: {
   open: boolean; onClose: () => void; onAdded?: (r: QuickAddResult) => void; mode?: "stock" | "purchase"; initialArticle?: string;
 }) {
@@ -30,7 +37,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const [f, setF] = useState({ brand: "", article: "", category: "", color: "", mrp: "", selling_price: "", cost: "", rack: "" });
   const [sizeText, setSizeText] = useState("6-10");
   const [sizeKind, setSizeKind] = useState<"adults" | "kids">("adults");
-  const [kidsSmall, setKidsSmall] = useState(false);
+  const [kidCats, setKidCats] = useState<string[]>(["5-10"]);
   const [defQty, setDefQty] = useState(mode === "purchase" ? "0" : "1");
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
