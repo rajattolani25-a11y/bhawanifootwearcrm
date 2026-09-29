@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/inventory")({
 });
 
 function Inventory() {
+  const navigate = useNavigate();
   const { data = [] } = useStock();
   const { isOwner } = useAuth();
   const qc = useQueryClient();
@@ -27,7 +28,7 @@ function Inventory() {
   const rows = data.filter((p) => {
     const s = q.toLowerCase();
     if (s && ![p.brand, p.article, p.category, p.color].some((f) => f?.toLowerCase().includes(s))) return false;
-    if (size && !p.product_variants.some((v) => v.size === size && v.stock > 0)) return false;
+    if (size && !p.product_variants.some((v) => v.size === size)) return false;
     return true;
   });
   const totalPairs = rows.reduce((a, p) => a + p.product_variants.reduce((b, v) => b + v.stock, 0), 0);
@@ -105,7 +106,7 @@ function Inventory() {
           <tbody>
             {rows.map((p) => (
               <tr key={p.id} className="border-t">
-                <td className="p-2"><span className="text-[11px] font-bold uppercase text-primary">{p.brand}</span><br />{p.article} <span className="text-xs text-muted-foreground">{p.color}</span></td>
+                <td className="p-2"><span className="text-[11px] font-bold uppercase text-primary">{p.brand}</span><br /><Button variant="link" className="h-auto p-0 text-left" onClick={() => navigate({ to: "/products", search: { article: p.article } })}>{p.article}</Button> <span className="text-xs text-muted-foreground">{p.color}</span></td>
                 {sizes.map((s) => {
                   const v = p.product_variants.find((x) => x.size === s);
                   if (!v) return <td key={s} className="p-2 text-center text-muted-foreground">·</td>;
