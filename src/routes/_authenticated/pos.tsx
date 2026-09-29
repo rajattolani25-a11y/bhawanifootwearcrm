@@ -232,8 +232,25 @@ function POS() {
     clearCustomer();
   }
 
+  // Typed a 10-digit mobile but customer isn't saved yet → save automatically so they appear in Customers.
+  async function ensureCustomer(): Promise<Customer | null> {
+    if (customer) return customer;
+    const clean = mobile.replace(/\D/g, "").slice(-10);
+    if (clean.length !== 10) return null;
+    const cols = "id,mobile,name,is_premium,regular_stamps,premium_stamps,last_stamp_date";
+    const found = await supabase.from("customers").select(cols).eq("mobile", clean).maybeSingle();
+    if (found.data) { setCustomer(found.data); return found.data; }
+    const { data, error } = await supabase.from("customers").insert({ mobile: clean, name: newName.trim() || "Walk-in Customer" }).select(cols).single();
+    if (error) { toast.error("Customer save nahi hua: " + error.message); return null; }
+    setCustomer(data); setNewName(""); toast.success(`Customer ${clean} saved`);
+    return data;
+  }
+
   async function complete() {
     if (!cart.length || submittingRef.current) return;
+    submittingRef.current = true;
+    const customer = await ensureCustomer();
+    submittingRef.current = false;
     if (pay === "Credit" && !customer) {
       toast.error("Credit bill ke liye customer mobile zaroori hai");
       mobileRef.current?.focus();
