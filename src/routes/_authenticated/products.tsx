@@ -14,6 +14,7 @@ import { inr } from "@/lib/modules";
 import { addSignedImages, uploadProductImage } from "@/lib/product-images";
 
 export const Route = createFileRoute("/_authenticated/products")({
+  validateSearch: (search: Record<string, unknown>) => ({ article: typeof search.article === "string" ? search.article : "" }),
   head: () => ({ meta: [{ title: "Products — SoleStack POS" }, { name: "description", content: "Articles, photos and size-wise stock." }, { property: "og:title", content: "Products — SoleStack POS" }, { property: "og:description", content: "Footwear articles, photos, prices and size stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Products,
 });
@@ -21,10 +22,14 @@ export const Route = createFileRoute("/_authenticated/products")({
 const SIZES = ["5", "6", "7", "8", "9", "10", "11", "12"];
 
 function Products() {
+  const { article } = Route.useSearch();
   const qc = useQueryClient();
   const { isOwner } = useAuth();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(article);
   const [adding, setAdding] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const { data: cost } = useQuery({ queryKey: ["product-profile-cost",selected], enabled: isOwner && !!selected, queryFn: async () => { const { data,error } = await supabase.from("product_costs").select("purchase_price").eq("product_id",selected ?? "").maybeSingle(); if(error) throw error; return data; } });
+  const { data: history } = useQuery({ queryKey: ["product-profile-history",selected], enabled: !!selected, queryFn: async () => { const p = products.find((x)=>x.id===selected); const ids = p?.product_variants.map((v)=>v.id) ?? []; if (!ids.length) return { purchases: [], movements: [] }; const [a,b] = await Promise.all([isOwner ? supabase.from("purchases").select("id,purchase_date,supplier_name,invoice_no,quantity,purchase_price,total").in("variant_id",ids).order("purchase_date",{ascending:false}).limit(30) : Promise.resolve({data:[]}),supabase.from("stock_movements").select("id,moved_at,type,product_name,qty_in,qty_out,note").in("variant_id",ids).order("moved_at",{ascending:false}).limit(30)]); return {purchases:a.data ?? [],movements:b.data ?? []}; } });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -83,7 +88,7 @@ function Products() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-primary">{p.brand}</p>
-                  <p className="font-display text-lg font-semibold">{p.article}</p>
+                   <Button variant="link" className="h-auto p-0 text-left font-display text-lg font-semibold" onClick={() => setSelected(p.id)}>{p.article}</Button>
                   <p className="text-sm text-muted-foreground">{[p.category, p.color].filter(Boolean).join(" · ")}</p>
                 </div>
                 <div className="text-right">
@@ -113,6 +118,7 @@ function Products() {
       </div>
 
       {adding && <AddArticle onClose={() => setAdding(false)} />}
+      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{p.category} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
     </div>
   );
 }

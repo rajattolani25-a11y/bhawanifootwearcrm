@@ -52,12 +52,11 @@ td:not(:first-child),th:not(:first-child){text-align:right}
 `;
 
 export async function printBill(billNo: string, design: PrintDesign = "Thermal", duplicate = false) {
-  const w = window.open("", "_blank", "width=900,height=750");
   const [{ data: s, error }, { data: st }] = await Promise.all([
     supabase.from("sales").select("bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,sale_items(product_name,size,sku,price,qty)").eq("bill_no", billNo).maybeSingle(),
     supabase.from("store_settings").select("*").eq("id", 1).maybeSingle(),
   ]);
-  if (error || !s) { w?.close(); throw new Error("Bill not found"); }
+  if (error || !s) { throw new Error("Bill not found"); }
   const sale = s as unknown as Sale;
   const gstBill = sale.bill_type === "gst" && Number(sale.gst_rate) > 0;
   const rows = lines(sale).map(({ it, d, taxable, gst, amount }) => {
@@ -88,14 +87,32 @@ export async function printBill(billNo: string, design: PrintDesign = "Thermal",
     <div class="foot"><div><strong>Exchange Policy</strong><span>${esc(footer)}</span></div><div><strong>Ref</strong><code>${esc(sale.bill_no)}</code></div></div>
     <p style="text-align:center;margin-top:8px;font-size:12px">Thank you! Visit again.</p>
   </section><script>window.onload=function(){window.focus();window.print();}<\/script></body></html>`;
-  if (!w) throw new Error("Popup blocked — allow popups to print");
-  w.document.write(html);
-  w.document.close();
+  previewDocument(sale.bill_no, html);
 }
 
 export function printHtml(title: string, body: string, css = "") {
-  const w = window.open("", "_blank", "width=900,height=750");
-  if (!w) throw new Error("Popup blocked — allow popups to print");
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{margin:0;font-family:Arial,sans-serif}${css}</style></head><body>${body}<script>window.onload=function(){window.focus();window.print();}<\/script></body></html>`);
-  w.document.close();
+  previewDocument(title, `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{margin:0;font-family:Arial,sans-serif}${css}</style></head><body>${body}</body></html>`);
+}
+
+function previewDocument(title: string, html: string) {
+  document.getElementById("print-preview")?.remove();
+  const wrapper = document.createElement("div");
+  wrapper.id = "print-preview";
+  wrapper.setAttribute("role", "dialog");
+  wrapper.setAttribute("aria-label", `${title} print preview`);
+  wrapper.style.cssText = "position:fixed;inset:0;z-index:9999;background:var(--background);color:var(--foreground);display:flex;flex-direction:column";
+  const toolbar = document.createElement("div");
+  toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border)";
+  const heading = document.createElement("strong"); heading.textContent = title; heading.style.cssText = "margin-right:auto";
+  const frame = document.createElement("iframe"); frame.title = title; frame.srcdoc = html.replace(/<script>window\.onload=function\(\)\{window\.focus\(\);window\.print\(\);\}<\/script>/, ""); frame.style.cssText = "flex:1;width:100%;border:0;background:white";
+  const blob = new Blob([frame.srcdoc], { type: "text/html" });
+  const button = (label: string, action: () => void | Promise<void>) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.style.cssText = "border:1px solid var(--border);border-radius:6px;padding:8px 12px;background:var(--card);color:var(--foreground);cursor:pointer"; b.onclick = () => { void action(); }; return b; };
+  toolbar.append(heading,
+    button("Print", () => frame.contentWindow?.print()),
+    button("Share", async () => { const file = new File([blob], `${title}.html`, { type: "text/html" }); if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title }); else { const url = URL.createObjectURL(blob); window.open(url, "_blank"); setTimeout(() => URL.revokeObjectURL(url), 60000); } }),
+    button("Download", () => { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${title}.html`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }),
+    button("Close", () => wrapper.remove()));
+  wrapper.append(toolbar, frame);
+  document.body.append(wrapper);
+  frame.focus();
 }

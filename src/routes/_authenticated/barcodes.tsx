@@ -2,63 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import JsBarcode from "jsbarcode";
+import QRCode from "qrcode";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { printHtml } from "@/lib/print";
 import { useStock } from "@/lib/stock";
+import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/barcodes")({
-  head: () => ({ meta: [{ title: "Barcodes — SoleStack POS" }, { name: "description", content: "Print barcode labels for shoe boxes." }, { property: "og:title", content: "Barcodes — SoleStack POS" }, { property: "og:description", content: "Prepare and print footwear box barcode labels." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
-  component: Barcodes,
-});
-
-function svgFor(code: string) {
-  const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  JsBarcode(el, code, { format: "CODE128", height: 38, width: 1.4, fontSize: 11, margin: 0 });
-  return el.outerHTML;
-}
-
-function Barcodes() {
-  const { data = [] } = useStock();
-  const [q, setQ] = useState("");
-  const [pick, setPick] = useState<Record<string, number>>({});
-  const s = q.toLowerCase();
-  const list = data.filter((p) => !s || `${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s)).slice(0, 60);
-
-  function print() {
-    const labels: string[] = [];
-    for (const p of data) for (const v of p.product_variants) {
-      const n = pick[v.id] ?? 0;
-      const code = v.barcode || v.sku || v.id.slice(0, 12);
-      for (let i = 0; i < n; i++) labels.push(`<div class="l"><b>${p.brand} ${p.article}</b><span>Size ${v.size} · MRP ${inr(p.mrp)}</span>${svgFor(code)}<strong>${inr(p.selling_price)}</strong></div>`);
-    }
-    if (!labels.length) { toast.error("Choose label count first"); return; }
-    try {
-      printHtml("Labels", `<div class="g">${labels.join("")}</div>`, ".g{display:grid;grid-template-columns:repeat(3,50mm);gap:2mm;padding:3mm}.l{border:1px dashed #999;padding:2mm;text-align:center;font-size:10px;height:32mm;overflow:hidden}.l b,.l span,.l strong{display:block}.l svg{max-width:100%}@page{margin:3mm}");
-    } catch (e) { toast.error((e as Error).message); }
-  }
-
-  return (
-    <div>
-      <PageHeader title="Barcodes" subtitle="Pick sizes, set label count, print on A4 sticker sheet (3 per row)." actions={<Button onClick={print}>Print labels ({Object.values(pick).reduce((a, b) => a + b, 0)})</Button>} />
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search article" className="mb-3 h-10 w-64" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {list.map((p) => (
-          <div key={p.id} className="rounded-xl border bg-card p-3">
-            <div className="flex justify-between"><p className="font-semibold">{p.brand} {p.article}</p><button className="text-xs underline" onClick={() => setPick((x) => ({ ...x, ...Object.fromEntries(p.product_variants.map((v) => [v.id, v.stock])) }))}>= stock qty</button></div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {p.product_variants.map((v) => (
-                <label key={v.id} className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs font-semibold">
-                  {v.size}
-                  <input type="number" min={0} value={pick[v.id] ?? 0} onChange={(e) => setPick({ ...pick, [v.id]: Number(e.target.value) || 0 })} className="w-10 rounded border bg-background px-1" />
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+export const Route = createFileRoute("/_authenticated/barcodes")({ head: () => ({ meta: [{ title: "Barcodes & QR — SoleStack POS" }, { name: "description", content: "Code 128 and QR box labels." }, { property: "og:title", content: "Barcodes & QR — SoleStack POS" }, { property: "og:description", content: "Print scan-ready footwear box labels with barcode and QR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: Barcodes });
+const escapeHtml=(s:unknown)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]??c);
+function svgFor(code:string){const el=document.createElementNS("http://www.w3.org/2000/svg","svg");JsBarcode(el,code,{format:"CODE128",height:32,width:1.25,displayValue:true,fontSize:9,margin:0});return el.outerHTML;}
+function Barcodes(){
+ const {data=[]}=useStock();const [q,setQ]=useState("");const [pick,setPick]=useState<Record<string,number>>({});const [busy,setBusy]=useState(false);
+ const s=q.toLowerCase();const list=data.filter(p=>!s||`${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s)||p.product_variants.some(v=>v.barcode?.toLowerCase()===s||v.sku?.toLowerCase()===s)).slice(0,60);
+ async function print(){const selected=data.flatMap(p=>p.product_variants.filter(v=>(pick[v.id]??0)>0).map(v=>({p,v,n:Math.min(500,Math.max(0,Math.floor(pick[v.id]??0)))})));if(!selected.length){toast.error("Choose label count first");return;}setBusy(true);try{const labels:string[]=[];for(const {p,v,n} of selected){let code=v.barcode||v.sku;if(!code){const r=await supabase.rpc("ensure_variant_code",{_variant_id:v.id});if(r.error)throw r.error;code=r.data;}if(!code)throw new Error("Could not assign a unique scan code");const qr=await QRCode.toDataURL(code,{margin:0,width:100,errorCorrectionLevel:"M"});for(let i=0;i<n;i++)labels.push(`<div class="label"><strong>${escapeHtml(p.brand)} ${escapeHtml(p.article)}</strong><span>Size ${escapeHtml(v.size)} · MRP ${escapeHtml(inr(p.mrp))}</span><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR code"></div><b>${escapeHtml(inr(p.selling_price))}</b></div>`);}printHtml("Footwear box labels",`<div class="grid">${labels.join("")}</div>`,`.grid{display:grid;grid-template-columns:repeat(3,62mm);gap:2mm;padding:3mm}.label{border:1px dashed #888;width:62mm;height:40mm;padding:2mm;overflow:hidden;text-align:center;font:10px Arial}.label strong,.label span,.label b{display:block}.codes{display:flex;justify-content:space-between;align-items:center;gap:2mm;height:23mm}.codes div{min-width:0;flex:1}.codes svg{max-width:100%;max-height:21mm}.codes img{width:21mm;height:21mm}@page{size:A4;margin:4mm}@media(max-width:650px){.grid{grid-template-columns:repeat(2,62mm)}}`);}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}}
+ return <div><PageHeader title="Barcodes & QR" subtitle="Each size gets a unique saved scan code. Preview, print, share or download labels." actions={<Button onClick={print} disabled={busy}>{busy?"Preparing…":`Preview labels (${Object.values(pick).reduce((a,b)=>a+b,0)})`}</Button>}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Article or scan code" className="mb-3 h-10 max-w-sm"/><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{list.map(p=><div key={p.id} className="rounded-lg border bg-card p-3"><div className="flex justify-between gap-2"><p className="font-semibold">{p.brand} {p.article}</p><Button variant="link" size="sm" onClick={()=>setPick(x=>({...x,...Object.fromEntries(p.product_variants.map(v=>[v.id,v.stock]))}))}>Use stock qty</Button></div><div className="mt-2 flex flex-wrap gap-2">{p.product_variants.map(v=><label key={v.id} className="flex items-center gap-1 bg-muted px-2 py-1 text-xs">Size {v.size}<input type="number" min="0" max="500" value={pick[v.id]??0} onChange={e=>setPick({...pick,[v.id]:Math.max(0,Number(e.target.value)||0)})} className="w-12 border bg-background px-1"/></label>)}</div></div>)}</div></div>;
 }

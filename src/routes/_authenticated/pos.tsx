@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone } from "lucide-react";
+import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ function POS() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<null | { bill_no: string; total: number; paid: number; due: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
   useEffect(() => { const d = localStorage.getItem("solestack-print"); if (d) setDesign(d as PrintDesign); }, []);
 
   useEffect(() => {
@@ -114,21 +115,32 @@ function POS() {
     beep(true);
   }, []);
 
+  const scanCode = useCallback((code: string) => {
+    const key = code.trim().toLowerCase();
+    for (const p of products) for (const v of p.product_variants) if (v.barcode?.toLowerCase() === key || v.sku?.toLowerCase() === key) { addVariant(p,v); setQ(""); return true; }
+    beep(false); toast.error("No product with this scan code"); return false;
+  }, [products,addVariant]);
+
+  useEffect(() => {
+    let buffer = ""; let last = 0; let rapid = 0;
+    const handle = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || cameraOpen) return;
+      const el = e.target as HTMLElement;
+      const editing = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || el.isContentEditable;
+      const now = performance.now();
+      if (now-last > 85) { buffer=""; rapid=0; }
+      last=now;
+      if (e.key === "Enter") { if (buffer.length >= 6 && rapid >= 5) { e.preventDefault(); scanCode(buffer); } buffer=""; rapid=0; return; }
+      if (e.key.length !== 1) return;
+      if (!editing || el === searchRef.current) { buffer += e.key; rapid++; }
+    };
+    window.addEventListener("keydown",handle); return () => window.removeEventListener("keydown",handle);
+  },[scanCode,cameraOpen]);
+
   // Barcode scanner: scanners type the code + Enter into the search box
   function onSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key !== "Enter") return;
-    const code = q.trim();
-    for (const p of products)
-      for (const v of p.product_variants)
-        if (v.barcode === code || v.sku === code) {
-          addVariant(p, v);
-          setQ("");
-          return;
-        }
-    if (code) {
-      beep(false);
-      toast.error("No product with this barcode");
-    }
+    if (q.trim()) scanCode(q);
   }
 
   async function lookup(m = mobile) {
@@ -195,6 +207,7 @@ function POS() {
       mobileRef.current?.focus();
       return;
     }
+    if (pay === "Split" && (Number(splitCash) < 0 || Number(splitCash) > paid)) { toast.error("Cash part must be between zero and amount received"); return; }
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("create_sale", {
@@ -268,7 +281,7 @@ function POS() {
           <div><h1 className="text-lg font-bold">POS Billing</h1><p className="text-[11px] text-muted-foreground">Scan, choose size and complete the bill</p></div>
           <span className="hidden items-center gap-1.5 rounded-md bg-success/15 px-2 py-1 text-[10px] font-semibold text-success sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />Ready</span>
         </div>
-        <div className="shrink-0 p-3 pb-2"><div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search article" className="h-9 pl-9 text-sm" /></div></div>
+        <div className="flex shrink-0 gap-2 p-3 pb-2"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search article" className="h-9 pl-9 text-sm" /></div><Button variant="outline" size="icon" className="h-9 w-9" title="Scan with phone camera" aria-label="Scan with phone camera" onClick={()=>setCameraOpen(true)}><ScanLine className="h-4 w-4"/></Button></div>
         <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-1">
           {cats.map((c) => (
              <Button key={c} size="sm" variant={cat === c ? "default" : "secondary"} onClick={() => setCat(c)} className="h-7 shrink-0 px-2.5 text-xs">{c}</Button>
@@ -469,8 +482,19 @@ function POS() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={cameraOpen} onOpenChange={setCameraOpen}><DialogContent><DialogHeader><DialogTitle>Scan box label</DialogTitle></DialogHeader>{cameraOpen && <CameraScanner onScan={(code)=>{if(scanCode(code))setCameraOpen(false);}} />}</DialogContent></Dialog>
     </div>
   );
+}
+
+function CameraScanner({onScan}:{onScan:(code:string)=>void}) {
+  const video=useRef<HTMLVideoElement>(null);
+  const [error,setError]=useState("");
+  useEffect(()=>{let active=true; let controls:{stop:()=>void}|undefined;
+    import("@zxing/browser").then(async ({BrowserMultiFormatReader})=>{if(!active)return;const reader=new BrowserMultiFormatReader();try{const target=video.current;if(!target)return;controls=await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}}},target,(result)=>{if(result&&active)onScan(result.getText());});if(!active)controls.stop();}catch(e){if(active)setError((e as Error).message);}}).catch(e=>setError((e as Error).message));
+    return()=>{active=false;controls?.stop();};
+  },[onScan]);
+  return <div><video ref={video} muted playsInline className="aspect-video w-full bg-muted object-cover"/>{error&&<p role="alert" className="mt-2 text-sm text-destructive">Camera unavailable: {error}</p>}</div>;
 }
 
 function Row({ k, v }: { k: string; v: string }) {
