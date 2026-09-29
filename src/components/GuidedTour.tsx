@@ -91,7 +91,7 @@ export function GuidedTour() {
   if (!allowed) return null;
   const t = labels[tour?.language ?? language];
   return <>
-    {!tour && <Button type="button" variant="secondary" size="icon" className="fixed bottom-5 right-5 z-30 size-11 rounded-full border shadow-lg" aria-label={`${module.label} ${t.guide}`} title={`${module.label} ${t.guide}`} onClick={() => setTour({ path: pathname, language, index: 0 })}><BookOpen className="size-5" /></Button>}
+    {!tour && pathname === "/settings" && <Button type="button" variant="secondary" size="icon" className="fixed bottom-5 right-5 z-30 size-11 rounded-full border shadow-lg" aria-label={`${module.label} ${t.guide}`} title={`${module.label} ${t.guide}`} onClick={() => setTour({ path: pathname, language, index: 0 })}><BookOpen className="size-5" /></Button>}
     {tour && <>
       {target ? <div className="pointer-events-none fixed inset-0 z-40" aria-hidden="true">
         <div className="absolute left-0 right-0 top-0 bg-foreground/55" style={{ height: Math.max(0, target.top - 5) }} />
