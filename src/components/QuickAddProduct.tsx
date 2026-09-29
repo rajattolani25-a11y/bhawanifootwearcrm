@@ -107,10 +107,13 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
             <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
           ) : (
             <div className="space-y-1">
-              <Label className="text-xs">Kids sizes</Label>
-              <div className="flex h-9 items-center gap-3 rounded-md border px-3 text-sm">
-                <span className="font-semibold">1–13</span>
-                <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={kidsSmall} onChange={(e) => setKidsSmall(e.target.checked)} /> + 1–5 (chhote)</label>
+              <Label className="text-xs">Kids size category</Label>
+              <div className="flex gap-1.5">
+                {KID_GROUPS.map(([g]) => (
+                  <button key={g} type="button" onClick={() => setKidCats((c) => (c.includes(g) ? c.filter((x) => x !== g) : [...c, g]))} className={`flex-1 rounded-md border px-2 py-2 text-sm font-semibold ${kidCats.includes(g) ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+                    {g}
+                  </button>
+                ))}
               </div>
             </div>
           )}
