@@ -22,30 +22,28 @@ const sizesOf = (p: Product) => p.product_variants.filter((v) => v.stock > 0).ma
 async function drawPoster(p: Product, shop: string, phone: string, tag: string) {
   const c = document.createElement("canvas");
   c.width = 1080; c.height = 1920;
-  const g = c.getContext("2d")!;
-  g.fillStyle = "#171717"; g.fillRect(0, 0, 1080, 1920);
-  g.fillStyle = "#d96838"; g.fillRect(0, 0, 1080, 16); g.fillRect(0, 1904, 1080, 16);
+  const g = c.getContext("2d");
+  if (!g) throw new Error("Poster canvas unavailable");
+  g.fillStyle = "#f5f3ef"; g.fillRect(0, 0, 1080, 1920);
+  g.fillStyle = "#171717"; g.fillRect(0, 0, 1080, 330); g.fillRect(0, 1640, 1080, 280);
+  g.fillStyle = "#d96838"; g.fillRect(0, 0, 1080, 18); g.fillRect(80, 170, 130, 8);
   g.textAlign = "center";
-  g.fillStyle = "#fff"; g.font = "bold 64px sans-serif"; g.fillText(shop, 540, 170);
-  g.fillStyle = "#d96838"; g.beginPath(); g.roundRect(290, 230, 500, 90, 12); g.fill();
-  g.fillStyle = "#fff"; g.font = "bold 52px sans-serif"; g.fillText(tag, 540, 318);
+  g.fillStyle = "#fff"; g.font = "bold 56px sans-serif"; g.fillText(shop.toUpperCase(), 540, 110, 940);
+  g.fillStyle = "#d96838"; g.font = "bold 76px sans-serif"; g.fillText(tag.toUpperCase(), 540, 277, 950);
+  g.fillStyle = "#e9e5de"; g.fillRect(60, 355, 960, 740);
   if (p.image_src) {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => { const img = new Image(); img.crossOrigin = "anonymous"; img.onload = () => resolve(img); img.onerror = reject; img.src = p.image_src ?? ""; });
-    const scale = Math.min(880 / image.width, 650 / image.height);
-    g.fillStyle = "#f7f4ef"; g.roundRect(80, 370, 920, 700, 18); g.fill();
-    g.drawImage(image, 540 - image.width * scale / 2, 720 - image.height * scale / 2, image.width * scale, image.height * scale);
+    const scale = Math.min(900 / image.width, 690 / image.height);
+    g.drawImage(image, 540 - image.width * scale / 2, 725 - image.height * scale / 2, image.width * scale, image.height * scale);
+  } else {
+    g.fillStyle = "#666"; g.font = "42px sans-serif"; g.fillText("PRODUCT PHOTO", 540, 740);
   }
-  g.fillStyle = "#d96838"; g.font = "bold 52px sans-serif"; g.fillText(p.brand.toUpperCase(), 540, 1150);
-  g.fillStyle = "#fff"; g.font = "bold 82px sans-serif";
-  const words = p.article.split(" "); let line = ""; let y = 1250;
-  for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > 950) { g.fillText(line, 540, y); y += 120; line = w; } else line = t; }
-  g.fillText(line, 540, y);
-  g.fillStyle = "#a3a3a3"; g.font = "38px sans-serif"; g.fillText([p.category, p.color].filter(Boolean).join(" · "), 540, y + 70);
-  g.fillStyle = "#d96838"; g.font = "bold 120px sans-serif"; g.fillText(inr(p.selling_price), 540, 1480);
-  g.fillStyle = "#fff"; g.font = "bold 38px sans-serif"; g.fillText("AVAILABLE SIZES", 540, 1570);
-  const sz = sizesOf(p); const w = 110; let x = 540 - (sz.length * (w + 16) - 16) / 2;
-  for (const s of sz) { g.fillStyle = "#262626"; g.strokeStyle = "#d96838"; g.lineWidth = 4; g.beginPath(); g.roundRect(x, 1600, w, 100, 12); g.fill(); g.stroke(); g.fillStyle = "#fff"; g.font = "bold 50px sans-serif"; g.fillText(s, x + w / 2, 1668); x += w + 16; }
-  g.fillStyle = "#cbd5e1"; g.font = "44px sans-serif"; g.fillText(phone ? `WhatsApp / Call ${phone}` : "Visit the store today", 540, 1780);
+  g.fillStyle = "#d96838"; g.font = "bold 48px sans-serif"; g.fillText(p.brand.toUpperCase(), 540, 1190, 940);
+  g.fillStyle = "#171717"; g.font = "bold 84px sans-serif"; g.fillText(p.article, 540, 1295, 960);
+  g.fillStyle = "#555"; g.font = "38px sans-serif"; g.fillText([p.category, p.color].filter(Boolean).join(" · "), 540, 1365, 950);
+  g.fillStyle = "#171717"; g.font = "bold 118px sans-serif"; g.fillText(inr(p.selling_price), 540, 1535);
+  g.fillStyle = "#fff"; g.font = "bold 36px sans-serif"; g.fillText(`AVAILABLE SIZES  ${sizesOf(p).join("  /  ")}`, 540, 1730, 940);
+  g.fillStyle = "#d96838"; g.font = "40px sans-serif"; g.fillText(phone ? `WhatsApp / Call ${phone}` : "Visit the store today", 540, 1825, 940);
   return c;
 }
 
