@@ -130,7 +130,7 @@ function POS() {
       const now = performance.now();
       if (now-last > 85) { buffer=""; rapid=0; }
       last=now;
-      if (e.key === "Enter") { if (buffer.length >= 6 && rapid >= 5) { e.preventDefault(); scanCode(buffer); } buffer=""; rapid=0; return; }
+      if (e.key === "Enter") { if (el !== searchRef.current && buffer.length >= 6 && rapid >= 5) { e.preventDefault(); scanCode(buffer); } buffer=""; rapid=0; return; }
       if (e.key.length !== 1) return;
       if (!editing || el === searchRef.current) { buffer += e.key; rapid++; }
     };
