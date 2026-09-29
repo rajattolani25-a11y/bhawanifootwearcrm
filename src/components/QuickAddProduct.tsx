@@ -112,7 +112,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
         </div>
         <div className="flex gap-2">
           {(sizeKind === "adults" ? ["Gents", "Ladies"] : ["Boys", "Girls"]).map((k) => (
-            <button key={k} type="button" onClick={() => setF({ ...f, category: k })} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${f.category === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+            <button key={k} type="button" onClick={() => { setF({ ...f, category: k }); if (k === "Ladies") setLadyCats((c) => (c.length ? c : ["5-9"])); }} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${f.category === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
               {k}
             </button>
           ))}
