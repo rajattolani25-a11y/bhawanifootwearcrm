@@ -7,7 +7,7 @@
 - [x] Phase 5 — WhatsApp links, community, status poster, full dashboard, reports, accounting
 - [ ] Final testing (live test by owner)
 - [x] Remove shop claim from product labels; stop repeated coupon use per customer; repair optional mobile lookup and direct WhatsApp drafts
-- [ ] Verify reset backup completeness and safety without deleting live data
+- [x] Verify owner backup includes all 20 relevant tables and reset stays locked until backup and typed confirmation; do not run destructive reset on live data
 - [x] Improve WhatsApp community messages and product posters
 - [x] Quick add product from POS, Purchase and Products
 - [x] Default bill size + thermal width in Settings
