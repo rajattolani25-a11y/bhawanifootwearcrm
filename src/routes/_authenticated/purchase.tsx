@@ -65,7 +65,7 @@ function Purchase() {
           </div>
           <div className="flex gap-2"><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search article to add sizes" /><Button variant="outline" onClick={() => setQuick(true)}><PackagePlus className="h-4 w-4" /> New article</Button></div>
           {s && !matches.length && <p className="text-sm text-muted-foreground">Article nahi mila — "New article" se turant banao.</p>}
-          <QuickAddProduct open={quick} mode="purchase" initialArticle={q} onClose={() => setQuick(false)} onAdded={(r) => { setQ(""); const label = r.variants.length ? "New article" : ""; setLines((ls) => [...ls, ...r.variants.filter((v) => !ls.some((l) => l.variant_id === v.id)).map((v) => ({ variant_id: v.id, label: `${label} · ${v.size}`, qty: 1, price: r.cost, gst_rate: gst, free_sample: false }))]); toast.success("Sizes receiving list mein add ho gaye — pairs aur cost check karo"); }} />
+          <QuickAddProduct open={quick} mode="purchase" initialArticle={q} onClose={() => setQuick(false)} onAdded={(r) => { setQ(""); setLines((ls) => [...ls, ...r.variants.filter((v) => !ls.some((l) => l.variant_id === v.id)).map((v) => ({ variant_id: v.id, label: `${r.name} · ${v.size}`, qty: 1, price: r.cost, gst_rate: gst, free_sample: false }))]); toast.success("Sizes receiving list mein add ho gaye — pairs aur cost check karo"); }} />
           {matches.map((p) => (
             <div key={p.id} className="rounded-lg border p-2">
               <p className="text-sm font-semibold">{p.brand} {p.article} <span className="text-muted-foreground">{p.color}</span></p>

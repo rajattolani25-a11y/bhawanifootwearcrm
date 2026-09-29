@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from "@/hooks/use-auth";
 import { sizeSort } from "@/lib/stock";
 
-export type QuickAddResult = { product_id: string; variants: { id: string; size: string }[]; cost: number; qty: Record<string, number> };
+export type QuickAddResult = { product_id: string; variants: { id: string; size: string }[]; cost: number; qty: Record<string, number>; name: string };
 
 /** Expand "6-10" or "6,7,8" or "S M L" into a size list. */
 function parseSizes(text: string) {
@@ -53,7 +53,7 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
     const r = data as { product_id: string; variants: { id: string; size: string }[] };
     toast.success(`${f.brand.toUpperCase()} ${f.article} ready — ${rows.reduce((a, x) => a + x.qty, 0)} pairs added`);
     ["products", "stock-all", "pos-products"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
-    onAdded?.({ ...r, cost: Number(f.cost) || 0, qty: Object.fromEntries(rows.map((x) => [x.size, x.qty])) });
+    onAdded?.({ ...r, name: `${f.brand.trim().toUpperCase()} ${f.article.trim()}`.trim(), cost: Number(f.cost) || 0, qty: Object.fromEntries(rows.map((x) => [x.size, x.qty])) });
     setF({ brand: f.brand, article: "", category: f.category, color: "", mrp: "", selling_price: "", cost: "", rack: f.rack });
     setQty({});
     onClose();
