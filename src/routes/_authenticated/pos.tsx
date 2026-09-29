@@ -217,7 +217,7 @@ function POS() {
   const due = Math.max(bill.total - recv, 0);
   const change = Math.max(recv - bill.total, 0);
   const stampedToday = customer?.last_stamp_date === todayIST();
-  const stampPreview = customer && giveStamp && !stampedToday && bill.total >= 299 ? (bill.total >= 999 ? "Regular +1 and Premium +1" : "Regular +1") : null;
+  const stampPreview = customer && giveStamp && !stampedToday && bill.total >= 299 ? (bill.total >= 999 ? "Premium +1" : "Regular +1") : null;
 
   function reset() {
     couponRequestRef.current++;
@@ -289,8 +289,8 @@ function POS() {
         _items: cart.map((i) => ({ variant_id: i.variant_id, product_name: i.product_name, size: i.size, sku: i.sku, price: i.price, qty: i.qty, discount: 0 })),
       });
       if (error) throw error;
-      const r = data as { bill_no: string; stamp_regular: boolean; unlocked: { card: string; amount: number }[] };
-       setDone({ bill_no: r.bill_no, total: bill.total, paid, due, mobile: customer?.mobile ?? "", name: customer?.name ?? "", stamp: r.stamp_regular, unlocked: r.unlocked ?? [] });
+      const r = data as { bill_no: string; stamp_regular: boolean; stamp_premium?: boolean; unlocked: { card: string; amount: number }[] };
+       setDone({ bill_no: r.bill_no, total: bill.total, paid, due, mobile: customer?.mobile ?? "", name: customer?.name ?? "", stamp: r.stamp_regular || !!r.stamp_premium, unlocked: r.unlocked ?? [] });
       reset();
       qc.invalidateQueries();
     } catch (e) {
