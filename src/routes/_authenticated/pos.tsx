@@ -51,6 +51,7 @@ function POS() {
   const [design, setDesign] = useState<PrintDesign>("Thermal");
   const [received, setReceived] = useState("");
   const [busy, setBusy] = useState(false);
+  const submittingRef = useRef(false);
   const [done, setDone] = useState<null | { bill_no: string; total: number; paid: number; due: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -228,7 +229,7 @@ function POS() {
   }
 
   async function complete() {
-    if (!cart.length || busy) return;
+    if (!cart.length || submittingRef.current) return;
     if (pay === "Credit" && !customer) {
       toast.error("Credit bill ke liye customer mobile zaroori hai");
       mobileRef.current?.focus();
@@ -240,6 +241,7 @@ function POS() {
       return;
     }
     if (pay === "Split" && (Number(splitCash) < 0 || Number(splitCash) > paid)) { toast.error("Cash part must be between zero and amount received"); return; }
+    submittingRef.current = true;
     setBusy(true);
     try {
       const { data, error } = await supabase.rpc("create_sale", {
@@ -274,6 +276,7 @@ function POS() {
       beep(false);
       toast.error((e as Error).message);
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   }
@@ -298,7 +301,7 @@ function POS() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F2") { e.preventDefault(); searchRef.current?.focus(); }
       if (e.key === "F4") { e.preventDefault(); mobileRef.current?.focus(); }
-      if (e.key === "F8") { e.preventDefault(); complete(); }
+      if (e.key === "F8" && !e.repeat) { e.preventDefault(); complete(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

@@ -75,24 +75,36 @@ function SettingsPage() {
   }
 
   async function download() {
-    const data = await exportAll();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-    a.download = `solestack-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    setBackupDone(true);
-    toast.success("Full backup downloaded");
+    setBackupDone(false);
+    setBusy(true);
+    try {
+      const data = await exportAll();
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+      a.href = url;
+      a.download = `solestack-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setBackupDone(true);
+      toast.success("Full backup downloaded");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function resetData() {
     if (!backupDone || confirm !== "RESET BHAWANI FOOTWEAR") return;
     setBusy(true);
-    const { error } = await supabase.rpc("reset_store_data", { _confirmation: confirm });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    setConfirm(""); setBackupDone(false);
-    toast.success("Store data reset completed");
+    try {
+      const { error } = await supabase.rpc("reset_store_data", { _confirmation: confirm });
+      if (error) throw error;
+      setConfirm(""); setBackupDone(false);
+      toast.success("Store data reset completed");
+      window.location.reload();
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setBusy(false); }
   }
 
   const fields: [string, string][] = [
@@ -151,7 +163,7 @@ function SettingsPage() {
         <h2 className="font-semibold text-destructive">Reset store data</h2>
         <p className="mt-1 text-sm text-muted-foreground">Bills, stock, products, customers, purchases and accounting entries will be permanently removed. Your account, team and store settings remain.</p>
         <ol className="my-3 list-inside list-decimal space-y-1 text-sm"><li>Download a fresh full backup.</li><li>Type the exact confirmation shown below.</li></ol>
-        <Button variant="outline" onClick={download}>{backupDone ? "Backup downloaded" : "1. Download required backup"}</Button>
+        <Button variant="outline" disabled={busy} onClick={download}>{busy ? "Preparing backup…" : backupDone ? "Backup downloaded" : "1. Download required backup"}</Button>
         <Label className="mt-4 block">Type: <b>RESET BHAWANI FOOTWEAR</b></Label>
         <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-1 max-w-md" autoComplete="off" />
         <Button variant="destructive" className="mt-3" disabled={!backupDone || confirm !== "RESET BHAWANI FOOTWEAR" || busy} onClick={resetData}>Permanently reset store data</Button>
