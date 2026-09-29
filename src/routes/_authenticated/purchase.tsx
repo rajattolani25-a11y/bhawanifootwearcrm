@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { PackagePlus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { useStock } from "@/lib/stock";
+import { QuickAddProduct } from "@/components/QuickAddProduct";
 
 export const Route = createFileRoute("/_authenticated/purchase")({
   head: () => ({ meta: [{ title: "Purchase — SoleStack POS" }, { name: "description", content: "Receive new stock from suppliers." }, { property: "og:title", content: "Purchase — SoleStack POS" }, { property: "og:description", content: "Receive and record supplier footwear stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -29,6 +30,7 @@ function Purchase() {
   const [q, setQ] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [busy, setBusy] = useState(false);
+  const [quick, setQuick] = useState(false);
   const s = q.toLowerCase();
   const matches = s ? stock.filter((p) => `${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s)).slice(0, 8) : [];
 
@@ -61,7 +63,9 @@ function Purchase() {
               {[0, 5, 12, 18].map((r) => <option key={r} value={r}>GST {r}%</option>)}
             </select>
           </div>
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search article to add sizes" />
+          <div className="flex gap-2"><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search article to add sizes" /><Button variant="outline" onClick={() => setQuick(true)}><PackagePlus className="h-4 w-4" /> New article</Button></div>
+          {s && !matches.length && <p className="text-sm text-muted-foreground">Article nahi mila — "New article" se turant banao.</p>}
+          <QuickAddProduct open={quick} mode="purchase" initialArticle={q} onClose={() => setQuick(false)} onAdded={(r) => { setQ(""); const label = r.variants.length ? "New article" : ""; setLines((ls) => [...ls, ...r.variants.filter((v) => !ls.some((l) => l.variant_id === v.id)).map((v) => ({ variant_id: v.id, label: `${label} · ${v.size}`, qty: 1, price: r.cost, gst_rate: gst, free_sample: false }))]); toast.success("Sizes receiving list mein add ho gaye — pairs aur cost check karo"); }} />
           {matches.map((p) => (
             <div key={p.id} className="rounded-lg border p-2">
               <p className="text-sm font-semibold">{p.brand} {p.article} <span className="text-muted-foreground">{p.color}</span></p>
