@@ -103,6 +103,14 @@ export async function exportAll() {
   for (const t of tables) {
     const rows: unknown[] = [];
     for (let from = 0; ; from += 1000) {
+      if (t === "sale_items") {
+        const { data, error } = await supabase.rpc("backup_sale_items", { _offset: from, _limit: 1000 });
+        if (error) throw new Error(`Backup failed on ${t}: ${error.message}`);
+        if (!data) throw new Error(`Backup failed on ${t}`);
+        rows.push(...data);
+        if (data.length < 1000) break;
+        continue;
+      }
       const { data, error } = await supabase.from(t).select("*").range(from, from + 999);
       if (error) throw new Error(`Backup failed on ${t}: ${error.message}`);
       if (!data) throw new Error(`Backup failed on ${t}`);
