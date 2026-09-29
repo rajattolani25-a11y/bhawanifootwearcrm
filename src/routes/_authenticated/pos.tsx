@@ -217,7 +217,7 @@ function POS() {
   const due = Math.max(bill.total - recv, 0);
   const change = Math.max(recv - bill.total, 0);
   const stampedToday = customer?.last_stamp_date === todayIST();
-  const stampPreview = customer && giveStamp && !stampedToday && bill.total >= 299 ? (bill.total >= 999 ? "Regular +1 and Premium +1" : "Regular +1") : null;
+  const stampPreview = customer && giveStamp && !stampedToday && bill.total >= 299 ? (bill.total >= 999 ? "Premium +1" : "Regular +1") : null;
 
   function reset() {
     couponRequestRef.current++;
