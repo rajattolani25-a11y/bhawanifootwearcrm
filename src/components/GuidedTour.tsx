@@ -35,6 +35,11 @@ export function GuidedTour() {
   const [language, setLanguage] = useState<Language>("hinglish");
 
   useEffect(() => {
+    setTour((current) => current?.path === pathname ? current : null);
+    setTarget(null);
+  }, [pathname]);
+
+  useEffect(() => {
     const request = sessionStorage.getItem("solestack-guide-request");
     if (!request) return;
     sessionStorage.removeItem("solestack-guide-request");
@@ -73,6 +78,7 @@ export function GuidedTour() {
 
   useEffect(() => {
     if (!tour) return;
+    setTarget(null);
     let timer: ReturnType<typeof setTimeout>;
     const node = getTarget(tour.path, tour.index);
     if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
