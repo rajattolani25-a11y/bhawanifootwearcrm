@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
 import { ThemeControl } from "@/components/ThemeControl";
+import { GuidedTour } from "@/components/GuidedTour";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -97,6 +98,7 @@ function AppShell() {
         <main className={cn("min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />
         </main>
+        <GuidedTour />
       </div>
     </div>
   );

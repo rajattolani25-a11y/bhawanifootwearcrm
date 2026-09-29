@@ -10,7 +10,6 @@ export function WorkspaceGuide({ collapsible = false }: { collapsible?: boolean 
   const { isOwner } = useAuth();
   const [open, setOpen] = useState(!collapsible);
   const [language, setLanguage] = useState<Language>("hinglish");
-  const [expanded, setExpanded] = useState<string | null>(null);
   const text = copy[language];
   return (
      <section className="border-t pt-5">
@@ -18,7 +17,7 @@ export function WorkspaceGuide({ collapsible = false }: { collapsible?: boolean 
         {text.heading} {open ? <ChevronDown /> : <ChevronRight />}
       </Button>
       {open && <div className="mt-3 space-y-4">
-         <p className="text-sm text-muted-foreground">{text.note}</p>
+         <p className="text-sm text-muted-foreground">{language === "hindi" ? "कोई भी हिस्सा चुनें; उसी स्क्रीन पर बारी-बारी से जानकारी मिलेगी।" : language === "english" ? "Choose any section for a guided walkthrough on that screen." : "Koi bhi section chuno; usi screen par step-by-step guide milegi."}</p>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Guide language">
           {(["hinglish", "english", "hindi"] as const).map((lang) => <Button key={lang} size="sm" variant={language === lang ? "default" : "outline"} onClick={() => setLanguage(lang)} aria-pressed={language === lang}>{lang === "hindi" ? "हिन्दी" : lang === "english" ? "English" : "Hinglish"}</Button>)}
         </div>
