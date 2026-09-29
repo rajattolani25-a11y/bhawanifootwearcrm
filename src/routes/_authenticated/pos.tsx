@@ -58,6 +58,7 @@ function POS() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<null | { id: string; code: string; title: string; amount: number }>(null);
+  const couponRequestRef = useRef(0);
   const { data: storeCfg } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
   useEffect(() => { const d = storeCfg?.bill_design; if (d) setDesign(d as PrintDesign); }, [storeCfg?.bill_design]);
 
@@ -196,7 +197,9 @@ function POS() {
   async function checkCoupon(code: string, silent = false) {
     const c = code.trim().toUpperCase();
     if (!c) return;
+    const request = ++couponRequestRef.current;
     const { data, error } = await supabase.rpc("coupon_discount", { _code: c, _customer: customer?.id ?? (null as unknown as string), _subtotal: cartSubtotal });
+    if (request !== couponRequestRef.current) return;
     if (error) { setCoupon(null); if (!silent) { beep(false); toast.error(error.message); } else toast.error(`Coupon ${c} removed: ${error.message}`); return; }
     const r = data as { id: string; code: string; title: string; amount: number };
     setCoupon(r);
@@ -205,7 +208,7 @@ function POS() {
   // Re-check the coupon whenever the cart value or customer changes (percent / min-bill / customer-only rules).
   useEffect(() => {
     if (!coupon) return;
-    if (!cart.length) { setCoupon(null); return; }
+    if (!cart.length) { couponRequestRef.current++; setCoupon(null); return; }
     void checkCoupon(coupon.code, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartSubtotal, customer?.id]);
@@ -217,6 +220,7 @@ function POS() {
   const stampPreview = customer && giveStamp && !stampedToday && bill.total >= 299 ? (bill.total >= 999 ? "Regular +1 and Premium +1" : "Regular +1") : null;
 
   function reset() {
+    couponRequestRef.current++;
     setCart([]);
     setBillDiscount("");
     setSplitCash("");
@@ -423,7 +427,7 @@ function POS() {
             {coupon ? (
               <div className="flex items-center justify-between rounded-lg bg-accent p-2 text-sm text-accent-foreground">
                 <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {coupon.code}{coupon.title ? ` · ${coupon.title}` : ""} −{inr(coupon.amount)}</span>
-                <button className="text-xs font-semibold underline" onClick={() => { setCoupon(null); setCouponInput(""); }}>Remove</button>
+                <Button variant="ghost" size="sm" className="h-7 text-xs font-semibold underline" onClick={() => { couponRequestRef.current++; setCoupon(null); setCouponInput(""); }}>Remove</Button>
               </div>
             ) : (
               <div className="flex gap-1.5">

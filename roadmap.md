@@ -6,9 +6,9 @@
 - [x] Phase 4 — inventory matrix, CSV bulk upload, size finder, thermal bill, re-print, returns/exchange, barcodes, purchase, suppliers
 - [x] Phase 5 — WhatsApp links, community, status poster, full dashboard, reports, accounting
 - [ ] Final testing (live test by owner)
-- [ ] Remove shop claim from product labels; stop repeated coupon use per customer; repair optional mobile lookup and direct WhatsApp drafts
+- [x] Remove shop claim from product labels; stop repeated coupon use per customer; repair optional mobile lookup and direct WhatsApp drafts
 - [ ] Verify reset backup completeness and safety without deleting live data
-- [ ] Improve WhatsApp community messages and product posters
+- [x] Improve WhatsApp community messages and product posters
 - [x] Quick add product from POS, Purchase and Products
 - [x] Default bill size + thermal width in Settings
 - [x] Remove Inventory Matrix (CSV tools moved to Products)
