@@ -29,11 +29,15 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const { isOwner } = useAuth();
   const [f, setF] = useState({ brand: "", article: "", category: "", color: "", mrp: "", selling_price: "", cost: "", rack: "" });
   const [sizeText, setSizeText] = useState("6-10");
+  const [sizeKind, setSizeKind] = useState<"adults" | "kids">("adults");
+  const [kidsSmall, setKidsSmall] = useState(false);
   const [defQty, setDefQty] = useState(mode === "purchase" ? "0" : "1");
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
-  const sizes = parseSizes(sizeText);
+  const sizes = sizeKind === "kids"
+    ? [...Array.from({ length: 13 }, (_, i) => String(i + 1)), ...(kidsSmall ? Array.from({ length: 5 }, (_, i) => `${i + 1}K`) : [])]
+    : parseSizes(sizeText);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   async function save() {
@@ -76,8 +80,25 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
             </div>
           ))}
         </div>
+        <div className="flex gap-2">
+          {(["adults", "kids"] as const).map((k) => (
+            <button key={k} type="button" onClick={() => setSizeKind(k)} className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold ${sizeKind === k ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+              {k === "adults" ? "Adults" : "Kids"}
+            </button>
+          ))}
+        </div>
         <div className="grid grid-cols-[1fr_90px] gap-2.5">
-          <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
+          {sizeKind === "adults" ? (
+            <div className="space-y-1"><Label className="text-xs">Sizes (6-10 ya 6,7,8)</Label><Input value={sizeText} onChange={(e) => setSizeText(e.target.value)} className="h-9" /></div>
+          ) : (
+            <div className="space-y-1">
+              <Label className="text-xs">Kids sizes</Label>
+              <div className="flex h-9 items-center gap-3 rounded-md border px-3 text-sm">
+                <span className="font-semibold">1–13</span>
+                <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={kidsSmall} onChange={(e) => setKidsSmall(e.target.checked)} /> + 1–5 (chhote)</label>
+              </div>
+            </div>
+          )}
           {mode !== "purchase" && <div className="space-y-1"><Label className="text-xs">Pairs / size</Label><Input value={defQty} onChange={(e) => setDefQty(e.target.value)} inputMode="numeric" className="h-9" /></div>}
         </div>
         {mode !== "purchase" && sizes.length > 0 && (
