@@ -29,6 +29,17 @@ const KID_GROUPS: [string, string[]][] = [
   ["2-5", ["2", "3", "4", "5"]],
 ];
 
+/** Ladies size categories: 5-9 (normal), 10-12 (badi size). */
+const LADY_GROUPS: [string, string[], string][] = [
+  ["5-9", ["5", "6", "7", "8", "9"], "Normal"],
+  ["10-12", ["10", "11", "12"], "Badi size"],
+];
+
+/** Dedupe + sort a merged size list. */
+function combine(list: string[]) {
+  return [...new Set(list)].sort(sizeSort);
+}
+
 export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initialArticle = "" }: {
   open: boolean; onClose: () => void; onAdded?: (r: QuickAddResult) => void; mode?: "stock" | "purchase"; initialArticle?: string;
 }) {
@@ -38,14 +49,18 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const [sizeText, setSizeText] = useState("6-10");
   const [sizeKind, setSizeKind] = useState<"adults" | "kids">("adults");
   const [kidCats, setKidCats] = useState<string[]>(["5-10"]);
+  const [ladyCats, setLadyCats] = useState<string[]>(["5-9"]);
+  const [extraSizes, setExtraSizes] = useState("");
   const [defQty, setDefQty] = useState(mode === "purchase" ? "0" : "1");
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
   useEffect(() => { setF((x) => ({ ...x, category: sizeKind === "kids" ? "Boys" : "Gents" })); }, [sizeKind]);
   const sizes = sizeKind === "kids"
-    ? KID_GROUPS.filter(([g]) => kidCats.includes(g)).flatMap(([, list]) => list).filter((s, i, a) => a.indexOf(s) === i)
-    : parseSizes(sizeText);
+    ? combine(KID_GROUPS.filter(([g]) => kidCats.includes(g)).flatMap(([, list]) => list))
+    : sizeKind === "adults" && f.category === "Ladies"
+      ? combine([...LADY_GROUPS.filter(([g]) => ladyCats.includes(g)).flatMap(([, list]) => list), ...parseSizes(extraSizes)])
+      : parseSizes(sizeText);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   async function save() {
