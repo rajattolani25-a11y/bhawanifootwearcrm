@@ -43,7 +43,7 @@ function Coupons() {
   const now = Date.now();
   const status = (c: Coupon) => !c.active ? "Paused" : c.expires_at && new Date(c.expires_at).getTime() < now ? "Expired" : c.usage_limit !== null && c.used_count >= c.usage_limit ? "Used up" : c.starts_at && new Date(c.starts_at).getTime() > now ? "Scheduled" : "Live";
   const shopName = shop?.business_name || "BHAWANI FOOTWEAR";
-  const message = (c: Coupon) => [`Dear ${c.customers?.name || "Customer"},`, "", `Here is your ${shopName} coupon: *${c.code}*`, `${describe(c)}.`, c.expires_at ? `Valid till ${new Date(c.expires_at).toLocaleDateString("en-IN")}.` : "", "Show this code at billing.", "", "See you at the store!"].filter((x) => x !== "").join("\n");
+  const message = (c: Coupon) => couponMessage(shopName, c, c.customers?.name);
 
   async function toggle(c: Coupon) {
     const { error } = await supabase.from("coupons").update({ active: !c.active }).eq("id", c.id);
@@ -71,7 +71,7 @@ function Coupons() {
                   </div>
                   <div className="min-w-0 flex-1 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <button className="font-mono text-base font-bold tracking-wider" onClick={() => { void navigator.clipboard?.writeText(c.code); toast.success("Code copied"); }}>{c.code} <Copy className="inline h-3 w-3 text-muted-foreground" /></button>
+                      <Button variant="ghost" size="sm" className="font-mono text-base font-bold tracking-wider" onClick={() => { void navigator.clipboard?.writeText(c.code); toast.success("Code copied"); }}>{c.code} <Copy className="inline h-3 w-3 text-muted-foreground" /></Button>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${st === "Live" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>{st}</span>
                     </div>
                     {c.title && <p className="truncate text-sm font-medium">{c.title}</p>}
@@ -81,7 +81,7 @@ function Coupons() {
                       {c.expires_at ? ` · till ${new Date(c.expires_at).toLocaleDateString("en-IN")}` : " · no expiry"}
                     </p>
                     <div className="mt-2 flex items-center gap-2">
-                      {c.customers && <Button asChild size="sm" variant="outline" className="h-7 text-xs"><a href={waLink(c.customers.mobile, message(c))} target="_blank" rel="noreferrer"><MessageCircle className="h-3.5 w-3.5" /> Send</a></Button>}
+                      {c.customers && <Button asChild size="sm" variant="outline" className="h-7 text-xs"><a href={waLink(c.customers.mobile, message(c))} target="_blank" rel="noreferrer"><MessageCircle className="h-3.5 w-3.5" /> WhatsApp customer</a></Button>}
                       {isOwner && <label className="ml-auto flex items-center gap-1.5 text-xs">Active <Switch checked={c.active} onCheckedChange={() => toggle(c)} /></label>}
                     </div>
                   </div>
@@ -100,24 +100,31 @@ function Coupons() {
           {!rewards.length && <p className="p-4 text-sm text-muted-foreground">Stamp milestones (5/10/20) par rewards yahan dikhenge.</p>}
         </div>
       )}
-      {isOwner && <NewCoupon open={open} onClose={() => setOpen(false)} />}
+      {isOwner && <NewCoupon open={open} onClose={() => setOpen(false)} shopName={shopName} />}
     </div>
   );
 }
 
-function NewCoupon({ open, onClose }: { open: boolean; onClose: () => void }) {
+function couponMessage(shopName: string, c: Pick<Coupon, "code" | "kind" | "value" | "max_discount" | "min_bill" | "expires_at">, name?: string) {
+  return [`Dear ${name?.trim() || "Customer"},`, "", `A special offer from ${shopName} is ready for you.`, "", `Your coupon code: *${c.code}*`, `Offer: ${describe(c)}`, c.expires_at ? `Valid until ${new Date(c.expires_at).toLocaleDateString("en-IN")}.` : "", "", "Share this code with us at billing to redeem your offer. Valid once per customer, subject to availability and offer terms.", `Warm regards,\n${shopName}`].filter(Boolean).join("\n");
+}
+
+function NewCoupon({ open, onClose, shopName }: { open: boolean; onClose: () => void; shopName: string }) {
   const qc = useQueryClient();
   const [f, setF] = useState({ code: randomCode(), title: "", kind: "flat", value: "", max_discount: "", min_bill: "", expires: "", usage_limit: "", mobile: "" });
   const [cust, setCust] = useState<{ id: string; name: string } | null>(null);
+  const [ready, setReady] = useState<{ mobile: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   async function findCustomer(m: string) {
     const clean = m.replace(/\D/g, "");
-    setCust(null);
-    if (clean.length !== 10) return;
-    const { data } = await supabase.from("customers").select("id,name").eq("mobile", clean).maybeSingle();
-    if (data) setCust(data); else toast.error("Is mobile ka customer nahi mila");
+    if (clean.length !== 10) { toast.error("10-digit mobile number daalo"); return null; }
+    const { data, error } = await supabase.from("customers").select("id,name,mobile").eq("mobile", clean).maybeSingle();
+    if (error) { toast.error(error.message); return null; }
+    if (!data) { toast.error("Is mobile ka customer nahi mila. Pehle Customers mein add karo."); return null; }
+    setCust(data);
+    return data;
   }
 
   async function save() {
@@ -125,29 +132,36 @@ function NewCoupon({ open, onClose }: { open: boolean; onClose: () => void }) {
     const value = Number(f.value);
     if (!/^[A-Z0-9-]{3,20}$/.test(code)) { toast.error("Code 3–20 letters/numbers ka rakho"); return; }
     if (!(value > 0) || (f.kind === "percent" && value > 100)) { toast.error("Sahi discount value do"); return; }
-    if (f.mobile.trim() && !cust) { toast.error("Customer mobile check karo"); return; }
+    const clean = f.mobile.replace(/\D/g, "");
+    const matched = clean ? (cust && "mobile" in cust && cust.mobile === clean ? cust : await findCustomer(clean)) : null;
+    if (clean && !matched) return;
+    if (f.expires && new Date(`${f.expires}T23:59:59+05:30`).getTime() < Date.now()) { toast.error("Aage ki valid date chuno"); return; }
     setBusy(true);
-    const { error } = await supabase.from("coupons").insert({
+    const payload = {
       code, title: f.title.trim(), kind: f.kind, value,
       max_discount: f.kind === "percent" && Number(f.max_discount) > 0 ? Number(f.max_discount) : null,
       min_bill: Math.max(0, Number(f.min_bill) || 0),
       expires_at: f.expires ? new Date(`${f.expires}T23:59:59+05:30`).toISOString() : null,
       usage_limit: Number(f.usage_limit) > 0 ? Math.floor(Number(f.usage_limit)) : null,
-      customer_id: cust?.id ?? null,
-    });
+      customer_id: matched?.id ?? null,
+    };
+    const { error } = await supabase.from("coupons").insert(payload);
     setBusy(false);
     if (error) { toast.error(error.message.includes("duplicate") ? "Ye code pehle se hai" : error.message); return; }
     toast.success(`Coupon ${code} ready`);
     qc.invalidateQueries({ queryKey: ["coupons"] });
+    if (matched) setReady({ mobile: clean, message: couponMessage(shopName, payload, matched.name) });
+    else setReady(null);
     setF({ code: randomCode(), title: "", kind: "flat", value: "", max_discount: "", min_bill: "", expires: "", usage_limit: "", mobile: "" });
     setCust(null);
-    onClose();
+    if (!matched) onClose();
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
-        <DialogHeader><DialogTitle>New coupon</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{ready ? "Coupon ready" : "New coupon"}</DialogTitle></DialogHeader>
+        {ready ? <div className="space-y-3"><p className="text-sm">Customer ka WhatsApp kholkar message check aur send karo.</p><pre className="whitespace-pre-wrap rounded bg-muted p-3 text-xs">{ready.message}</pre><Button asChild className="w-full"><a href={waLink(ready.mobile, ready.message)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Open customer WhatsApp</a></Button><Button variant="outline" className="w-full" onClick={() => { setReady(null); onClose(); }}>Done</Button></div> : <>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1"><Label>Code</Label><div className="flex gap-2"><Input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} className="font-mono uppercase" /><Button variant="outline" onClick={() => setF({ ...f, code: randomCode() })}>New</Button></div></div>
           <div className="col-span-2 space-y-1"><Label>Title (optional)</Label><Input value={f.title} onChange={set("title")} placeholder="Diwali offer, Birthday gift…" /></div>
@@ -157,10 +171,11 @@ function NewCoupon({ open, onClose }: { open: boolean; onClose: () => void }) {
           <div className="space-y-1"><Label>Minimum bill ₹</Label><Input value={f.min_bill} onChange={set("min_bill")} inputMode="decimal" placeholder="No minimum" /></div>
           <div className="space-y-1"><Label>Valid till</Label><Input type="date" value={f.expires} onChange={set("expires")} /></div>
           <div className="space-y-1"><Label>Use limit</Label><Input value={f.usage_limit} onChange={set("usage_limit")} inputMode="numeric" placeholder="Unlimited" /></div>
-          <div className="col-span-2 space-y-1"><Label>Only for customer (mobile, optional)</Label><Input value={f.mobile} maxLength={10} inputMode="numeric" onChange={(e) => { setF({ ...f, mobile: e.target.value }); void findCustomer(e.target.value); }} placeholder="Blank = any customer" />{cust && <p className="text-xs text-success">Coupon sirf {cust.name} ke liye chalega</p>}</div>
+          <div className="col-span-2 space-y-1"><Label>Customer mobile (optional)</Label><div className="flex gap-2"><Input value={f.mobile} maxLength={10} inputMode="numeric" onChange={(e) => { setF({ ...f, mobile: e.target.value.replace(/\D/g, "") }); setCust(null); }} placeholder="Blank = any customer" /><Button type="button" variant="outline" onClick={() => void findCustomer(f.mobile)} disabled={f.mobile.length !== 10}>Find</Button></div>{cust && <p className="text-xs text-success">Sirf {cust.name} ke liye · {f.mobile}</p>}</div>
         </div>
-        <p className="text-xs text-muted-foreground">Khaali chhodo to koi limit nahi — na expiry, na minimum, na use limit.</p>
+        <p className="text-xs text-muted-foreground">Har customer ye coupon ek baar use kar sakta hai. Mobile khaali ho to koi bhi registered customer use kar sakta hai.</p>
         <Button onClick={save} disabled={busy} className="h-11">{busy ? "Saving…" : "Create coupon"}</Button>
+        </>}
       </DialogContent>
     </Dialog>
   );
