@@ -6,14 +6,14 @@
 - [x] Phase 4 — inventory matrix, CSV bulk upload, size finder, thermal bill, re-print, returns/exchange, barcodes, purchase, suppliers
 - [x] Phase 5 — WhatsApp links, community, status poster, full dashboard, reports, accounting
 - [ ] Final testing (live test by owner)
-- [ ] Rewrite dashboard live welcome copy with a sharper retail pulse message
-- [ ] Replace fragile phone popup printing with mobile-safe bill, label and poster print/share flows
-- [ ] Add QR alongside Code 128 and make scanner capture work from any POS field
-- [ ] Add tappable product and supplier profiles with full stock, purchase and movement history
-- [ ] Correct inventory matrix quantities, sorting and product drill-down
-- [ ] Carry existing purchase cost into receiving, allow owner edits and prevent silent zero-cost receipts
-- [ ] Correct accounting for GST, returns, COGS, credit collections, supplier payments and cash movement
-- [ ] Redesign posters to look like professional retail creatives instead of generated templates
+- [x] Rewrite dashboard live welcome copy with a sharper retail pulse message
+- [x] Replace fragile phone popup printing with in-page bill, label and poster print/share flows
+- [x] Add QR alongside Code 128 and make scanner capture work from any POS field
+- [x] Add tappable product and supplier profiles with stock, purchase and movement history
+- [x] Correct inventory matrix quantities, sorting and product drill-down
+- [x] Carry existing purchase cost into receiving, allow owner edits and prevent silent zero-cost receipts
+- [x] Reconcile accounting views for GST, returns, COGS, credit collections, supplier payments and cash movement; historical missing cost remains flagged
+- [x] Redesign posters as product-focused retail creatives with preview and print
 - [x] Fix GST totaling in POS (exclusive GST add)
 - [x] POS layout + bill print exactly like old app
 - [x] Stock poster, new-stock WhatsApp community message
