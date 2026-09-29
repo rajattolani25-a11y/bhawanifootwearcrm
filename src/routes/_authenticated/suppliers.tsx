@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { inr } from "@/lib/modules";
 import { waLink } from "@/lib/pos";
 
@@ -18,8 +19,11 @@ export const Route = createFileRoute("/_authenticated/suppliers")({
 function Suppliers() {
   const qc = useQueryClient();
   const [f, setF] = useState({ name: "", phone: "", gstin: "", address: "" });
+  const [selected, setSelected] = useState<string | null>(null);
+  const [payment, setPayment] = useState({ amount: "", mode: "Cash", note: "" });
   const { data = [] } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
-  const { data: purchases = [] } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => (await supabase.from("purchases").select("supplier_id,total,paid_amount")).data ?? [] });
+  const { data: purchases = [] } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => (await supabase.from("purchases").select("id,supplier_id,purchase_date,invoice_no,quantity,purchase_price,total,paid_amount").order("purchase_date",{ascending:false})).data ?? [] });
+  const { data: payments = [] } = useQuery({ queryKey: ["supplier-payments"], queryFn: async () => (await supabase.from("supplier_payments").select("id,supplier_id,amount,payment_mode,paid_at,note").order("paid_at",{ascending:false})).data ?? [] });
   const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [0, 0]);
 
   async function add() {
@@ -35,6 +39,13 @@ function Suppliers() {
     if (error) { toast.error("Has purchases — cannot delete"); return; }
     qc.invalidateQueries({ queryKey: ["suppliers"] });
   }
+  async function recordPayment() {
+    if (!selected || !Number.isFinite(Number(payment.amount)) || Number(payment.amount) <= 0) { toast.error("Enter a positive amount"); return; }
+    const { error } = await supabase.rpc("record_supplier_payment", { _supplier_id: selected, _amount: Number(payment.amount), _mode: payment.mode, _note: payment.note });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Supplier payment saved"); setPayment({ amount: "", mode: "Cash", note: "" }); qc.invalidateQueries({ queryKey: ["purchases-sum"] }); qc.invalidateQueries({ queryKey: ["supplier-payments"] }); qc.invalidateQueries({ queryKey: ["acct"] });
+  }
+  const current = data.find((s) => s.id === selected);
   return (
     <div>
       <PageHeader title="Suppliers" subtitle="Who you buy from, how much is pending." />
@@ -50,7 +61,7 @@ function Suppliers() {
           const [tot, paid] = sum(s.id);
           return (
             <div key={s.id} className="rounded-xl border bg-card p-4">
-              <div className="flex justify-between"><p className="font-semibold">{s.name}</p><button onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></button></div>
+               <div className="flex justify-between"><Button variant="link" className="h-auto p-0 text-left font-semibold" onClick={() => setSelected(s.id)}>{s.name}</Button><Button variant="ghost" size="icon" aria-label={`Delete ${s.name}`} onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button></div>
               <p className="text-xs text-muted-foreground">{s.phone} {s.gstin && `· ${s.gstin}`}</p>
               <p className="mt-2 text-sm">Purchased {inr(tot)} · <span className="text-destructive">Pending {inr(tot - paid)}</span></p>
               {s.phone && (
@@ -62,6 +73,13 @@ function Suppliers() {
           );
         })}
       </div>
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{current?.name}</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">{current?.phone} · {current?.gstin} · {current?.address}</p>
+        <div className="grid grid-cols-3 gap-2 border-y py-3 text-sm"><div>Purchased<br /><b>{inr(current ? sum(current.id)[0] : 0)}</b></div><div>Paid<br /><b>{inr(current ? sum(current.id)[1] : 0)}</b></div><div>Due<br /><b>{inr(current ? sum(current.id)[0]-sum(current.id)[1] : 0)}</b></div></div>
+        <h3 className="font-semibold">Record payment</h3><div className="flex flex-wrap gap-2"><Input className="min-w-28 flex-1" type="number" min="0.01" step="0.01" placeholder="Amount ₹" value={payment.amount} onChange={(e) => setPayment({...payment,amount:e.target.value})}/><select aria-label="Payment mode" className="rounded border bg-background px-2" value={payment.mode} onChange={(e) => setPayment({...payment,mode:e.target.value})}>{["Cash","UPI","Card","Bank"].map((m)=><option key={m}>{m}</option>)}</select><Button onClick={recordPayment}>Save</Button></div><Input placeholder="Note (optional)" value={payment.note} onChange={(e) => setPayment({...payment,note:e.target.value})}/>
+        <h3 className="font-semibold">Purchase history</h3><div className="max-h-44 overflow-y-auto text-sm">{purchases.filter((p)=>p.supplier_id===selected).map((p)=><div key={p.id} className="flex justify-between border-t py-2"><span>{new Date(p.purchase_date).toLocaleDateString("en-IN")} · {p.invoice_no || "No invoice"} · {p.quantity} pairs</span><span>{inr(p.total)} · Due {inr(Number(p.total)-Number(p.paid_amount || 0))}</span></div>)}</div>
+        <h3 className="font-semibold">Payment history</h3><div className="max-h-36 overflow-y-auto text-sm">{payments.filter((p)=>p.supplier_id===selected).map((p)=><div key={p.id} className="flex justify-between border-t py-2"><span>{new Date(p.paid_at).toLocaleDateString("en-IN")} · {p.payment_mode} {p.note}</span><b>{inr(p.amount)}</b></div>)}</div>
+      </DialogContent></Dialog>
     </div>
   );
 }
