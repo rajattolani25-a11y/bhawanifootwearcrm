@@ -216,6 +216,15 @@ function SettingsPage() {
           <ul className="mt-3 space-y-1 text-sm text-success">{log.map((l) => <li key={l}>✓ {l}</li>)}</ul>
         )}
       </section>
+
+      <footer className="mt-10 rounded-xl border bg-card px-6 py-8 text-center">
+        <p className="text-sm font-semibold tracking-wide text-muted-foreground">Built with heart for Footwear Retailers</p>
+        <p className="mx-auto mt-4 max-w-xl font-display text-base italic leading-relaxed text-foreground">
+          "Footwear retail is full of ground-level chaos—odd size curves, missing pairs, and unorganized ledgers. SoleStack was built to give independent shoe store owners the same speed, dignity, and control that billion-dollar retail chains enjoy."
+        </p>
+        <p className="mt-5 text-sm font-semibold text-foreground">— Rajat Tolani</p>
+        <p className="text-xs text-muted-foreground">Founder</p>
+      </footer>
     </div>
   );
 }
