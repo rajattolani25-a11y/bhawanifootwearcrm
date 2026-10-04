@@ -49,7 +49,7 @@ export function CatalogSettings() {
       <h2 className="mb-1 font-semibold">Online catalog</h2>
       <p className="mb-4 text-sm text-muted-foreground">A public page with your products, prices and in-stock sizes. Cost, profit and stock counts are never shown.</p>
       <Row k="catalog_enabled" title="Show catalog to customers" />
-      <Row k="show_few_left" title="Show \"Few sizes left\" tag" sub="Shown when only 1–2 sizes are in stock." />
+      <Row k="show_few_left" title={"Show \"Few sizes left\" tag"} sub="Shown when only 1–2 sizes are in stock." />
       <div className="my-3 flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={() => { void navigator.clipboard.writeText(link); toast.success("Catalog link copied"); }}><Copy className="h-4 w-4" /> Copy catalog link</Button>
         <Button variant="outline" size="sm" asChild><a href={link} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Open catalog</a></Button>
