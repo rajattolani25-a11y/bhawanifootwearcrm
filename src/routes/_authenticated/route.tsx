@@ -8,6 +8,7 @@ import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
 import { ThemeControl } from "@/components/ThemeControl";
 import { GuidedTour } from "@/components/GuidedTour";
+import { MessageLanguage } from "@/components/MessageLanguage";
 import { LanguageProvider, useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -103,6 +104,7 @@ function AppShell() {
           <Outlet />
         </main>
         <GuidedTour />
+        <MessageLanguage />
       </div>
     </div>
   );

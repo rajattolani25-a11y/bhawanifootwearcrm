@@ -6,6 +6,11 @@ export type AppLanguage = "english" | "hindi" | "hinglish";
 // Keyed by the English text shown in the app. Missing phrases fall back to English.
 const DICT: Record<string, { hindi: string; hinglish: string }> = {
   ...GENERATED,
+  "SoleStack": { hindi: "SoleStack", hinglish: "SoleStack" },
+  "Summary": { hindi: "सारांश", hinglish: "Summary" },
+  "Profit & Loss": { hindi: "लाभ और हानि", hinglish: "Munafa-Nuksaan" },
+  "Cash Book": { hindi: "नकद बही", hinglish: "Cash Khata" },
+  "Tax & Payables": { hindi: "टैक्स और देनदारी", hinglish: "Tax aur Dena" },
   "Dashboard": { hindi: "डैशबोर्ड", hinglish: "Dashboard" },
   "POS Billing": { hindi: "नया बिल", hinglish: "Naya Bill" },
   "Products": { hindi: "सामान", hinglish: "Saman" },
