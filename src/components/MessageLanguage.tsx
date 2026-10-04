@@ -55,7 +55,7 @@ export function MessageLanguage() {
     if (!p) return;
     const cur = p; setP(null);
     if (cur.kind === "share") {
-      try { if (navigator.share) await navigator.share({ title: cur.title, text }); else { await navigator.clipboard.writeText(text); toast.success("Message copy ho gaya"); } } catch { /* cancelled */ }
+      try { if (navigator.share) await navigator.share({ title: cur.title ?? "", text }); else { await navigator.clipboard.writeText(text); toast.success("Message copy ho gaya"); } } catch { /* cancelled */ }
       return;
     }
     let url: string;
