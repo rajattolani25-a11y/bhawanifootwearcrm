@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_bookings: {
+        Row: {
+          advance: number
+          booking_no: string
+          confirmed_at: string | null
+          created_at: string
+          customer_name: string
+          expires_at: string
+          id: string
+          mobile: string
+          note: string | null
+          price: number
+          product_name: string
+          sale_id: string | null
+          size: string
+          status: string
+          variant_id: string
+        }
+        Insert: {
+          advance: number
+          booking_no: string
+          confirmed_at?: string | null
+          created_at?: string
+          customer_name: string
+          expires_at: string
+          id?: string
+          mobile: string
+          note?: string | null
+          price: number
+          product_name: string
+          sale_id?: string | null
+          size: string
+          status?: string
+          variant_id: string
+        }
+        Update: {
+          advance?: number
+          booking_no?: string
+          confirmed_at?: string | null
+          created_at?: string
+          customer_name?: string
+          expires_at?: string
+          id?: string
+          mobile?: string
+          note?: string | null
+          price?: number
+          product_name?: string
+          sale_id?: string | null
+          size?: string
+          status?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_bookings_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_bookings_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_redemptions: {
         Row: {
           amount: number
@@ -439,6 +508,7 @@ export type Database = {
         Row: {
           article: string
           brand: string
+          catalog_visible: boolean
           category: string
           color: string | null
           created_at: string
@@ -454,6 +524,7 @@ export type Database = {
         Insert: {
           article: string
           brand?: string
+          catalog_visible?: boolean
           category?: string
           color?: string | null
           created_at?: string
@@ -469,6 +540,7 @@ export type Database = {
         Update: {
           article?: string
           brand?: string
+          catalog_visible?: boolean
           category?: string
           color?: string | null
           created_at?: string
@@ -909,40 +981,55 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          advance_percent: number
           bill_design: string
           bill_footer: string | null
+          booking_enabled: boolean
           business_address: string | null
           business_name: string
           business_phone: string | null
+          catalog_enabled: boolean
           daily_target: number | null
           gstin: string | null
+          hold_hours: number
           id: number
           thermal_width: string
           updated_at: string
+          upi_id: string | null
         }
         Insert: {
+          advance_percent?: number
           bill_design?: string
           bill_footer?: string | null
+          booking_enabled?: boolean
           business_address?: string | null
           business_name?: string
           business_phone?: string | null
+          catalog_enabled?: boolean
           daily_target?: number | null
           gstin?: string | null
+          hold_hours?: number
           id?: number
           thermal_width?: string
           updated_at?: string
+          upi_id?: string | null
         }
         Update: {
+          advance_percent?: number
           bill_design?: string
           bill_footer?: string | null
+          booking_enabled?: boolean
           business_address?: string | null
           business_name?: string
           business_phone?: string | null
+          catalog_enabled?: boolean
           daily_target?: number | null
           gstin?: string | null
+          hold_hours?: number
           id?: number
           thermal_width?: string
           updated_at?: string
+          upi_id?: string | null
         }
         Relationships: []
       }
@@ -1054,6 +1141,10 @@ export type Database = {
         Args: { _limit?: number; _offset?: number }
         Returns: Json[]
       }
+      cancel_catalog_booking: {
+        Args: { _id: string; _note: string }
+        Returns: undefined
+      }
       collect_credit_payment: {
         Args: {
           _amount: number
@@ -1063,12 +1154,22 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_catalog_booking: {
+        Args: { _id: string; _items: Json; _sale: Json }
+        Returns: Json
+      }
+      confirm_catalog_booking: { Args: { _id: string }; Returns: undefined }
       coupon_discount: {
         Args: { _code: string; _customer: string; _subtotal: number }
         Returns: Json
       }
+      create_catalog_booking: {
+        Args: { _mobile: string; _name: string; _variant_id: string }
+        Returns: Json
+      }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
       ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
+      expire_catalog_bookings: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1076,6 +1177,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_catalog_image: { Args: { _name: string }; Returns: boolean }
       is_member: { Args: { _user_id: string }; Returns: boolean }
       process_return: {
         Args: {
@@ -1087,6 +1189,7 @@ export type Database = {
         }
         Returns: number
       }
+      public_catalog: { Args: never; Returns: Json }
       quick_add_product: {
         Args: { _cost?: number; _product: Json; _sizes: Json }
         Returns: Json

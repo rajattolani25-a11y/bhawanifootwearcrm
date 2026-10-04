@@ -28,3 +28,6 @@
 - App language is per-device in `src/lib/i18n.tsx`: a DOM translator swaps exact English phrases from the dictionary (`i18n-dict.ts`) on every screen, so pages need no per-string wiring and unknown text stays English. Outgoing WhatsApp/SMS/share sends are intercepted by `MessageLanguage`, which rebuilds known message lines from free offline templates in `message-templates.ts` (no AI cost).
 - Khata builds running-balance statements from existing sales, credit payments, purchases and supplier payments; it never stores a separate ledger, so balances can't drift.
 - Any list used for totals reads every row through `fetchAll` (`src/lib/fetch-all.ts`), because the database returns max 1000 rows per request and totals would silently go wrong.
+- Public `/catalog` reads only through the `public_catalog` DB function via a publishable-key server fn (no cost/stock counts); anon may read only catalog-visible photos.
+- Catalog bookings take stock out immediately (`create_catalog_booking`, BOOKING_HOLD) and return it on cancel/expiry; pickup bills go through `complete_catalog_booking`, which releases the hold and calls `create_sale` in one transaction, so stock never double-counts.
+- Product photos are compressed on the device (max 1080px WebP) before upload, and the old file is deleted on replace.
