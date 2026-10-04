@@ -876,9 +876,9 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 "hindi": "रीसेट करें",
 "hinglish": "RESET"
 },
-"Re-print (duplicate copy), WhatsApp bill, return or exchange.": {
+"Re-print bill, WhatsApp bill, return or exchange.": {
 "hindi": "री-प्रिंट (डुप्लीकेट कॉपी), WhatsApp बिल, वापसी या अदला-बदली।",
-"hinglish": "Re-print (duplicate copy), WhatsApp bill, return ya exchange."
+"hinglish": "Bill dobara print, WhatsApp bill, return ya exchange."
 },
 "Re-print thermal": {
 "hindi": "थर्मल री-प्रिंट करें",
