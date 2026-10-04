@@ -1,3 +1,4 @@
+import { fetchAll } from "@/lib/fetch-all";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,12 +18,11 @@ export function useStock() {
     queryKey: ["stock-all"],
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data = await fetchAll((a, b) => supabase
         .from("products")
         .select("id,brand,article,category,color,gender,mrp,selling_price,created_at,image_url,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku)")
         .order("created_at", { ascending: false })
-        .limit(5000);
-      if (error) throw error;
+        .range(a, b));
       const { addSignedImages } = await import("@/lib/product-images");
       return addSignedImages(data as unknown as Product[]);
     },
