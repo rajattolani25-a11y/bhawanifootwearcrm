@@ -86,7 +86,7 @@ export function LanguageSelect() {
     <div className="flex flex-wrap gap-2" role="group" aria-label={t("Language")}>
       {([["english", "English"], ["hindi", "हिंदी"], ["hinglish", "Hinglish"]] as const).map(([v, l]) => (
         <button key={v} type="button" onClick={() => setLang(v)} aria-pressed={lang === v}
-          className={`rounded-md border px-4 py-2 text-sm ${lang === v ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{l}</button>
+          className={`rounded-md border px-4 py-2 text-sm ${lang === v ? "border-primary bg-primary text-primary-foreground" : "bg-card text-card-foreground"}`}>{l}</button>
       ))}
     </div>
   );

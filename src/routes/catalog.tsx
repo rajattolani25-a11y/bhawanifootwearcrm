@@ -30,7 +30,7 @@ function Catalog() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [brand, setBrand] = useState("All");
   const [open, setOpen] = useState<CatalogProduct | null>(null);
-  const products = data.products ?? [];
+  const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand))], [products]);
   const list = useMemo(() => {
     const s = q.toLowerCase().trim();
