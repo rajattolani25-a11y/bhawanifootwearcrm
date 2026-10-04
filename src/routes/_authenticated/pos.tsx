@@ -1,3 +1,4 @@
+import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +18,7 @@ import { sizeSort } from "@/lib/stock";
 import { QuickAddProduct } from "@/components/QuickAddProduct";
 
 export const Route = createFileRoute("/_authenticated/pos")({
-  head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: POS,
 });
 
@@ -28,6 +29,7 @@ const HOLD_KEY = "solestack-held-bills";
 const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function POS() {
+  const shop = useShop();
   const qc = useQueryClient();
   const searchRef = useRef<HTMLInputElement>(null);
   const mobileRef = useRef<HTMLInputElement>(null);
@@ -328,7 +330,7 @@ function POS() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const waText = done ? billMessage({ shop: "BHAWANI FOOTWEAR", name: done.name, billNo: done.bill_no, total: done.total, paid: done.paid, due: done.due, stamp: done.stamp, rewards: done.unlocked }) : "";
+  const waText = done ? billMessage({ shop: shop.name, name: done.name, billNo: done.bill_no, total: done.total, paid: done.paid, due: done.due, stamp: done.stamp, rewards: done.unlocked }) : "";
 
   return (
     <div className="grid min-h-[calc(100vh-2.5rem)] gap-3 md:h-[calc(100vh-4.5rem)] md:min-h-[460px] md:grid-cols-[minmax(0,1fr)_320px] md:overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">

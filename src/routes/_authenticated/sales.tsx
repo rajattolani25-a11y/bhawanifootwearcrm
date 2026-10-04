@@ -1,3 +1,4 @@
+import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -25,6 +26,7 @@ type SaleRow = {
 };
 
 function Sales() {
+  const shop = useShop();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [ret, setRet] = useState<SaleRow | null>(null);
@@ -82,7 +84,7 @@ function Sales() {
                     <Button size="sm" variant="outline" onClick={() => reprint(x.bill_no, "Thermal")} title="Re-print thermal"><Printer className="h-3.5 w-3.5" /></Button>
                     <Button size="sm" variant="outline" onClick={() => reprint(x.bill_no, "A4")}>A4</Button>
                     {x.customers?.mobile && (
-                       <Button size="sm" variant="outline" asChild><a target="_blank" rel="noreferrer" href={waLink(x.customers.mobile, x.due_amount > 0 ? dueMessage("BHAWANI FOOTWEAR", x.customer_name ?? "", x.bill_no, x.due_amount) : billMessage({ shop: "BHAWANI FOOTWEAR", name: x.customer_name ?? "", billNo: x.bill_no, total: x.total }))}><MessageCircle className="h-3.5 w-3.5" /></a></Button>
+                       <Button size="sm" variant="outline" asChild><a target="_blank" rel="noreferrer" href={waLink(x.customers.mobile, x.due_amount > 0 ? dueMessage(shop.name, x.customer_name ?? "", x.bill_no, x.due_amount) : billMessage({ shop: shop.name, name: x.customer_name ?? "", billNo: x.bill_no, total: x.total }))}><MessageCircle className="h-3.5 w-3.5" /></a></Button>
                     )}
                      {x.due_amount > 0 && <Button size="sm" onClick={() => { setCollect(x); setAmount(String(x.due_amount)); }} title="Collect due"><IndianRupee className="h-3.5 w-3.5" /></Button>}
                     <Button size="sm" variant="outline" onClick={() => setRet(x)} title="Return / exchange"><Undo2 className="h-3.5 w-3.5" /></Button>

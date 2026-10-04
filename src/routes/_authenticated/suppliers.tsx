@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { inr } from "@/lib/modules";
 import { waLink } from "@/lib/pos";
+import { useShop } from "@/hooks/use-shop";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated/suppliers")({
   head: () => ({ meta: [{ title: "Suppliers — SoleStack POS" }, { name: "description", content: "Supplier list, dues and WhatsApp rate-list requests." }, { property: "og:title", content: "Suppliers — SoleStack POS" }, { property: "og:description", content: "Supplier balances and professional rate-list requests." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -18,19 +20,23 @@ export const Route = createFileRoute("/_authenticated/suppliers")({
 
 function Suppliers() {
   const qc = useQueryClient();
-  const [f, setF] = useState({ name: "", phone: "", gstin: "", address: "" });
+  const shop = useShop();
+  const { isOwner } = useAuth();
+  const [f, setF] = useState({ name: "", phone: "", gstin: "", address: "", opening_balance: "" });
+  const [ob, setOb] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [payment, setPayment] = useState({ amount: "", mode: "Cash", note: "" });
   const { data = [] } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
   const { data: purchases = [] } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => (await supabase.from("purchases").select("id,supplier_id,purchase_date,invoice_no,quantity,purchase_price,total,paid_amount").order("purchase_date",{ascending:false})).data ?? [] });
   const { data: payments = [] } = useQuery({ queryKey: ["supplier-payments"], queryFn: async () => (await supabase.from("supplier_payments").select("id,supplier_id,amount,payment_mode,paid_at,note").order("paid_at",{ascending:false})).data ?? [] });
-  const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [0, 0]);
+  const openingOf = (id: string) => Number(data.find((s) => s.id === id)?.opening_balance ?? 0);
+  const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [openingOf(id), 0]);
 
   async function add() {
     if (!f.name.trim()) { toast.error("Name required"); return; }
-    const { error } = await supabase.from("suppliers").insert(f);
+    const { error } = await supabase.from("suppliers").insert({ ...f, opening_balance: Math.max(0, Number(f.opening_balance) || 0) });
     if (error) { toast.error(error.message); return; }
-    setF({ name: "", phone: "", gstin: "", address: "" });
+    setF({ name: "", phone: "", gstin: "", address: "", opening_balance: "" });
     qc.invalidateQueries({ queryKey: ["suppliers"] });
   }
   async function del(id: string) {
@@ -49,11 +55,12 @@ function Suppliers() {
   return (
     <div>
       <PageHeader title="Suppliers" subtitle="Who you buy from, how much is pending." />
-      <div className="mb-4 grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-5">
+      <div className="mb-4 grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-6">
         <Input placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
         <Input placeholder="GSTIN" value={f.gstin} onChange={(e) => setF({ ...f, gstin: e.target.value })} />
         <Input placeholder="Address" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+        <Input type="number" min="0" placeholder="Opening balance ₹" value={f.opening_balance} onChange={(e) => setF({ ...f, opening_balance: e.target.value })} />
         <Button onClick={add}>Add supplier</Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -66,7 +73,7 @@ function Suppliers() {
               <p className="mt-2 text-sm">Purchased {inr(tot)} · <span className="text-destructive">Pending {inr(tot - paid)}</span></p>
               {s.phone && (
                 <Button size="sm" variant="outline" className="mt-2" asChild>
-                  <a target="_blank" rel="noreferrer" href={waLink(s.phone, `Hello ${s.name}, please share your latest footwear rate list / catalogue and delivery time. Thank you.`)}><MessageCircle className="h-3.5 w-3.5" /> Ask rate list</a>
+                  <a target="_blank" rel="noreferrer" href={waLink(s.phone, `Hello ${s.name},\n\nThis is ${shop.name}. Please share your latest footwear rate list / catalogue and delivery time.\nThank you.${shop.phone ? `\n${shop.phone}` : ""}`)}><MessageCircle className="h-3.5 w-3.5" /> Ask rate list</a>
                 </Button>
               )}
             </div>
@@ -76,6 +83,7 @@ function Suppliers() {
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{current?.name}</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{current?.phone} · {current?.gstin} · {current?.address}</p>
         <div className="grid grid-cols-3 gap-2 border-y py-3 text-sm"><div>Purchased<br /><b>{inr(current ? sum(current.id)[0] : 0)}</b></div><div>Paid<br /><b>{inr(current ? sum(current.id)[1] : 0)}</b></div><div>Due<br /><b>{inr(current ? sum(current.id)[0]-sum(current.id)[1] : 0)}</b></div></div>
+        <div className="flex flex-wrap items-center gap-2 text-sm"><span>Opening balance (included above): <b>{inr(current ? openingOf(current.id) : 0)}</b></span>{isOwner && (ob === null ? <Button size="sm" variant="outline" onClick={() => setOb(String(current ? openingOf(current.id) : 0))}>Edit</Button> : <><Input className="h-8 w-28" type="number" min="0" value={ob} onChange={(e) => setOb(e.target.value)} /><Button size="sm" onClick={async () => { const { error } = await supabase.from("suppliers").update({ opening_balance: Math.max(0, Number(ob) || 0) }).eq("id", selected!); if (error) return void toast.error(error.message); setOb(null); qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Opening balance saved"); }}>Save</Button></>)}</div>
         <h3 className="font-semibold">Record payment</h3><div className="flex flex-wrap gap-2"><Input className="min-w-28 flex-1" type="number" min="0.01" step="0.01" placeholder="Amount ₹" value={payment.amount} onChange={(e) => setPayment({...payment,amount:e.target.value})}/><select aria-label="Payment mode" className="rounded border bg-background px-2" value={payment.mode} onChange={(e) => setPayment({...payment,mode:e.target.value})}>{["Cash","UPI","Card","Bank"].map((m)=><option key={m}>{m}</option>)}</select><Button onClick={recordPayment}>Save</Button></div><Input placeholder="Note (optional)" value={payment.note} onChange={(e) => setPayment({...payment,note:e.target.value})}/>
         <h3 className="font-semibold">Purchase history</h3><div className="max-h-44 overflow-y-auto text-sm">{purchases.filter((p)=>p.supplier_id===selected).map((p)=><div key={p.id} className="flex justify-between border-t py-2"><span>{new Date(p.purchase_date).toLocaleDateString("en-IN")} · {p.invoice_no || "No invoice"} · {p.quantity} pairs</span><span>{inr(p.total)} · Due {inr(Number(p.total)-Number(p.paid_amount || 0))}</span></div>)}</div>
         <h3 className="font-semibold">Payment history</h3><div className="max-h-36 overflow-y-auto text-sm">{payments.filter((p)=>p.supplier_id===selected).map((p)=><div key={p.id} className="flex justify-between border-t py-2"><span>{new Date(p.paid_at).toLocaleDateString("en-IN")} · {p.payment_mode} {p.note}</span><b>{inr(p.amount)}</b></div>)}</div>

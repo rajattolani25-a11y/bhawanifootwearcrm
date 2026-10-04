@@ -7,7 +7,7 @@ import { inr } from "@/lib/modules";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — SoleStack POS" }, { name: "description", content: "Retail control room: sales, stock and alerts." }, { property: "og:title", content: "Dashboard — SoleStack POS" }, { property: "og:description", content: "Retail control room for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — SoleStack POS" }, { name: "description", content: "Retail control room: sales, stock and alerts." }, { property: "og:title", content: "Dashboard — SoleStack POS" }, { property: "og:description", content: "Retail control room." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Dashboard,
 });
 

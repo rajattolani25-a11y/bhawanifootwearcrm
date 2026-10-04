@@ -69,7 +69,7 @@ function SettingsPage() {
   }
 
   async function save() {
-    const { error } = await supabase.from("store_settings").update({ ...f, daily_target: Number(f["daily_target"]) || 0 }).eq("id", 1);
+    const { error } = await supabase.from("store_settings").update({ ...f, daily_target: Number(f["daily_target"]) || 0 }).eq("id", 1); qc.invalidateQueries({ queryKey: ["shop-identity"] });
     error ? toast.error(error.message) : toast.success("Settings saved");
   }
 
@@ -111,7 +111,7 @@ function SettingsPage() {
   }
 
   async function resetData() {
-    if (!backupDone || confirm !== "RESET BHAWANI FOOTWEAR") return;
+    if (!backupDone || confirm.trim().toUpperCase() !== "RESET") return;
     setBusy(true);
     try {
       const { error } = await supabase.rpc("reset_store_data", { _confirmation: confirm });
@@ -182,9 +182,9 @@ function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">Bills, stock, products, customers, purchases and accounting entries will be permanently removed. Your account, team and store settings remain.</p>
         <ol className="my-3 list-inside list-decimal space-y-1 text-sm"><li>Download a fresh full backup.</li><li>Type the exact confirmation shown below.</li></ol>
         <Button variant="outline" disabled={busy} onClick={download}>{busy ? "Preparing backup…" : backupDone ? "Backup downloaded" : "1. Download required backup"}</Button>
-        <Label className="mt-4 block">Type: <b>RESET BHAWANI FOOTWEAR</b></Label>
+        <Label className="mt-4 block">Type: <b>RESET</b></Label>
         <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-1 max-w-md" autoComplete="off" />
-        <Button variant="destructive" className="mt-3" disabled={!backupDone || confirm !== "RESET BHAWANI FOOTWEAR" || busy} onClick={resetData}>Permanently reset store data</Button>
+        <Button variant="destructive" className="mt-3" disabled={!backupDone || confirm.trim().toUpperCase() !== "RESET" || busy} onClick={resetData}>Permanently reset store data</Button>
       </section>
 
       <section className="rounded-xl border bg-card p-5">

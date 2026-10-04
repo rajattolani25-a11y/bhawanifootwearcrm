@@ -19,8 +19,9 @@
 - Stock-in and returns go only through `receive_stock` / `process_return` DB functions so stock + ledger stay in sync; bills and labels use the in-page print preview in `src/lib/print.ts` (Thermal/A4/Premium), avoiding mobile popup blocking.
 - Supplier repayments go through `record_supplier_payment` to allocate against open purchases; QR and Code 128 encode the same variant scan code so both resolve to one size at checkout.
 - Credit repayments go only through `collect_credit_payment`; product photos stay in the private `product-images` bucket and are rendered with short-lived signed URLs.
-- Destructive store reset stays owner-only through `reset_store_data`; UI requires a complete error-checked backup and exact typed confirmation.
+- Destructive store reset stays owner-only through `reset_store_data`; UI requires a complete error-checked backup and typing RESET.
 - Coupons require a customer, validate in `coupon_discount` and redeem once per customer inside `create_sale` (row lock + redemption trigger), preventing repeated discounts.
 - New articles from POS/Purchase/Products go through `quick_add_product` so variants get a scan code and opening stock is ledgered; cost is saved only for owners.
 - Default bill size and thermal width live in `store_settings` (bill_design, thermal_width); POS uses them instead of device storage.
 - Password recovery goes through the public `/reset-password` route: the sign-in page calls `resetPasswordForEmail` with `redirectTo` origin + `/reset-password`, and the page saves via `updateUser({ password })` without `current_password` (recovery sessions are exempt).
+- Customer/supplier opening balances live in an `opening_balance` column added to dues (owner-only edits for customers); all outgoing messages read the shop name from `store_settings` via `useShop`.
