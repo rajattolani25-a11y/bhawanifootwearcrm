@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { downloadCsv } from "@/lib/stock";
+import { printHtml } from "@/lib/print";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/hooks/use-auth";
 import { useShop } from "@/hooks/use-shop";
@@ -25,6 +26,7 @@ const n = (x: unknown) => Number(x ?? 0);
 function KhataPage() {
   const { isOwner } = useAuth();
   const { t } = useLang();
+  const label = (x: string) => x.replace(/^(Credit received|Goods received|Payment made|Paid at billing)/, (m) => t(m));
   const shop = useShop();
   const qc = useQueryClient();
   const [kind, setKind] = useState<"customer" | "supplier">("customer");
@@ -123,6 +125,20 @@ function KhataPage() {
     window.open(`https://wa.me/${num ? "91" + num : ""}?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
+  function pdf() {
+    if (!party) return;
+    const e = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    const dr = k === "customer" ? t("Credit given") : t("Paid"), cr = k === "customer" ? t("Received") : t("Goods");
+    const rowsHtml = shown.map((r) => `<tr><td>${e(r.date.slice(0, 10))}</td><td>${e(label(r.text))}</td><td class="r">${r.debit ? e(inr(r.debit)) : ""}</td><td class="r">${r.credit ? e(inr(r.credit)) : ""}</td><td class="r"><b>${e(inr(r.bal))}</b></td></tr>`).join("");
+    const body = `<div class="w"><h1>${e(shop.name)}</h1>${shop.phone ? `<p class="m">${e(shop.phone)}</p>` : ""}<h2>${e(t("Account statement"))}</h2>
+<p><b>${e(party.name)}</b> · ${e(party.mobile)}</p><p class="m">${e(t("Date"))}: ${e(new Date().toLocaleDateString("en-IN"))}${from ? ` · ${e(t("From date"))} ${e(from)}` : ""}</p>
+<table><thead><tr><th>${e(t("Date"))}</th><th>${e(t("Details"))}</th><th class="r">${e(dr)}</th><th class="r">${e(cr)}</th><th class="r">${e(t("Balance"))}</th></tr></thead><tbody>
+<tr><td>—</td><td>${e(from ? t("Previous balance") : t("Opening balance"))}</td><td></td><td></td><td class="r">${e(inr(openingShown))}</td></tr>${rowsHtml}
+<tr class="t"><td></td><td>${e(t("Total"))}</td><td class="r">${e(inr(totDebit))}</td><td class="r">${e(inr(totCredit))}</td><td class="r">${e(inr(balance))}</td></tr></tbody></table>
+<p class="b">${e(k === "customer" ? t("To receive") : t("To pay"))}: ${e(inr(balance))}</p></div>`;
+    printHtml(`Khatabook ${party.name}`, body, `.w{padding:24px;width:720px;color:#111}h1{margin:0;font-size:22px}h2{font-size:15px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:1px;color:#555}.m{color:#666;font-size:12px;margin:2px 0}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}th,td{border-bottom:1px solid #ddd;padding:6px;text-align:left}th{background:#f3f3f3}.r{text-align:right}.t td{font-weight:bold;border-top:2px solid #111}.b{font-size:16px;font-weight:bold;margin-top:14px;text-align:right}`);
+  }
+
   async function receive() {
     const amt = Number(pay.amount);
     if (!party || !(amt > 0)) return void toast.error(t("Enter a valid amount"));
@@ -191,6 +207,7 @@ function KhataPage() {
               <div className="flex flex-wrap gap-2">
                 <Button onClick={share}>{t("Share on WhatsApp")}</Button>
                 <Button variant="outline" onClick={() => downloadCsv(`khata-${party.name}.csv`, [["date", "details", "debit", "credit", "balance"], ["", "Opening", "", "", openingShown], ...shown.map((r) => [r.date.slice(0, 10), r.text, r.debit, r.credit, r.bal])])}>CSV</Button>
+                <Button variant="outline" onClick={pdf}>PDF</Button>
               </div>
             </div>
             {balance > 0.5 && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-2">
