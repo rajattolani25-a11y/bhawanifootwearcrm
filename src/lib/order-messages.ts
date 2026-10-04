@@ -8,7 +8,7 @@ const L = {
   english: {
     hi: (n: string) => `Dear ${n},`, hello: (s: string) => `Hello ${s},`, thanks: "Thank you for shopping with us.", regards: "Warm regards,",
     order: "Order no.", item: "Item", size: "Size", amount: "Amount", paid: "Amount paid", balance: "Balance at store", delivery: "Delivery", address: "Address",
-    type: { pickup: "Store pickup", local: "Local delivery", outside: "Outside city delivery" } as Record<string, string>,
+    type: { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" } as Record<string, string>,
     ask: (p: string, sz: string) => `I saw *${p}*${sz ? ` (size ${sz})` : ""} in your online catalog. Is it available? I would like to visit the store.`,
     proof: "I have placed an order and paid on UPI. Sharing the payment screenshot below.", name: "Name",
     st: {
@@ -24,7 +24,7 @@ const L = {
   hindi: {
     hi: (n: string) => `प्रिय ${n} जी,`, hello: (s: string) => `नमस्ते ${s},`, thanks: "हमारे साथ खरीदारी करने के लिए धन्यवाद।", regards: "सादर,",
     order: "ऑर्डर नं.", item: "सामान", size: "साइज़", amount: "राशि", paid: "भुगतान किया", balance: "दुकान पर बाकी", delivery: "डिलीवरी", address: "पता",
-    type: { pickup: "दुकान से लेना", local: "लोकल डिलीवरी", outside: "शहर के बाहर डिलीवरी" } as Record<string, string>,
+    type: { pickup: "दुकान से लेना", local: "लोकल डिलीवरी", outside: "जबलपुर के बाहर डिलीवरी" } as Record<string, string>,
     ask: (p: string, sz: string) => `मैंने आपके ऑनलाइन कैटलॉग में *${p}*${sz ? ` (साइज़ ${sz})` : ""} देखा। क्या यह उपलब्ध है? मैं दुकान आना चाहता/चाहती हूँ।`,
     proof: "मैंने ऑर्डर किया है और UPI से भुगतान कर दिया है। भुगतान का स्क्रीनशॉट नीचे भेज रहा/रही हूँ।", name: "नाम",
     st: {
@@ -40,7 +40,7 @@ const L = {
   hinglish: {
     hi: (n: string) => `Dear ${n} ji,`, hello: (s: string) => `Namaste ${s},`, thanks: "Humare saath shopping karne ke liye dhanyavaad.", regards: "Saadar,",
     order: "Order no.", item: "Saman", size: "Size", amount: "Amount", paid: "Payment kiya", balance: "Dukaan pe baaki", delivery: "Delivery", address: "Address",
-    type: { pickup: "Dukaan se lena", local: "Local delivery", outside: "Shehar ke bahar delivery" } as Record<string, string>,
+    type: { pickup: "Dukaan se lena", local: "Local delivery", outside: "Jabalpur ke bahar delivery" } as Record<string, string>,
     ask: (p: string, sz: string) => `Maine aapke online catalog mein *${p}*${sz ? ` (size ${sz})` : ""} dekha. Kya ye available hai? Main dukaan aana chahta/chahti hoon.`,
     proof: "Maine order kiya hai aur UPI se payment kar diya hai. Payment ka screenshot neeche bhej raha/rahi hoon.", name: "Naam",
     st: {

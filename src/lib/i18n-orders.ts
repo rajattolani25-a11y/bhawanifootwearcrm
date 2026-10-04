@@ -32,7 +32,7 @@ const R: [string, string, string][] = [
   ["Free", "मुफ़्त", "Free"],
   ["Local delivery", "लोकल डिलीवरी", "Local delivery"],
   ["Within city", "शहर के अंदर", "Shehar ke andar"],
-  ["Outside city delivery", "शहर के बाहर डिलीवरी", "Shehar ke bahar delivery"],
+  ["Outside Jabalpur delivery", "जबलपुर के बाहर डिलीवरी", "Jabalpur ke bahar delivery"],
   ["Full payment, delivered to your address", "पूरा भुगतान, आपके पते पर डिलीवरी", "Poora payment, aapke address pe delivery"],
   ["Free local delivery above", "इससे ऊपर लोकल डिलीवरी मुफ़्त", "Isse upar local delivery free"],
   ["Back", "वापस", "Wapas"], ["Continue", "आगे बढ़ें", "Aage badho"],
