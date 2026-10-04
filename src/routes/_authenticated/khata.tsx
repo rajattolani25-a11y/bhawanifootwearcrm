@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { downloadCsv } from "@/lib/stock";
+import { printHtml } from "@/lib/print";
 import { fetchAll } from "@/lib/fetch-all";
 import { useAuth } from "@/hooks/use-auth";
 import { useShop } from "@/hooks/use-shop";
@@ -25,6 +26,7 @@ const n = (x: unknown) => Number(x ?? 0);
 function KhataPage() {
   const { isOwner } = useAuth();
   const { t } = useLang();
+  const label = (x: string) => x.replace(/^(Credit received|Goods received|Payment made|Paid at billing)/, (m) => t(m));
   const shop = useShop();
   const qc = useQueryClient();
   const [kind, setKind] = useState<"customer" | "supplier">("customer");
@@ -73,7 +75,7 @@ function KhataPage() {
           const later = pays.filter((p) => p.sale_id === s.id).reduce((a, p) => a + n(p.amount), 0);
           list.push({ date: s.sale_date, text: `Bill ${s.bill_no}`, debit: n(s.total), credit: Math.max(0, n(s.total) - n(s.due_amount) - later) });
         }
-        for (const p of pays) list.push({ date: p.paid_at, text: `Udhar jama (${p.payment_mode})`, debit: 0, credit: n(p.amount) });
+        for (const p of pays) list.push({ date: p.paid_at, text: `Credit received (${p.payment_mode})`, debit: 0, credit: n(p.amount) });
       } else {
         const [purchases, pays] = await Promise.all([
           fetchAll((a, b) => supabase.from("purchases").select("purchase_date,invoice_no,total,paid_amount").eq("supplier_id", id!).range(a, b)),
@@ -83,14 +85,14 @@ function KhataPage() {
         const inv = new Map<string, Entry>();
         for (const p of purchases) {
           const key = `${p.invoice_no ?? ""}|${p.purchase_date.slice(0, 10)}`;
-          const e = inv.get(key) ?? { date: p.purchase_date, text: `Maal aaya ${p.invoice_no ? "· Inv " + p.invoice_no : ""}`, debit: 0, credit: 0 };
+          const e = inv.get(key) ?? { date: p.purchase_date, text: `Goods received${p.invoice_no ? " · Inv " + p.invoice_no : ""}`, debit: 0, credit: 0 };
           e.credit += n(p.total); inv.set(key, e);
         }
         list.push(...inv.values());
-        for (const p of pays) list.push({ date: p.paid_at, text: `Payment diya (${p.payment_mode})${p.note ? " · " + p.note : ""}`, credit: 0, debit: n(p.amount) });
+        for (const p of pays) list.push({ date: p.paid_at, text: `Payment made (${p.payment_mode})${p.note ? " · " + p.note : ""}`, credit: 0, debit: n(p.amount) });
         const extra = purchases.reduce((a, p) => a + n(p.paid_amount), 0) - pays.reduce((a, p) => a + n(p.amount), 0);
         const first = purchases.map((p) => p.purchase_date).sort()[0];
-        if (extra > 0.5 && first) list.push({ date: first, text: "Bill ke time diya", credit: 0, debit: extra });
+        if (extra > 0.5 && first) list.push({ date: first, text: "Paid at billing", credit: 0, debit: extra });
       }
       return list.sort((a, b) => a.date.localeCompare(b.date));
     },
@@ -116,17 +118,31 @@ function KhataPage() {
 
   function share() {
     if (!party) return;
-    const last = shown.slice(-10).map((r) => `${r.date.slice(0, 10)} · ${r.text} · ${inr(r.debit || r.credit)}`).join("\n");
-    const tail = k === "customer" ? (balance > 0 ? `Aapka baaki: *${inr(balance)}*\nKripya jaldi jama karein.` : "Aapka koi baaki nahi hai. Dhanyavaad!") : `Hamari taraf baaki: *${inr(balance)}*`;
-    const msg = `Namaste ${party.name},\n\n*${shop.name} — Khata statement*\n\n${last || "Koi entry nahi"}\n\n${tail}\n\n${shop.name}${shop.phone ? "\n" + shop.phone : ""}`;
+    const last = shown.slice(-10).map((r) => `${r.date.slice(0, 10)} · ${label(r.text)} · ${inr(r.debit || r.credit)}`).join("\n");
+    const tail = k === "customer" ? (balance > 0 ? `Your balance due: *${inr(balance)}*\nKindly clear it at the earliest.` : "You have no pending balance. Thank you!") : `Balance payable by us: *${inr(balance)}*`;
+    const msg = `Dear ${party.name},\n\n*${shop.name} — Account statement*\n\n${last || "No entries"}\n\n${tail}\n\n${shop.name}${shop.phone ? "\n" + shop.phone : ""}`;
     const num = party.mobile.replace(/\D/g, "").slice(-10);
     window.open(`https://wa.me/${num ? "91" + num : ""}?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
+  function pdf() {
+    if (!party) return;
+    const e = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    const dr = k === "customer" ? t("Credit given") : t("Paid"), cr = k === "customer" ? t("Received") : t("Goods");
+    const rowsHtml = shown.map((r) => `<tr><td>${e(r.date.slice(0, 10))}</td><td>${e(label(r.text))}</td><td class="r">${r.debit ? e(inr(r.debit)) : ""}</td><td class="r">${r.credit ? e(inr(r.credit)) : ""}</td><td class="r"><b>${e(inr(r.bal))}</b></td></tr>`).join("");
+    const body = `<div class="w"><h1>${e(shop.name)}</h1>${shop.phone ? `<p class="m">${e(shop.phone)}</p>` : ""}<h2>${e(t("Account statement"))}</h2>
+<p><b>${e(party.name)}</b> · ${e(party.mobile)}</p><p class="m">${e(t("Date"))}: ${e(new Date().toLocaleDateString("en-IN"))}${from ? ` · ${e(t("From date"))} ${e(from)}` : ""}</p>
+<table><thead><tr><th>${e(t("Date"))}</th><th>${e(t("Details"))}</th><th class="r">${e(dr)}</th><th class="r">${e(cr)}</th><th class="r">${e(t("Balance"))}</th></tr></thead><tbody>
+<tr><td>—</td><td>${e(from ? t("Previous balance") : t("Opening balance"))}</td><td></td><td></td><td class="r">${e(inr(openingShown))}</td></tr>${rowsHtml}
+<tr class="t"><td></td><td>${e(t("Total"))}</td><td class="r">${e(inr(totDebit))}</td><td class="r">${e(inr(totCredit))}</td><td class="r">${e(inr(balance))}</td></tr></tbody></table>
+<p class="b">${e(k === "customer" ? t("To receive") : t("To pay"))}: ${e(inr(balance))}</p></div>`;
+    printHtml(`Khatabook ${party.name}`, body, `.w{padding:24px;width:720px;color:#111}h1{margin:0;font-size:22px}h2{font-size:15px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:1px;color:#555}.m{color:#666;font-size:12px;margin:2px 0}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}th,td{border-bottom:1px solid #ddd;padding:6px;text-align:left}th{background:#f3f3f3}.r{text-align:right}.t td{font-weight:bold;border-top:2px solid #111}.b{font-size:16px;font-weight:bold;margin-top:14px;text-align:right}`);
+  }
+
   async function receive() {
     const amt = Number(pay.amount);
-    if (!party || !(amt > 0)) return void toast.error("Sahi amount daalo");
-    if (amt > balance + 0.5) return void toast.error(`Baaki sirf ${inr(balance)} hai`);
+    if (!party || !(amt > 0)) return void toast.error(t("Enter a valid amount"));
+    if (amt > balance + 0.5) return void toast.error(`${t("Balance is only")} ${inr(balance)}`);
     setBusy(true);
     try {
       if (k === "supplier") {
@@ -145,12 +161,12 @@ function KhataPage() {
           left -= part;
         }
         if (left > 0.5) {
-          if (!isOwner) throw new Error(`${inr(left)} purane baaki ka hai — sirf Owner kam kar sakta hai`);
+          if (!isOwner) throw new Error(`${inr(left)} — ${t("only the Owner can reduce the opening balance")}`);
           const r = await supabase.from("customers").update({ opening_balance: Math.max(0, party.opening - left) }).eq("id", party.id);
           if (r.error) throw r.error;
         }
       }
-      toast.success("Payment khate mein jud gaya");
+      toast.success(t("Payment added to the account"));
       setPay({ ...pay, amount: "" });
       ["khata-parties", "khata-entries", "acct", "purchases-sum", "supplier-payments"].forEach((key) => qc.invalidateQueries({ queryKey: [key] }));
     } catch (e) { toast.error((e as Error).message); }
@@ -165,55 +181,56 @@ function KhataPage() {
         {isOwner && <Button variant={k === "supplier" ? "default" : "outline"} onClick={() => { setKind("supplier"); setId(null); }}>{t("Supplier Ledger")}</Button>}
       </div>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">{k === "customer" ? "Total lena hai (grahak se)" : "Total dena hai (supplier ko)"}</p><p className={`font-display text-2xl font-bold ${k === "customer" ? "text-destructive" : ""}`}>{inr(total)}</p></div>
-        <div className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">Baaki wale khate</p><p className="font-display text-2xl font-bold">{dueCount}</p></div>
-        <div className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">Kul khate</p><p className="font-display text-2xl font-bold">{parties.length}</p></div>
+        <div className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">{k === "customer" ? "Total to receive (from customers)" : "Total to pay (to suppliers)"}</p><p className={`font-display text-2xl font-bold ${k === "customer" ? "text-destructive" : ""}`}>{inr(total)}</p></div>
+        <div className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">Accounts with balance</p><p className="font-display text-2xl font-bold">{dueCount}</p></div>
+        <div className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">Total accounts</p><p className="font-display text-2xl font-bold">{parties.length}</p></div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <div className="rounded-xl border bg-card p-3">
           <Input placeholder={t("Search")} value={q} onChange={(e) => setQ(e.target.value)} />
-          <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyDue} onChange={(e) => setOnlyDue(e.target.checked)} /> Sirf baaki wale</label>
+          <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyDue} onChange={(e) => setOnlyDue(e.target.checked)} /> Only with balance</label>
           {isPending && <p className="mt-2 text-sm text-muted-foreground">Loading…</p>}
           <ul className="mt-2 max-h-[60vh] divide-y overflow-y-auto text-sm">
             {filtered.map((p) => { const d = daysOld(p.last); return (
               <li key={p.id}><button className={`flex w-full items-center justify-between gap-2 px-2 py-2 text-left ${p.id === id ? "bg-accent" : ""}`} onClick={() => setId(p.id)}>
-                <span className="min-w-0"><b className="block truncate">{p.name || p.mobile}</b><span className="text-xs text-muted-foreground">{p.mobile}{d !== null && p.balance > 0.5 ? ` · ${d} din` : ""}</span></span>
+                <span className="min-w-0"><b className="block truncate">{p.name || p.mobile}</b><span className="text-xs text-muted-foreground">{p.mobile}{d !== null && p.balance > 0.5 ? ` · ${d} ${t("days")}` : ""}</span></span>
                 <b className={p.balance > 0.5 ? (k === "customer" ? "text-destructive" : "") : "text-success"}>{inr(p.balance)}</b>
               </button></li>); })}
-            {!isPending && !filtered.length && <li className="py-3 text-muted-foreground">Koi khata nahi</li>}
+            {!isPending && !filtered.length && <li className="py-3 text-muted-foreground">No accounts</li>}
           </ul>
         </div>
         <div className="rounded-xl border bg-card p-4">
-          {!party ? <p className="text-sm text-muted-foreground">Left side se khata chuno.</p> : <>
+          {!party ? <p className="text-sm text-muted-foreground">Select an account from the list.</p> : <>
             <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
               <div><h2 className="text-lg font-semibold">{party.name}</h2><p className="text-xs text-muted-foreground">{party.mobile}</p>
-                <p className="mt-1 text-sm">{k === "customer" ? "Lena hai" : "Dena hai"}: <b className={balance > 0.5 ? "text-destructive" : "text-success"}>{inr(balance)}</b></p></div>
+                <p className="mt-1 text-sm">{k === "customer" ? "To receive" : "To pay"}: <b className={balance > 0.5 ? "text-destructive" : "text-success"}>{inr(balance)}</b></p></div>
               <div className="flex flex-wrap gap-2">
                 <Button onClick={share}>{t("Share on WhatsApp")}</Button>
                 <Button variant="outline" onClick={() => downloadCsv(`khata-${party.name}.csv`, [["date", "details", "debit", "credit", "balance"], ["", "Opening", "", "", openingShown], ...shown.map((r) => [r.date.slice(0, 10), r.text, r.debit, r.credit, r.bal])])}>CSV</Button>
+                <Button variant="outline" onClick={pdf}>PDF</Button>
               </div>
             </div>
             {balance > 0.5 && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border p-2">
-              <span className="text-sm font-medium">{k === "customer" ? "Paisa mila" : "Paisa diya"}</span>
+              <span className="text-sm font-medium">{k === "customer" ? "Money received" : "Money paid"}</span>
               <Input className="h-9 w-28" inputMode="decimal" placeholder="₹" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
               <select className="h-9 rounded border bg-background px-2 text-sm" value={pay.mode} onChange={(e) => setPay({ ...pay, mode: e.target.value })}>{["Cash", "UPI", "Bank"].map((m) => <option key={m}>{m}</option>)}</select>
               <Button size="sm" disabled={busy} onClick={receive}>Save</Button>
-              <Button size="sm" variant="ghost" onClick={() => setPay({ ...pay, amount: String(Math.round(balance)) })}>Pura</Button>
+              <Button size="sm" variant="ghost" onClick={() => setPay({ ...pay, amount: String(Math.round(balance)) })}>Full</Button>
             </div>}
-            <div className="mb-2 flex items-center gap-2 text-sm"><span>From</span><Input type="date" className="h-9 w-40" value={from} onChange={(e) => setFrom(e.target.value)} />{from && <Button size="sm" variant="ghost" onClick={() => setFrom("")}>Clear</Button>}</div>
+            <div className="mb-2 flex items-center gap-2 text-sm"><span>From date</span><Input type="date" className="h-9 w-40" value={from} onChange={(e) => setFrom(e.target.value)} />{from && <Button size="sm" variant="ghost" onClick={() => setFrom("")}>Clear</Button>}</div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2">{t("Date")}</th><th>{t("Details")}</th><th className="text-right">{k === "customer" ? "Udhar (diya)" : "Paid"}</th><th className="text-right">{k === "customer" ? "Jama (mila)" : "Maal"}</th><th className="text-right">{t("Balance")}</th></tr></thead>
+                <thead><tr className="border-b text-left text-muted-foreground"><th className="py-2">{t("Date")}</th><th>{t("Details")}</th><th className="text-right">{k === "customer" ? "Credit given" : "Paid"}</th><th className="text-right">{k === "customer" ? "Received" : "Goods"}</th><th className="text-right">{t("Balance")}</th></tr></thead>
                 <tbody>
-                  <tr className="border-b"><td className="py-2">—</td><td>{from ? "Pichla baaki" : t("Opening balance")}</td><td /><td /><td className="text-right">{inr(openingShown)}</td></tr>
+                  <tr className="border-b"><td className="py-2">—</td><td>{from ? "Previous balance" : t("Opening balance")}</td><td /><td /><td className="text-right">{inr(openingShown)}</td></tr>
                   {shown.map((r, i) => (
-                    <tr key={i} className="border-b"><td className="whitespace-nowrap py-2">{r.date.slice(0, 10)}</td><td>{r.text}</td><td className="text-right">{r.debit ? inr(r.debit) : ""}</td><td className="text-right">{r.credit ? inr(r.credit) : ""}</td><td className="text-right font-medium">{inr(r.bal)}</td></tr>
+                    <tr key={i} className="border-b"><td className="whitespace-nowrap py-2">{r.date.slice(0, 10)}</td><td>{label(r.text)}</td><td className="text-right">{r.debit ? inr(r.debit) : ""}</td><td className="text-right">{r.credit ? inr(r.credit) : ""}</td><td className="text-right font-medium">{inr(r.bal)}</td></tr>
                   ))}
                   <tr className="font-semibold"><td className="py-2" /><td>Total</td><td className="text-right">{inr(totDebit)}</td><td className="text-right">{inr(totCredit)}</td><td className="text-right">{inr(balance)}</td></tr>
                 </tbody>
               </table>
             </div>
-            {rows.length > 0 && Math.abs(rows[rows.length - 1]!.bal - balance) > 1 && <p className="mt-2 text-xs text-muted-foreground">Note: purane import kiye bills ki wajah se entries aur final baaki mein thoda farak ho sakta hai; final baaki sahi hai.</p>}
+            {rows.length > 0 && Math.abs(rows[rows.length - 1]!.bal - balance) > 1 && <p className="mt-2 text-xs text-muted-foreground">Note: older imported bills may cause a small gap between entries and the final balance; the final balance is correct.</p>}
           </>}
         </div>
       </div>
