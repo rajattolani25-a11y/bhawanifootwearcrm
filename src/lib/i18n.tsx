@@ -50,6 +50,12 @@ const DICT: Record<string, { english?: string; hindi: string; hinglish: string }
   "Who you buy from, how much is pending.": { hindi: "किससे माल लेते हैं, कितना बाकी है।", hinglish: "Kisse maal lete ho, kitna baaki hai." },
   "Every entry with running balance for customers and suppliers.": { hindi: "ग्राहक और सप्लायर की हर एंट्री, चलते बकाये के साथ।", hinglish: "Grahak aur supplier ki har entry, chalte baaki ke saath." },
   "Pick a size, see what is in stock, and send it on WhatsApp.": { hindi: "साइज़ चुनें, स्टॉक देखें और व्हाट्सऐप पर भेजें।", hinglish: "Size chuno, stock dekho aur WhatsApp pe bhejo." },
+  "Credit received": { hindi: "उधार जमा", hinglish: "Udhar jama" },
+  "Goods received": { hindi: "माल आया", hinglish: "Maal aaya" },
+  "Payment made": { hindi: "भुगतान दिया", hinglish: "Payment diya" },
+  "Paid at billing": { hindi: "बिल के समय दिया", hinglish: "Bill ke time diya" },
+  "days": { hindi: "दिन", hinglish: "din" },
+  "Balance is only": { english: "Balance is only", hindi: "बाकी सिर्फ", hinglish: "Baaki sirf" },
 };
 
 const Ctx = createContext<{ lang: AppLanguage; setLang: (l: AppLanguage) => void }>({ lang: "english", setLang: () => {} });
