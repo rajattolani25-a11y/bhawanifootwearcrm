@@ -11,7 +11,7 @@ const DICT: Record<string, { hindi: string; hinglish: string }> = {
   "Sales History": { hindi: "बिक्री इतिहास", hinglish: "Bikri History" },
   "Suppliers": { hindi: "सप्लायर", hinglish: "Supplier" },
   "Customers": { hindi: "ग्राहक", hinglish: "Grahak" },
-  "Khata": { hindi: "खाता", hinglish: "Khata" },
+  "Khatabook": { hindi: "खाता बही", hinglish: "Khatabook" },
   "Size Finder": { hindi: "साइज़ खोजें", hinglish: "Size Dhundo" },
   "Rewards & Coupons": { hindi: "इनाम और कूपन", hinglish: "Inaam & Coupon" },
   "Inventory Control": { hindi: "स्टॉक नियंत्रण", hinglish: "Stock Control" },
