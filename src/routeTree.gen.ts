@@ -21,12 +21,14 @@ import { Route as AuthenticatedCustomersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuideRouteImport } from './routes/_authenticated/guide'
 import { Route as AuthenticatedInventoryControlRouteImport } from './routes/_authenticated/inventory-control'
+import { Route as AuthenticatedKhataRouteImport } from './routes/_authenticated/khata'
 import { Route as AuthenticatedPosRouteImport } from './routes/_authenticated/pos'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedPurchaseRouteImport } from './routes/_authenticated/purchase'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSizeFinderRouteImport } from './routes/_authenticated/size-finder'
 import { Route as AuthenticatedStockLedgerRouteImport } from './routes/_authenticated/stock-ledger'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
 
@@ -90,6 +92,11 @@ const AuthenticatedInventoryControlRoute =
     path: '/inventory-control',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedKhataRoute = AuthenticatedKhataRouteImport.update({
+  id: '/khata',
+  path: '/khata',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPosRoute = AuthenticatedPosRouteImport.update({
   id: '/pos',
   path: '/pos',
@@ -120,6 +127,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSizeFinderRoute = AuthenticatedSizeFinderRouteImport.update({
+  id: '/size-finder',
+  path: '/size-finder',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedStockLedgerRoute =
   AuthenticatedStockLedgerRouteImport.update({
     id: '/stock-ledger',
@@ -144,12 +156,14 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guide': typeof AuthenticatedGuideRoute
   '/inventory-control': typeof AuthenticatedInventoryControlRoute
+  '/khata': typeof AuthenticatedKhataRoute
   '/pos': typeof AuthenticatedPosRoute
   '/products': typeof AuthenticatedProductsRoute
   '/purchase': typeof AuthenticatedPurchaseRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/size-finder': typeof AuthenticatedSizeFinderRoute
   '/stock-ledger': typeof AuthenticatedStockLedgerRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
 }
@@ -165,12 +179,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guide': typeof AuthenticatedGuideRoute
   '/inventory-control': typeof AuthenticatedInventoryControlRoute
+  '/khata': typeof AuthenticatedKhataRoute
   '/pos': typeof AuthenticatedPosRoute
   '/products': typeof AuthenticatedProductsRoute
   '/purchase': typeof AuthenticatedPurchaseRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/size-finder': typeof AuthenticatedSizeFinderRoute
   '/stock-ledger': typeof AuthenticatedStockLedgerRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
 }
@@ -188,12 +204,14 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guide': typeof AuthenticatedGuideRoute
   '/_authenticated/inventory-control': typeof AuthenticatedInventoryControlRoute
+  '/_authenticated/khata': typeof AuthenticatedKhataRoute
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/purchase': typeof AuthenticatedPurchaseRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/size-finder': typeof AuthenticatedSizeFinderRoute
   '/_authenticated/stock-ledger': typeof AuthenticatedStockLedgerRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
 }
@@ -211,12 +229,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/inventory-control'
+    | '/khata'
     | '/pos'
     | '/products'
     | '/purchase'
     | '/reports'
     | '/sales'
     | '/settings'
+    | '/size-finder'
     | '/stock-ledger'
     | '/suppliers'
   fileRoutesByTo: FileRoutesByTo
@@ -232,12 +252,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/guide'
     | '/inventory-control'
+    | '/khata'
     | '/pos'
     | '/products'
     | '/purchase'
     | '/reports'
     | '/sales'
     | '/settings'
+    | '/size-finder'
     | '/stock-ledger'
     | '/suppliers'
   id:
@@ -254,12 +276,14 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/guide'
     | '/_authenticated/inventory-control'
+    | '/_authenticated/khata'
     | '/_authenticated/pos'
     | '/_authenticated/products'
     | '/_authenticated/purchase'
     | '/_authenticated/reports'
     | '/_authenticated/sales'
     | '/_authenticated/settings'
+    | '/_authenticated/size-finder'
     | '/_authenticated/stock-ledger'
     | '/_authenticated/suppliers'
   fileRoutesById: FileRoutesById
@@ -357,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInventoryControlRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/khata': {
+      id: '/_authenticated/khata'
+      path: '/khata'
+      fullPath: '/khata'
+      preLoaderRoute: typeof AuthenticatedKhataRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pos': {
       id: '/_authenticated/pos'
       path: '/pos'
@@ -399,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/size-finder': {
+      id: '/_authenticated/size-finder'
+      path: '/size-finder'
+      fullPath: '/size-finder'
+      preLoaderRoute: typeof AuthenticatedSizeFinderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/stock-ledger': {
       id: '/_authenticated/stock-ledger'
       path: '/stock-ledger'
@@ -425,12 +463,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuideRoute: typeof AuthenticatedGuideRoute
   AuthenticatedInventoryControlRoute: typeof AuthenticatedInventoryControlRoute
+  AuthenticatedKhataRoute: typeof AuthenticatedKhataRoute
   AuthenticatedPosRoute: typeof AuthenticatedPosRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedPurchaseRoute: typeof AuthenticatedPurchaseRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSizeFinderRoute: typeof AuthenticatedSizeFinderRoute
   AuthenticatedStockLedgerRoute: typeof AuthenticatedStockLedgerRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
 }
@@ -444,12 +484,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuideRoute: AuthenticatedGuideRoute,
   AuthenticatedInventoryControlRoute: AuthenticatedInventoryControlRoute,
+  AuthenticatedKhataRoute: AuthenticatedKhataRoute,
   AuthenticatedPosRoute: AuthenticatedPosRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedPurchaseRoute: AuthenticatedPurchaseRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSizeFinderRoute: AuthenticatedSizeFinderRoute,
   AuthenticatedStockLedgerRoute: AuthenticatedStockLedgerRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
 }
