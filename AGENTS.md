@@ -25,3 +25,5 @@
 - Default bill size and thermal width live in `store_settings` (bill_design, thermal_width); POS uses them instead of device storage.
 - Password recovery goes through the public `/reset-password` route: the sign-in page calls `resetPasswordForEmail` with `redirectTo` origin + `/reset-password`, and the page saves via `updateUser({ password })` without `current_password` (recovery sessions are exempt).
 - Customer/supplier opening balances live in an `opening_balance` column added to dues (owner-only edits for customers); all outgoing messages read the shop name from `store_settings` via `useShop`.
+- App language (English/Hindi/Hinglish) is a per-device choice in `src/lib/i18n.tsx`, keyed by the English text, so untranslated text safely falls back to English.
+- Khata builds running-balance statements from existing sales, credit payments, purchases and supplier payments; it never stores a separate ledger, so balances can't drift.
