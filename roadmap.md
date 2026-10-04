@@ -44,3 +44,4 @@
 - [x] POS walk-in / new mobile customer auto-saves to Customers
 - [x] Quick Add Ladies size categories (5-9 normal, 10-12 badi size) with optional extra sizes
 - [x] Add forgot password flow with a public reset-password page
+- Ask language (EN/Hindi/Hinglish) before every WhatsApp/SMS message send
