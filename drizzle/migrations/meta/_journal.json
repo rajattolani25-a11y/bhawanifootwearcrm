@@ -99,6 +99,13 @@
       "when": 1791099287155,
       "tag": "0013_opening_balances_simple_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791105505952,
+      "tag": "0014_catalog_and_bookings",
+      "breakpoints": true
     }
   ]
 }
