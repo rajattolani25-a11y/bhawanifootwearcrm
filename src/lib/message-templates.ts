@@ -10,7 +10,7 @@ const r = (re: RegExp, en: T, hi: T, hg: T): Rule => [re, en, hi, hg];
 const RULES: Rule[] = [
   // Greetings
   r(/^(?:Dear|Namaste|Hello) (.+?)( ji)?,$/, (m) => `Dear ${m[1]},`, (m) => `नमस्ते ${m[1]} जी,`, (m) => `Namaste ${m[1]} ji,`),
-  r(/^Hello (.+?), greetings from (.+?)\.(.*)$/, (m) => `Hello ${m[1]}, greetings from ${m[2]}.${m[3]}`, (m) => `नमस्ते ${m[1]} जी, ${m[2]} की ओर से शुभकामनाएँ।${m[3].replace("Call / WhatsApp:", "कॉल / WhatsApp:")}`, (m) => `Namaste ${m[1]} ji, ${m[2]} ki taraf se shubhkamnayein.${m[3].replace("Call / WhatsApp:", "Call / WhatsApp:")}`),
+  r(/^Hello (.+?), greetings from (.+?)\.(.*)$/, (m) => `Hello ${m[1]}, greetings from ${m[2]}.${m[3]}`, (m) => `नमस्ते ${m[1]} जी, ${m[2]} की ओर से शुभकामनाएँ।${(m[3] ?? "").replace("Call / WhatsApp:", "कॉल / WhatsApp:")}`, (m) => `Namaste ${m[1]} ji, ${m[2]} ki taraf se shubhkamnayein.${(m[3] ?? "").replace("Call / WhatsApp:", "Call / WhatsApp:")}`),
   // Bill
   r(/^Thank you for shopping at (.+)\.$/, (m) => `Thank you for shopping at ${m[1]}.`, (m) => `${m[1]} से खरीदारी करने के लिए धन्यवाद।`, (m) => `${m[1]} se shopping karne ke liye dhanyavaad.`),
   r(/^Bill: (.+)$/, (m) => `Bill: ${m[1]}`, (m) => `बिल: ${m[1]}`, (m) => `Bill: ${m[1]}`),
@@ -18,7 +18,7 @@ const RULES: Rule[] = [
   r(/^Paid: (.+)$/, (m) => `Paid: ${m[1]}`, (m) => `जमा: ${m[1]}`, (m) => `Jama: ${m[1]}`),
   r(/^Balance due: (.+)$/, (m) => `Balance due: ${m[1]}`, (m) => `बाकी: ${m[1]}`, (m) => `Baaki: ${m[1]}`),
   r(/^Your loyalty stamp has been added\.$/, () => "Your loyalty stamp has been added.", () => "आपका लॉयल्टी स्टैम्प जोड़ दिया गया है।", () => "Aapka loyalty stamp jud gaya hai."),
-  r(/^Reward unlocked: (.+) on your next bill\.$/, (m) => `Reward unlocked: ${m[1]} on your next bill.`, (m) => `इनाम मिला: अगले बिल पर ${m[1].replace(/ off/g, " की छूट")}।`, (m) => `Reward mila: agle bill pe ${m[1].replace(/ off/g, " ki chhoot")}.`),
+  r(/^Reward unlocked: (.+) on your next bill\.$/, (m) => `Reward unlocked: ${m[1]} on your next bill.`, (m) => `इनाम मिला: अगले बिल पर ${(m[1] ?? "").replace(/ off/g, " की छूट")}।`, (m) => `Reward mila: agle bill pe ${(m[1] ?? "").replace(/ off/g, " ki chhoot")}.`),
   r(/^Size exchange is available within 7 days with this bill\.$/, () => "Size exchange is available within 7 days with this bill.", () => "इस बिल के साथ 7 दिनों के अंदर साइज़ बदला जा सकता है।", () => "Is bill ke saath 7 din ke andar size exchange ho sakta hai."),
   r(/^We look forward to serving you again\.$/, () => "We look forward to serving you again.", () => "आपकी दोबारा सेवा का इंतज़ार रहेगा।", () => "Aapki dobara seva ka intezaar rahega."),
   // Due reminders
