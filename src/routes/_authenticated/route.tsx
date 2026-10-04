@@ -8,6 +8,7 @@ import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
 import { ThemeControl } from "@/components/ThemeControl";
 import { GuidedTour } from "@/components/GuidedTour";
+import { LanguageProvider, useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => (
     <AuthProvider>
-      <AppShell />
+      <LanguageProvider><AppShell /></LanguageProvider>
     </AuthProvider>
   ),
 });
@@ -28,6 +29,7 @@ function AppShell() {
   const { user, role, isOwner } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLang();
   const items = MODULES.filter((m) => !m.ownerOnly || isOwner);
 
   async function signOut() {
@@ -46,7 +48,7 @@ function AppShell() {
           activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium" }}
         >
           <m.icon className="h-4 w-4" />
-          {m.label}
+          {t(m.label)}
         </Link>
       ))}
     </nav>
@@ -62,7 +64,7 @@ function AppShell() {
           <ThemeControl compact />
       </div>
       <button onClick={signOut} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent">
-        <LogOut className="h-4 w-4" /> Sign out
+        <LogOut className="h-4 w-4" /> {t("Sign out")}
       </button>
     </div>
   );

@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { exportAll, importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
 import { WorkspaceGuide } from "@/components/WorkspaceGuide";
+import { LanguageSelect } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data controls." }, { property: "og:title", content: "Settings — SoleStack POS" }, { property: "og:description", content: "Store, appearance and protected data controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -138,6 +139,9 @@ function SettingsPage() {
         <h2 className="mb-1 font-semibold">Appearance</h2>
         <p className="mb-3 text-sm text-muted-foreground">Choose the workspace appearance on this device.</p>
         <ThemeControl />
+        <h2 className="mb-1 mt-5 font-semibold">Language / भाषा</h2>
+        <p className="mb-3 text-sm text-muted-foreground">Menu aur screen titles is bhasha me dikhenge (is device par).</p>
+        <LanguageSelect />
       </section>
 
       <section className="rounded-xl border bg-card p-5">
