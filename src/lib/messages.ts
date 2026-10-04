@@ -46,6 +46,6 @@ export function smsLink(mobile: string, text: string) {
 }
 
 export async function shareText(title: string, text: string) {
-  if (navigator.share) return navigator.share({ title, text });
-  await navigator.clipboard.writeText(text);
+  // The language picker (MessageLanguage) does the actual share after the user picks a language.
+  window.dispatchEvent(new CustomEvent("solestack-share", { detail: { title, text } }));
 }

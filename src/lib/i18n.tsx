@@ -1,9 +1,16 @@
+import { GENERATED } from "@/lib/i18n-dict";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type AppLanguage = "english" | "hindi" | "hinglish";
 
 // Keyed by the English text shown in the app. Missing phrases fall back to English.
 const DICT: Record<string, { hindi: string; hinglish: string }> = {
+  ...GENERATED,
+  "SoleStack": { hindi: "SoleStack", hinglish: "SoleStack" },
+  "Summary": { hindi: "सारांश", hinglish: "Summary" },
+  "Profit & Loss": { hindi: "लाभ और हानि", hinglish: "Munafa-Nuksaan" },
+  "Cash Book": { hindi: "नकद बही", hinglish: "Cash Khata" },
+  "Tax & Payables": { hindi: "टैक्स और देनदारी", hinglish: "Tax aur Dena" },
   "Dashboard": { hindi: "डैशबोर्ड", hinglish: "Dashboard" },
   "POS Billing": { hindi: "नया बिल", hinglish: "Naya Bill" },
   "Products": { hindi: "सामान", hinglish: "Saman" },
@@ -54,6 +61,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (v === "hindi" || v === "hinglish" || v === "english") setLangState(v);
   }, []);
   const setLang = (l: AppLanguage) => { localStorage.setItem(KEY, l); setLangState(l); };
+  useEffect(() => translateDom(lang), [lang]);
   return <Ctx.Provider value={{ lang, setLang }}>{children}</Ctx.Provider>;
 }
 
@@ -74,3 +82,60 @@ export function LanguageSelect() {
     </div>
   );
 }
+
+// Translates every visible text and placeholder on screen, so all pages follow the chosen language.
+const origText = new WeakMap<Node, string>();
+const shownText = new WeakMap<Node, string>();
+const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE"]);
+function lookup(text: string, lang: AppLanguage) {
+  if (lang === "english") return null;
+  const k = text.trim();
+  return k && DICT[k] ? text.replace(k, DICT[k]![lang]) : null;
+}
+function translateText(node: Text, lang: AppLanguage) {
+  const p = node.parentElement;
+  if (!p || SKIP.has(p.tagName) || p.closest("[data-no-translate]")) return;
+  const cur = node.nodeValue ?? "";
+  if (shownText.get(node) !== cur) origText.set(node, cur); // React wrote new text
+  const orig = origText.get(node) ?? cur;
+  const next = lookup(orig, lang) ?? orig;
+  if (next !== cur) node.nodeValue = next;
+  shownText.set(node, next);
+}
+function translateAttrs(el: Element, lang: AppLanguage) {
+  for (const a of ["placeholder", "title", "aria-label"]) {
+    const v = el.getAttribute(a); if (v === null) continue;
+    const key = `data-i18n-${a}`;
+    let orig = el.getAttribute(key);
+    const shown = el.getAttribute(`${key}-shown`);
+    if (orig === null || shown !== v) { orig = v; el.setAttribute(key, v); }
+    const next = lookup(orig, lang) ?? orig;
+    el.setAttribute(`${key}-shown`, next);
+    if (next !== v) el.setAttribute(a, next);
+  }
+}
+function walk(root: Node, lang: AppLanguage) {
+  if (root.nodeType === 3) return translateText(root as Text, lang);
+  if (root.nodeType !== 1) return;
+  translateAttrs(root as Element, lang);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) n.nodeType === 3 ? translateText(n as Text, lang) : translateAttrs(n as Element, lang);
+}
+let observer: MutationObserver | null = null;
+function translateDom(lang: AppLanguage) {
+  observer?.disconnect();
+  document.documentElement.lang = lang === "hindi" ? "hi" : "en";
+  walk(document.body, lang);
+  observer = new MutationObserver((list) => {
+    observer!.disconnect();
+    for (const m of list) {
+      if (m.type === "characterData") translateText(m.target as Text, lang);
+      else if (m.type === "attributes") translateAttrs(m.target as Element, lang);
+      else m.addedNodes.forEach((n) => walk(n, lang));
+    }
+    observer!.observe(document.body, OPTS);
+  });
+  observer.observe(document.body, OPTS);
+  return () => observer?.disconnect();
+}
+const OPTS: MutationObserverInit = { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["placeholder", "title", "aria-label"] };
