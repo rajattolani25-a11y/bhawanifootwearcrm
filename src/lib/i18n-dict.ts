@@ -1296,6 +1296,14 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Storage": { english: "Storage", hindi: "स्टोरेज", hinglish: "Storage" },
+  "How much free space your shop has used. Numbers are approximate.": { english: "How much free space your shop has used. Numbers are approximate.", hindi: "आपकी दुकान ने कितनी फ्री जगह इस्तेमाल की है। आंकड़े अनुमानित हैं।", hinglish: "Dukaan ne kitni free jagah use ki hai. Numbers andaaze se hain." },
+  "Shop records": { english: "Shop records", hindi: "दुकान का रिकॉर्ड", hinglish: "Dukaan ka record" },
+  "Product photos": { english: "Product photos", hindi: "प्रोडक्ट फ़ोटो", hinglish: "Product photos" },
+  "Safe": { english: "Safe", hindi: "सुरक्षित", hinglish: "Safe" },
+  "Getting full": { english: "Getting full", hindi: "भर रहा है", hinglish: "Bhar raha hai" },
+  "Almost full": { english: "Almost full", hindi: "लगभग भर गया", hinglish: "Lagbhag bhar gaya" },
+  "Checking storage…": { english: "Checking storage…", hindi: "स्टोरेज जाँच रहे हैं…", hinglish: "Storage check ho raha hai…" },
  "Loading accounts…": {
   "english": "Loading accounts…",
   "hindi": "खाते लोड हो रहे हैं…",
