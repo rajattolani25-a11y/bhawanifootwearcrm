@@ -16,12 +16,16 @@ export type Database = {
     Tables: {
       catalog_bookings: {
         Row: {
+          address: string | null
           advance: number
+          area: string | null
           booking_no: string
           confirmed_at: string | null
           created_at: string
           customer_name: string
+          delivery_charge: number
           expires_at: string
+          fulfillment: string
           id: string
           mobile: string
           note: string | null
@@ -30,15 +34,20 @@ export type Database = {
           sale_id: string | null
           size: string
           status: string
+          status_history: Json
           variant_id: string
         }
         Insert: {
+          address?: string | null
           advance: number
+          area?: string | null
           booking_no: string
           confirmed_at?: string | null
           created_at?: string
           customer_name: string
+          delivery_charge?: number
           expires_at: string
+          fulfillment?: string
           id?: string
           mobile: string
           note?: string | null
@@ -47,15 +56,20 @@ export type Database = {
           sale_id?: string | null
           size: string
           status?: string
+          status_history?: Json
           variant_id: string
         }
         Update: {
+          address?: string | null
           advance?: number
+          area?: string | null
           booking_no?: string
           confirmed_at?: string | null
           created_at?: string
           customer_name?: string
+          delivery_charge?: number
           expires_at?: string
+          fulfillment?: string
           id?: string
           mobile?: string
           note?: string | null
@@ -64,6 +78,7 @@ export type Database = {
           sale_id?: string | null
           size?: string
           status?: string
+          status_history?: Json
           variant_id?: string
         }
         Relationships: [
@@ -990,9 +1005,17 @@ export type Database = {
           business_phone: string | null
           catalog_enabled: boolean
           daily_target: number | null
+          delivery_enabled: boolean
+          delivery_note: string | null
+          free_delivery_above: number | null
           gstin: string | null
           hold_hours: number
           id: number
+          local_charge: number
+          outside_charge: number
+          outside_enabled: boolean
+          pickup_enabled: boolean
+          show_few_left: boolean
           thermal_width: string
           updated_at: string
           upi_id: string | null
@@ -1007,9 +1030,17 @@ export type Database = {
           business_phone?: string | null
           catalog_enabled?: boolean
           daily_target?: number | null
+          delivery_enabled?: boolean
+          delivery_note?: string | null
+          free_delivery_above?: number | null
           gstin?: string | null
           hold_hours?: number
           id?: number
+          local_charge?: number
+          outside_charge?: number
+          outside_enabled?: boolean
+          pickup_enabled?: boolean
+          show_few_left?: boolean
           thermal_width?: string
           updated_at?: string
           upi_id?: string | null
@@ -1024,9 +1055,17 @@ export type Database = {
           business_phone?: string | null
           catalog_enabled?: boolean
           daily_target?: number | null
+          delivery_enabled?: boolean
+          delivery_note?: string | null
+          free_delivery_above?: number | null
           gstin?: string | null
           hold_hours?: number
           id?: number
+          local_charge?: number
+          outside_charge?: number
+          outside_enabled?: boolean
+          pickup_enabled?: boolean
+          show_few_left?: boolean
           thermal_width?: string
           updated_at?: string
           upi_id?: string | null
@@ -1167,6 +1206,17 @@ export type Database = {
         Args: { _mobile: string; _name: string; _variant_id: string }
         Returns: Json
       }
+      create_catalog_order: {
+        Args: {
+          _address: string
+          _area: string
+          _fulfillment: string
+          _mobile: string
+          _name: string
+          _variant_id: string
+        }
+        Returns: Json
+      }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
       ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
       expire_catalog_bookings: { Args: never; Returns: number }
@@ -1223,6 +1273,14 @@ export type Database = {
         Returns: undefined
       }
       store_usage: { Args: never; Returns: Json }
+      track_catalog_order: {
+        Args: { _booking_no: string; _mobile: string }
+        Returns: Json
+      }
+      update_catalog_order_status: {
+        Args: { _id: string; _status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "owner" | "staff"

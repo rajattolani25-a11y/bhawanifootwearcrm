@@ -31,3 +31,4 @@
 - Public `/catalog` reads only through the `public_catalog` DB function via a publishable-key server fn (no cost/stock counts); anon may read only catalog-visible photos.
 - Catalog bookings take stock out immediately (`create_catalog_booking`, BOOKING_HOLD) and return it on cancel/expiry; pickup bills go through `complete_catalog_booking`, which releases the hold and calls `create_sale` in one transaction, so stock never double-counts.
 - Product photos are compressed on the device (max 1080px WebP) before upload, and the old file is deleted on replace.
+- Catalog orders: pickup = advance, local/outside delivery = full payment + server-computed charge via `create_catalog_order`; public tracking only through `track_catalog_order` (order no. + mobile); status history is logged by trigger.
