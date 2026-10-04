@@ -28,7 +28,6 @@ import { Route as AuthenticatedPurchaseRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedSizeFinderRouteImport } from './routes/_authenticated/size-finder'
 import { Route as AuthenticatedStockLedgerRouteImport } from './routes/_authenticated/stock-ledger'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
 
@@ -127,11 +126,6 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedSizeFinderRoute = AuthenticatedSizeFinderRouteImport.update({
-  id: '/size-finder',
-  path: '/size-finder',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedStockLedgerRoute =
   AuthenticatedStockLedgerRouteImport.update({
     id: '/stock-ledger',
@@ -163,7 +157,6 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/size-finder': typeof AuthenticatedSizeFinderRoute
   '/stock-ledger': typeof AuthenticatedStockLedgerRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
 }
@@ -186,7 +179,6 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/size-finder': typeof AuthenticatedSizeFinderRoute
   '/stock-ledger': typeof AuthenticatedStockLedgerRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
 }
@@ -211,7 +203,6 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/size-finder': typeof AuthenticatedSizeFinderRoute
   '/_authenticated/stock-ledger': typeof AuthenticatedStockLedgerRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
 }
@@ -236,7 +227,6 @@ export interface FileRouteTypes {
     | '/reports'
     | '/sales'
     | '/settings'
-    | '/size-finder'
     | '/stock-ledger'
     | '/suppliers'
   fileRoutesByTo: FileRoutesByTo
@@ -259,7 +249,6 @@ export interface FileRouteTypes {
     | '/reports'
     | '/sales'
     | '/settings'
-    | '/size-finder'
     | '/stock-ledger'
     | '/suppliers'
   id:
@@ -283,7 +272,6 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/sales'
     | '/_authenticated/settings'
-    | '/_authenticated/size-finder'
     | '/_authenticated/stock-ledger'
     | '/_authenticated/suppliers'
   fileRoutesById: FileRoutesById
@@ -430,13 +418,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/size-finder': {
-      id: '/_authenticated/size-finder'
-      path: '/size-finder'
-      fullPath: '/size-finder'
-      preLoaderRoute: typeof AuthenticatedSizeFinderRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/stock-ledger': {
       id: '/_authenticated/stock-ledger'
       path: '/stock-ledger'
@@ -470,7 +451,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedSizeFinderRoute: typeof AuthenticatedSizeFinderRoute
   AuthenticatedStockLedgerRoute: typeof AuthenticatedStockLedgerRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
 }
@@ -491,7 +471,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedSizeFinderRoute: AuthenticatedSizeFinderRoute,
   AuthenticatedStockLedgerRoute: AuthenticatedStockLedgerRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
 }

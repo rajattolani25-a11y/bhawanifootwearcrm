@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Crown, MessageCircle, Search, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,11 +30,10 @@ function Customers() {
   const { data = [] } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const [{ data: cs, error }, { data: sales }] = await Promise.all([
-        supabase.from("customers").select("*").order("created_at", { ascending: false }).limit(5000),
-        supabase.from("sales").select("customer_id,total,due_amount,sale_date").not("customer_id", "is", null).limit(50000),
+      const [cs, sales] = await Promise.all([
+        fetchAll((a, b) => supabase.from("customers").select("*").order("created_at", { ascending: false }).range(a, b)),
+        fetchAll((a, b) => supabase.from("sales").select("customer_id,total,due_amount,sale_date").not("customer_id", "is", null).range(a, b)),
       ]);
-      if (error) throw error;
        const agg = new Map<string, { spend: number; due: number; last: string }>();
       for (const s of sales ?? []) {
          const a = agg.get(s.customer_id!) ?? { spend: 0, due: 0, last: "" };

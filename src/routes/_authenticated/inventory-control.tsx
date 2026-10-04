@@ -22,8 +22,9 @@ function Control() {
     queryKey: ["sold-60"],
     queryFn: async () => {
       const since = new Date(Date.now() - 60 * 864e5).toISOString();
-      const { data } = await supabase.from("sale_items").select("variant_id,sales!inner(sale_date)").gte("sales.sale_date", since).limit(10000);
-      return new Set((data ?? []).map((r) => r.variant_id as string));
+      const { fetchAll } = await import("@/lib/fetch-all");
+      const data = await fetchAll((a, b) => supabase.from("sale_items").select("variant_id,sales!inner(sale_date)").gte("sales.sale_date", since).range(a, b));
+      return new Set(data.map((r) => r.variant_id as string));
     },
   });
   const flat = data.flatMap((p) => p.product_variants.map((v) => ({ p, v })));

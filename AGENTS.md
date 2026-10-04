@@ -27,3 +27,4 @@
 - Customer/supplier opening balances live in an `opening_balance` column added to dues (owner-only edits for customers); all outgoing messages read the shop name from `store_settings` via `useShop`.
 - App language (English/Hindi/Hinglish) is a per-device choice in `src/lib/i18n.tsx`, keyed by the English text, so untranslated text safely falls back to English.
 - Khata builds running-balance statements from existing sales, credit payments, purchases and supplier payments; it never stores a separate ledger, so balances can't drift.
+- Any list used for totals reads every row through `fetchAll` (`src/lib/fetch-all.ts`), because the database returns max 1000 rows per request and totals would silently go wrong.
