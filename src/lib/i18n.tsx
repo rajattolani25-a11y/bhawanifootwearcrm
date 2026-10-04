@@ -1,11 +1,12 @@
-import { GENERATED } from "@/lib/i18n-dict";
+import { EXTRA, GENERATED } from "@/lib/i18n-dict";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type AppLanguage = "english" | "hindi" | "hinglish";
 
 // Keyed by the English text shown in the app. Missing phrases fall back to English.
-const DICT: Record<string, { hindi: string; hinglish: string }> = {
+const DICT: Record<string, { english?: string; hindi: string; hinglish: string }> = {
   ...GENERATED,
+  ...EXTRA,
   "SoleStack": { hindi: "SoleStack", hinglish: "SoleStack" },
   "Summary": { hindi: "सारांश", hinglish: "Summary" },
   "Profit & Loss": { hindi: "लाभ और हानि", hinglish: "Munafa-Nuksaan" },
@@ -67,7 +68,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
 export function useLang() {
   const { lang, setLang } = useContext(Ctx);
-  const t = (text: string) => (lang === "english" ? text : DICT[text]?.[lang] ?? text);
+  const t = (text: string) => DICT[text]?.[lang] ?? text;
   return { lang, setLang, t };
 }
 
@@ -88,9 +89,9 @@ const origText = new WeakMap<Node, string>();
 const shownText = new WeakMap<Node, string>();
 const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE"]);
 function lookup(text: string, lang: AppLanguage) {
-  if (lang === "english") return null;
   const k = text.trim();
-  return k && DICT[k] ? text.replace(k, DICT[k]![lang]) : null;
+  const v = k ? DICT[k]?.[lang] : undefined;
+  return v ? text.replace(k, v) : null;
 }
 function translateText(node: Text, lang: AppLanguage) {
   const p = node.parentElement;
