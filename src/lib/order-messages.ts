@@ -10,7 +10,7 @@ const L = {
     order: "Order no.", item: "Item", size: "Size", amount: "Amount", paid: "Amount paid", balance: "Balance at store", delivery: "Delivery", address: "Address",
     type: { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" } as Record<string, string>,
     ask: (p: string, sz: string) => `I saw *${p}*${sz ? ` (size ${sz})` : ""} in your online catalog. Is it available? I would like to visit the store.`,
-    proof: "I have placed an order and paid on UPI. Sharing the payment screenshot below.", name: "Name",
+    policy: "Note: No cash refund or return. Size exchange within 7 days with bill.", proof: "I have placed an order and paid on UPI. Sharing the payment screenshot below.", name: "Name",
     st: {
       pending: "Your order is placed and is waiting for payment. Please complete the UPI payment within 30 minutes to confirm it.",
       confirmed: "We have received your payment. Your order is confirmed.",
@@ -26,7 +26,7 @@ const L = {
     order: "ऑर्डर नं.", item: "सामान", size: "साइज़", amount: "राशि", paid: "भुगतान किया", balance: "दुकान पर बाकी", delivery: "डिलीवरी", address: "पता",
     type: { pickup: "दुकान से लेना", local: "लोकल डिलीवरी", outside: "जबलपुर के बाहर डिलीवरी" } as Record<string, string>,
     ask: (p: string, sz: string) => `मैंने आपके ऑनलाइन कैटलॉग में *${p}*${sz ? ` (साइज़ ${sz})` : ""} देखा। क्या यह उपलब्ध है? मैं दुकान आना चाहता/चाहती हूँ।`,
-    proof: "मैंने ऑर्डर किया है और UPI से भुगतान कर दिया है। भुगतान का स्क्रीनशॉट नीचे भेज रहा/रही हूँ।", name: "नाम",
+    policy: "नोट: पैसे वापस या रिटर्न नहीं। बिल के साथ 7 दिन में साइज़ एक्सचेंज।", proof: "मैंने ऑर्डर किया है और UPI से भुगतान कर दिया है। भुगतान का स्क्रीनशॉट नीचे भेज रहा/रही हूँ।", name: "नाम",
     st: {
       pending: "आपका ऑर्डर हो गया है, भुगतान बाकी है। कृपया 30 मिनट में UPI भुगतान करके पक्का करें।",
       confirmed: "आपका भुगतान मिल गया है। आपका ऑर्डर पक्का हो गया है।",
@@ -42,7 +42,7 @@ const L = {
     order: "Order no.", item: "Saman", size: "Size", amount: "Amount", paid: "Payment kiya", balance: "Dukaan pe baaki", delivery: "Delivery", address: "Address",
     type: { pickup: "Dukaan se lena", local: "Local delivery", outside: "Jabalpur ke bahar delivery" } as Record<string, string>,
     ask: (p: string, sz: string) => `Maine aapke online catalog mein *${p}*${sz ? ` (size ${sz})` : ""} dekha. Kya ye available hai? Main dukaan aana chahta/chahti hoon.`,
-    proof: "Maine order kiya hai aur UPI se payment kar diya hai. Payment ka screenshot neeche bhej raha/rahi hoon.", name: "Naam",
+    policy: "Note: Cash refund ya return nahi. Bill ke saath 7 din mein size exchange.", proof: "Maine order kiya hai aur UPI se payment kar diya hai. Payment ka screenshot neeche bhej raha/rahi hoon.", name: "Naam",
     st: {
       pending: "Aapka order ho gaya hai, payment baaki hai. Please 30 minute mein UPI payment karke confirm karein.",
       confirmed: "Aapka payment mil gaya hai. Aapka order confirm ho gaya hai.",
@@ -71,7 +71,7 @@ export function enquiryText(lang: AppLanguage, shop: string, product: string, si
 /** Customer -> shop: payment proof after ordering. */
 export function proofText(lang: AppLanguage, o: OrderInfo) {
   const t = L[lang];
-  return `${t.hello(o.shop)}\n\n${t.proof}\n\n${lines(t, o)}\n*${t.name}:* ${o.name}`;
+  return `${t.hello(o.shop)}\n\n${t.proof}\n\n${lines(t, o)}\n*${t.name}:* ${o.name}\n\n_${t.policy}_`;
 }
 
 /** Shop -> customer: status update for an order. */

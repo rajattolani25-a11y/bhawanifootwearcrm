@@ -13,6 +13,7 @@ import { computeBill, waLink } from "@/lib/pos";
 import { useShop } from "@/hooks/use-shop";
 import { useLang } from "@/lib/i18n";
 import { statusText } from "@/lib/order-messages";
+import { printBill } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/bookings")({
   head: () => ({ meta: [{ title: "Online Orders — SoleStack POS" }, { name: "description", content: "Catalog reservations with advance payment." }, { property: "og:title", content: "Online Orders — SoleStack POS" }, { property: "og:description", content: "Confirm, bill or cancel catalog reservations." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -125,7 +126,9 @@ function PickupBill({ b, onClose, onDone }: { b: Booking; onClose: () => void; o
         _items: [{ variant_id: b.variant_id, product_name: b.product_name, size: b.size, sku: null, price: b.price, qty: 1, discount: 0 }],
       });
       if (error) throw error;
-      toast.success(`Bill ${(data as { bill_no: string }).bill_no} made`);
+      const billNo = (data as { bill_no: string }).bill_no;
+      toast.success(`Bill ${billNo} made`);
+      printBill(billNo).catch((e) => toast.error((e as Error).message));
       onDone(); onClose();
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   }

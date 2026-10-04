@@ -52,7 +52,7 @@ function Sales() {
   const returned = (id: string) => returns.filter((r) => r.sale_item_id === id).reduce((a, r) => a + r.qty, 0);
   const s = q.toLowerCase();
   const list = data.filter((x) => !s || x.bill_no.toLowerCase().includes(s) || (x.customer_name ?? "").toLowerCase().includes(s) || x.customers?.mobile.includes(s));
-  const reprint = (b: string, d: PrintDesign) => printBill(b, d, true).catch((e) => toast.error(e.message));
+  const reprint = (b: string, d: PrintDesign) => printBill(b, d).catch((e) => toast.error(e.message));
   async function collectPayment() {
     if (!collect) return;
     const { data: result, error } = await supabase.rpc("collect_credit_payment", { _sale_id: collect.id, _amount: Number(amount), _mode: mode, _note: "Collected from Sales History" });
@@ -64,7 +64,7 @@ function Sales() {
 
   return (
     <div>
-      <PageHeader title="Sales History" subtitle="Re-print (duplicate copy), WhatsApp bill, return or exchange." actions={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Bill no, name or mobile" className="h-10 w-64" />} />
+      <PageHeader title="Sales History" subtitle="Re-print bill, WhatsApp bill, return or exchange." actions={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Bill no, name or mobile" className="h-10 w-64" />} />
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">

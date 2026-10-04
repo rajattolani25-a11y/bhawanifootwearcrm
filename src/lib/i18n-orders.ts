@@ -1,5 +1,11 @@
 // Catalog orders, delivery and tracking phrases (English / Hindi / Hinglish).
 const R: [string, string, string][] = [
+  ["Exchange policy", "एक्सचेंज नियम", "Exchange policy"],
+  ["No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.", "पैसे वापस या रिटर्न नहीं होंगे। बिल के साथ, बिना पहने जोड़े का 7 दिन में सिर्फ़ साइज़ बदला जा सकता है।", "Cash refund ya return nahi hoga. Bill ke saath, bina pehne pair ka 7 din mein sirf size exchange hoga."],
+  ["100% original brands", "100% ओरिजिनल ब्रांड", "100% original brand"],
+  ["Easy size exchange", "आसान साइज़ एक्सचेंज", "Aasaan size exchange"],
+  ["No refund", "रिफंड नहीं", "Refund nahi"],
+  ["Pickup & local delivery", "पिकअप और लोकल डिलीवरी", "Pickup aur local delivery"],
   ["Online Orders", "ऑनलाइन ऑर्डर", "Online Order"],
   ["Track order", "ऑर्डर ट्रैक करें", "Order track karo"],
   ["Track your order", "अपना ऑर्डर ट्रैक करें", "Apna order track karo"],

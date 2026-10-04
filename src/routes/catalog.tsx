@@ -130,6 +130,8 @@ function Catalog() {
           <div className="flex gap-3"><MessageCircle className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Ask on WhatsApp</p><p className="text-sm text-muted-foreground">We confirm your size before you come.</p></div></div>
           <div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Live stock</p><p className="text-sm text-muted-foreground">Only sizes in stock are shown.</p></div></div>
         </div>
+        <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs font-semibold">{["100% original brands", "Easy size exchange", "No refund", "Pickup & local delivery"].map((x) => <span key={x} className="rounded-full border bg-card px-3 py-1">{x}</span>)}</div>
+        <p className="mt-2 text-center text-xs text-muted-foreground">No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</p>
         <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
       </main>
       <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
@@ -196,6 +198,7 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
             </div>
           </div>
           {wa && <Button asChild variant={canOrder ? "outline" : "default"} className="h-12 w-full"><a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Ask on WhatsApp & visit store</a></Button>}
+          <div className="flex gap-2 rounded-lg border bg-muted/50 p-3 text-xs"><ShieldCheck className="h-4 w-4 shrink-0 text-primary" /><p><b>Exchange policy</b> · <span>No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</span></p></div>
           {canOrder && <Button disabled={!chosen} onClick={() => setStep("method")} className="h-12 w-full">{chosen ? "Get this pair" : "Select a size to continue"}</Button>}
         </>}
         {step === "method" && chosen && <div className="space-y-3">
