@@ -21,12 +21,12 @@ export function CatalogSettings() {
 
   async function save() {
     const upi = f.upi_id.trim();
-    if (f.booking_enabled && !/^[\w.-]{2,}@[\w.-]{2,}$/.test(upi)) return toast.error("Enter a valid UPI ID to turn on booking");
+    if (f.booking_enabled && !/^[\w.-]{2,}@[\w.-]{2,}$/.test(upi)) { toast.error("Enter a valid UPI ID to turn on booking"); return; }
     const { error } = await supabase.from("store_settings").update({
       catalog_enabled: f.catalog_enabled, booking_enabled: f.booking_enabled, upi_id: upi || null,
       advance_percent: Math.min(100, Math.max(10, Number(f.advance_percent) || 50)), hold_hours: Math.min(168, Math.max(1, Number(f.hold_hours) || 24)),
     }).eq("id", 1);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["catalog-settings"] }); toast.success("Catalog settings saved");
   }
 

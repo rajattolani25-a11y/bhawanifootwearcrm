@@ -36,6 +36,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
     const { data: signed } = await sb.storage.from("product-images").createSignedUrls(paths, 6 * 3600);
     signed?.forEach((s) => s.path && s.signedUrl && urls.set(s.path, s.signedUrl));
   }
+  if (!d.shop) return { enabled: false };
   return { enabled: true, shop: d.shop, products: d.products.map((p) => ({ ...p, image: p.image ? urls.get(p.image) ?? null : null })) };
 });
 

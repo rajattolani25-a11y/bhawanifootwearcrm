@@ -44,14 +44,14 @@ function Bookings() {
   async function confirm(b: Booking) {
     if (!window.confirm(`Did you receive ${inr(b.advance)} on UPI for ${b.booking_no}?`)) return;
     const { error } = await supabase.rpc("confirm_catalog_booking", { _id: b.id });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Payment received — pair is on hold"); refresh();
   }
   async function cancel(b: Booking) {
     const note = window.prompt("Reason / refund note (optional)", b.status === "confirmed" ? `Refund ${inr(b.advance)} by UPI` : "");
     if (note === null) return;
     const { error } = await supabase.rpc("cancel_catalog_booking", { _id: b.id, _note: note });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Booking cancelled — stock returned"); refresh();
   }
   const copyLink = () => { void navigator.clipboard.writeText(`${window.location.origin}/catalog`); toast.success("Catalog link copied"); };

@@ -2007,7 +2007,6 @@ export const EXTRA: Record<string, { english: string; hindi: string; hinglish: s
  "Select a size to reserve this pair": { english: "Select a size to reserve this pair", hindi: "जोड़ी रखवाने के लिए साइज़ चुनें", hinglish: "Pair rakhwane ke liye size chuno" },
  "Reserve": { english: "Reserve", hindi: "रखवाएँ", hinglish: "Rakhwao" },
  "Back": { english: "Back", hindi: "वापस", hinglish: "Wapas" },
- "Please wait…": { english: "Please wait…", hindi: "कृपया रुकें…", hinglish: "Ruko…" },
  "Your name": { english: "Your name", hindi: "आपका नाम", hinglish: "Aapka naam" },
  "Mobile number": { english: "Mobile number", hindi: "मोबाइल नंबर", hinglish: "Mobile number" },
  "Pair kept aside for you": { english: "Pair kept aside for you", hindi: "जोड़ी आपके लिए रख दी गई है", hinglish: "Pair aapke liye rakh diya hai" },
