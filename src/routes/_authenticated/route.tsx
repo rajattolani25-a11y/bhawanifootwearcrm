@@ -1,3 +1,4 @@
+import { useShop } from "@/hooks/use-shop";
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { LogOut, Menu, X } from "lucide-react";
@@ -70,7 +71,7 @@ function AppShell() {
       <aside className="sticky top-0 hidden h-screen w-52 shrink-0 flex-col bg-sidebar lg:flex">
         <div className="border-b border-sidebar-border px-5 py-4">
           <p className="font-display text-base font-bold text-sidebar-accent-foreground">SoleStack<span className="text-sidebar-primary">.</span></p>
-          <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/45">Bhawani Footwear</p>
+          <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/45">{shopName}</p>
         </div>
         {nav}
         {footer}

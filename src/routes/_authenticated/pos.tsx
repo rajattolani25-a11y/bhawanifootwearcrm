@@ -1,3 +1,4 @@
+import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +29,7 @@ const HOLD_KEY = "solestack-held-bills";
 const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function POS() {
+  const shop = useShop();
   const qc = useQueryClient();
   const searchRef = useRef<HTMLInputElement>(null);
   const mobileRef = useRef<HTMLInputElement>(null);

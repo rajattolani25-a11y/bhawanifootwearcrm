@@ -1,3 +1,4 @@
+import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -25,6 +26,7 @@ type SaleRow = {
 };
 
 function Sales() {
+  const shop = useShop();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [ret, setRet] = useState<SaleRow | null>(null);
