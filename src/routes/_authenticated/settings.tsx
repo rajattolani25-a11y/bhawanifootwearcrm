@@ -12,6 +12,7 @@ import { exportAll, importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
 import { WorkspaceGuide } from "@/components/WorkspaceGuide";
 import { LanguageSelect } from "@/lib/i18n";
+import { CatalogSettings } from "@/components/CatalogSettings";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — SoleStack POS" }, { name: "description", content: "Store details, team and data controls." }, { property: "og:title", content: "Settings — SoleStack POS" }, { property: "og:description", content: "Store, appearance and protected data controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -156,6 +157,8 @@ function SettingsPage() {
         </div>
         <Button onClick={save} className="mt-4">Save</Button>
       </section>
+
+      <CatalogSettings />
 
       <section className="rounded-xl border bg-card p-5">
         <h2 className="mb-1 font-semibold">Bill printing</h2>
