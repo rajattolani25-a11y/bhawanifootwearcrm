@@ -67,7 +67,10 @@ function Products() {
       <PageHeader
         title="Products"
         subtitle="Size-wise stock for every article. Green = in stock, amber = low, red = out. Tap an article for its full profile."
-        actions={<div className="flex flex-wrap gap-2">{isOwner && <CsvTools />}<Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Quick add</Button></div>}
+        actions={<div className="flex flex-wrap gap-2">{isOwner && <CsvTools />}{isOwner && <>
+          <Button variant="outline" className="h-11" onClick={async () => { const { error } = await supabase.from("products").update({ catalog_visible: true }).not("image_url", "is", null); if (error) toast.error(error.message); else { toast.success("All products with a photo are now in the catalog"); qc.invalidateQueries({ queryKey: ["products"] }); } }}>Show all with photo</Button>
+          <Button variant="outline" className="h-11" onClick={async () => { if (!window.confirm("Hide all products from the catalog?")) return; const { error } = await supabase.from("products").update({ catalog_visible: false }).eq("catalog_visible", true); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["products"] }); }}>Hide all</Button>
+        </>}<Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Quick add</Button></div>}
       />
       <div className="relative mb-4 max-w-md">
         <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
@@ -109,7 +112,10 @@ function Products() {
                   </span>
                 ))}
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">{total} pairs total</p>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">{total} pairs total</p>
+                {isOwner && <label className="flex items-center gap-2 text-xs font-medium"><span>In catalog</span><Switch checked={p.catalog_visible} onCheckedChange={async (v) => { const { error } = await supabase.from("products").update({ catalog_visible: v }).eq("id", p.id); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["products"] }); }} /></label>}
+              </div>
               </div>
             </div>
           );
