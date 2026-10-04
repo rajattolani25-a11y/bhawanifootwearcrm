@@ -186,6 +186,7 @@ export type Database = {
           legacy_id: string | null
           mobile: string
           name: string
+          opening_balance: number
           premium_stamps: number
           premium_visits: number
           regular_stamps: number
@@ -201,6 +202,7 @@ export type Database = {
           legacy_id?: string | null
           mobile: string
           name?: string
+          opening_balance?: number
           premium_stamps?: number
           premium_visits?: number
           regular_stamps?: number
@@ -216,6 +218,7 @@ export type Database = {
           legacy_id?: string | null
           mobile?: string
           name?: string
+          opening_balance?: number
           premium_stamps?: number
           premium_visits?: number
           regular_stamps?: number
@@ -999,6 +1002,7 @@ export type Database = {
           id: string
           legacy_id: string | null
           name: string
+          opening_balance: number
           phone: string | null
         }
         Insert: {
@@ -1008,6 +1012,7 @@ export type Database = {
           id?: string
           legacy_id?: string | null
           name: string
+          opening_balance?: number
           phone?: string | null
         }
         Update: {
@@ -1017,6 +1022,7 @@ export type Database = {
           id?: string
           legacy_id?: string | null
           name?: string
+          opening_balance?: number
           phone?: string | null
         }
         Relationships: []

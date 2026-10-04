@@ -92,6 +92,13 @@
       "when": 1790659603562,
       "tag": "0012_premium_stamp_only_for_999",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791099287155,
+      "tag": "0013_opening_balances_simple_reset",
+      "breakpoints": true
     }
   ]
 }
