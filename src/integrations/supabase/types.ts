@@ -1222,6 +1222,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      store_usage: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "owner" | "staff"
