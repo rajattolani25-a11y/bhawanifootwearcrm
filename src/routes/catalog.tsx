@@ -130,8 +130,6 @@ function Catalog() {
           <div className="flex gap-3"><MessageCircle className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Ask on WhatsApp</p><p className="text-sm text-muted-foreground">We confirm your size before you come.</p></div></div>
           <div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Live stock</p><p className="text-sm text-muted-foreground">Only sizes in stock are shown.</p></div></div>
         </div>
-        <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs font-semibold">{["100% original brands", "Easy size exchange", "No refund", "Pickup & local delivery"].map((x) => <span key={x} className="rounded-full border bg-card px-3 py-1">{x}</span>)}</div>
-        <p className="mt-2 text-center text-xs text-muted-foreground">No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</p>
         <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
       </main>
       <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
@@ -188,7 +186,7 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle><span data-no-translate>{label}</span></DialogTitle></DialogHeader>
-        {step === "view" && <>
+        {step === "view" && <div className="flex flex-col gap-4">
           <div className="aspect-square overflow-hidden rounded-lg bg-muted">{product.image ? <img src={product.image} alt={label} className="h-full w-full object-contain p-3" /> : null}</div>
           <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{product.category}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
           <div>
@@ -197,10 +195,12 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
               {product.sizes.map((s) => <button key={s.id} disabled={!s.available} onClick={() => setSize(s.id)} className={`min-w-12 rounded-md border px-3 py-2 text-sm font-semibold ${!s.available ? "cursor-not-allowed text-muted-foreground/40 line-through" : size === s.id ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{s.size}</button>)}
             </div>
           </div>
-          {wa && <Button asChild variant={canOrder ? "outline" : "default"} className="h-12 w-full"><a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Ask on WhatsApp & visit store</a></Button>}
-          <div className="flex gap-2 rounded-lg border bg-muted/50 p-3 text-xs"><ShieldCheck className="h-4 w-4 shrink-0 text-primary" /><p><b>Exchange policy</b> · <span>No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</span></p></div>
-          {canOrder && <Button disabled={!chosen} onClick={() => setStep("method")} className="h-12 w-full">{chosen ? "Get this pair" : "Select a size to continue"}</Button>}
-        </>}
+          <div className="flex flex-col gap-2">
+            {wa && <Button asChild variant={canOrder ? "outline" : "default"} className="h-12 w-full"><a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Ask on WhatsApp & visit store</a></Button>}
+            {canOrder && <Button disabled={!chosen} onClick={() => setStep("method")} className="h-12 w-full">{chosen ? "Get this pair" : "Select a size to continue"}</Button>}
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p><b className="block">Exchange policy</b><span className="text-muted-foreground">No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</span></p></div>
+        </div>}
         {step === "method" && chosen && <div className="space-y-3">
           <p className="text-sm font-semibold">How do you want it?</p>
           {shop.booking && <Opt f="pickup" icon={<Store className="h-5 w-5" />} title="Pickup from store" sub="Pay a small advance now, rest at the store" price="Free" />}
