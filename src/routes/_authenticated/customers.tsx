@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
 import { waLink } from "@/lib/pos";
+import { useShop } from "@/hooks/use-shop";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   head: () => ({ meta: [{ title: "Customers — SoleStack POS" }, { name: "description", content: "Customer profiles, dues, history and loyalty stamp cards." }, { property: "og:title", content: "Customers — SoleStack POS" }, { property: "og:description", content: "Customer purchase history, balances and loyalty cards." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -41,7 +42,7 @@ function Customers() {
         if (s.sale_date > a.last) a.last = s.sale_date;
         agg.set(s.customer_id!, a);
       }
-       return (cs ?? []).map((c) => ({ ...c, spend: agg.get(c.id)?.spend ?? 0, due: agg.get(c.id)?.due ?? 0, last: agg.get(c.id)?.last ?? "" }));
+       return (cs ?? []).map((c) => ({ ...c, spend: agg.get(c.id)?.spend ?? 0, due: (agg.get(c.id)?.due ?? 0) + Number(c.opening_balance ?? 0), last: agg.get(c.id)?.last ?? "" }));
     },
   });
 
@@ -85,11 +86,13 @@ function Customers() {
 
 function AddCustomer({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
+  const { isOwner } = useAuth();
   const [f, setF] = useState({ mobile: "", name: "", shoe_size: "", brand_preference: "" });
+  const [opening, setOpening] = useState("");
   async function save() {
     const mobile = f.mobile.replace(/\D/g, "");
     if (mobile.length !== 10) return void toast.error("Enter a 10-digit mobile");
-    const { error } = await supabase.from("customers").insert({ ...f, mobile });
+    const { error } = await supabase.from("customers").insert({ ...f, mobile, opening_balance: isOwner ? Math.max(0, Number(opening) || 0) : 0 });
     if (error) return void toast.error(error.message.includes("duplicate") ? "This mobile already has a profile" : error.message);
     toast.success("Customer added");
     qc.invalidateQueries({ queryKey: ["customers"] });
@@ -102,6 +105,7 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
         {([["mobile", "Mobile"], ["name", "Name"], ["shoe_size", "Shoe size"], ["brand_preference", "Brand preference"]] as const).map(([k, l]) => (
           <div key={k} className="space-y-1"><Label>{l}</Label><Input value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} inputMode={k === "mobile" ? "numeric" : undefined} /></div>
         ))}
+        {isOwner && <div className="space-y-1"><Label>Opening balance due (₹)</Label><Input type="number" min="0" inputMode="decimal" placeholder="Purana udhar, agar hai" value={opening} onChange={(e) => setOpening(e.target.value)} /></div>}
         <Button className="h-11" onClick={save}>Save</Button>
       </DialogContent>
     </Dialog>
@@ -111,6 +115,8 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
 function Profile({ id, onClose }: { id: string; onClose: () => void }) {
   const qc = useQueryClient();
   const { isOwner } = useAuth();
+  const shop = useShop();
+  const [ob, setOb] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["customer", id],
     queryFn: async () => {
@@ -147,7 +153,14 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
   const c = data?.c;
   const now = Date.now();
   const spend = (data?.sales ?? []).reduce((a, s) => a + Number(s.total), 0);
-  const due = (data?.sales ?? []).reduce((a, s) => a + Number(s.due_amount), 0);
+  const opening = Number(data?.c?.opening_balance ?? 0);
+  const due = (data?.sales ?? []).reduce((a, s) => a + Number(s.due_amount), 0) + opening;
+  async function saveOpening() {
+    const v = Math.max(0, Number(ob) || 0);
+    const { error } = await supabase.from("customers").update({ opening_balance: v }).eq("id", id);
+    if (error) return void toast.error(error.message);
+    toast.success("Opening balance saved"); setOb(null); refresh();
+  }
   const active = (data?.rewards ?? []).filter((r) => r.status === "active" && new Date(r.expires_at).getTime() > now);
   const past = (data?.rewards ?? []).filter((r) => !active.includes(r));
 
@@ -167,9 +180,13 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
                <Stat k="Size / Brand" v={`${c.shoe_size || "—"} / ${c.brand_preference || "—"}`} />
             </div>
 
+            {(opening > 0 || isOwner) && <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2 text-sm">
+              <span>Opening balance: <b>{inr(opening)}</b></span>
+              {isOwner && (ob === null ? <Button size="sm" variant="outline" onClick={() => setOb(String(opening))}>Edit</Button> : <><Input className="h-8 w-28" type="number" min="0" value={ob} onChange={(e) => setOb(e.target.value)} /><Button size="sm" onClick={saveOpening}>Save</Button><Button size="sm" variant="ghost" onClick={() => setOb(null)}>Cancel</Button></>)}
+            </div>}
             <div className="flex flex-wrap gap-2">
               <Button asChild className="bg-success text-success-foreground hover:bg-success/90">
-                <a href={waLink(c.mobile, `Hello ${c.name || "there"}, greetings from our store.`)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp {c.mobile}</a>
+                <a href={waLink(c.mobile, due > 0 ? `Dear ${c.name || "Customer"},\n\nThis is a gentle reminder from ${shop.name}. Your outstanding balance is ${inr(due)}.\nPlease ignore this message if already paid. Thank you.${shop.phone ? `\nCall: ${shop.phone}` : ""}` : `Hello ${c.name || "there"}, greetings from ${shop.name}.${shop.phone ? ` Call / WhatsApp: ${shop.phone}` : ""}`)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp {c.mobile}</a>
               </Button>
               {isOwner && (
                 <label className="flex items-center gap-2 rounded-md border px-3 text-sm">Premium membership <Switch checked={c.is_premium} onCheckedChange={togglePremium} /></label>
