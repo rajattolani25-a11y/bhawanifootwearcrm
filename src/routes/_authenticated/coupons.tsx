@@ -15,7 +15,7 @@ import { inr } from "@/lib/modules";
 import { waLink } from "@/lib/pos";
 
 export const Route = createFileRoute("/_authenticated/coupons")({
-  head: () => ({ meta: [{ title: "Rewards & Coupons — SoleStack POS" }, { name: "description", content: "Create shop coupons, customer-only codes and track loyalty rewards." }, { property: "og:title", content: "Rewards & Coupons — SoleStack POS" }, { property: "og:description", content: "Custom coupon codes and loyalty rewards for BHAWANI FOOTWEAR." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({ meta: [{ title: "Rewards & Coupons — SoleStack POS" }, { name: "description", content: "Create shop coupons, customer-only codes and track loyalty rewards." }, { property: "og:title", content: "Rewards & Coupons — SoleStack POS" }, { property: "og:description", content: "Custom coupon codes and loyalty rewards." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Coupons,
 });
 
@@ -42,7 +42,7 @@ function Coupons() {
 
   const now = Date.now();
   const status = (c: Coupon) => !c.active ? "Paused" : c.expires_at && new Date(c.expires_at).getTime() < now ? "Expired" : c.usage_limit !== null && c.used_count >= c.usage_limit ? "Used up" : c.starts_at && new Date(c.starts_at).getTime() > now ? "Scheduled" : "Live";
-  const shopName = shop?.business_name || "BHAWANI FOOTWEAR";
+  const shopName = shop?.business_name || "Our Store";
   const message = (c: Coupon) => couponMessage(shopName, c, c.customers?.name);
 
   async function toggle(c: Coupon) {
