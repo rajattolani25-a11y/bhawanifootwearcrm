@@ -30,7 +30,7 @@ const waTo = (phone: string | null, text: string) => (phone ? `https://wa.me/${w
 function LangChip() {
   const { lang, setLang } = useLang();
   return (
-    <label className="flex items-center gap-1 rounded-full border border-sidebar-border px-2.5 py-1 text-xs" data-no-translate>
+    <label className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs" data-no-translate>
       <Globe className="h-3.5 w-3.5" />
       <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as AppLanguage)} className="bg-transparent text-xs font-medium outline-none [&>option]:text-foreground">
         <option value="english">EN</option><option value="hindi">हिंदी</option><option value="hinglish">Hinglish</option>
@@ -61,16 +61,16 @@ function Catalog() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-sidebar text-sidebar-foreground">
+      <div className="border-b bg-card text-card-foreground">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary font-display text-sm font-bold text-primary-foreground" data-no-translate>{shop.name.slice(0, 1)}</span>
             <span className="truncate font-display font-bold" data-no-translate>{shop.name}</span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button onClick={() => setTrack("")} className="flex items-center gap-1 rounded-full border border-sidebar-border px-2.5 py-1 text-xs font-medium"><Package className="h-3.5 w-3.5" /><span>Track order</span></button>
+            <button onClick={() => setTrack("")} className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium"><Package className="h-3.5 w-3.5" /><span>Track order</span></button>
             <LangChip />
-            {shop.phone && <a href={`tel:${shop.phone}`} className="rounded-full border border-sidebar-border p-1.5" aria-label="Call store"><Phone className="h-3.5 w-3.5" /></a>}
+            {shop.phone && <a href={`tel:${shop.phone}`} className="rounded-full border border-border p-1.5" aria-label="Call store"><Phone className="h-3.5 w-3.5" /></a>}
           </div>
         </div>
         <div className="mx-auto max-w-6xl px-4 pb-7 pt-4 sm:pb-10">
@@ -79,9 +79,9 @@ function Catalog() {
           <p className="mt-2 max-w-xl text-sm opacity-80">See what's in stock, pick your size, and visit the store to try it on.</p>
           {shop.address && <p className="mt-3 flex items-center gap-1.5 text-sm opacity-80"><MapPin className="h-4 w-4 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <span className="flex items-center gap-1 rounded-full bg-sidebar-accent px-3 py-1"><Store className="h-3.5 w-3.5" /><span>Try in store</span></span>
-            {delivers && <span className="flex items-center gap-1 rounded-full bg-sidebar-accent px-3 py-1"><Truck className="h-3.5 w-3.5" /><span>Home delivery</span></span>}
-            <span className="flex items-center gap-1 rounded-full bg-sidebar-accent px-3 py-1"><ShieldCheck className="h-3.5 w-3.5" /><span>Direct UPI, no extra fee</span></span>
+            <span className="flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1"><Store className="h-3.5 w-3.5" /><span>Try in store</span></span>
+            {delivers && <span className="flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1"><Truck className="h-3.5 w-3.5" /><span>Home delivery</span></span>}
+            <span className="flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1"><ShieldCheck className="h-3.5 w-3.5" /><span>Direct UPI, no extra fee</span></span>
           </div>
         </div>
       </div>
