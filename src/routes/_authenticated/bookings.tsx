@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/bookings")({
 type Booking = { id: string; booking_no: string; variant_id: string; product_name: string; size: string; customer_name: string; mobile: string; price: number; advance: number; status: string; note: string | null; expires_at: string; created_at: string; fulfillment: string; delivery_charge: number; address: string | null; area: string | null };
 const TABS = [["pending", "Pending payment"], ["active", "To fulfil"], ["done", "Completed"], ["closed", "Cancelled"]] as const;
 const GROUP: Record<string, string> = { pending: "pending", confirmed: "active", packed: "active", shipped: "active", picked: "done", delivered: "done", cancelled: "closed", expired: "closed", refunded: "closed" };
-const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside city delivery" };
+const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
 const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refunded: "Cancelled - refund initiated" };
 
 function Bookings() {

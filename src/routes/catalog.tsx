@@ -141,7 +141,7 @@ function Catalog() {
 const STEPS_PICKUP = ["pending", "confirmed", "packed", "picked"];
 const STEPS_DELIVERY = ["pending", "confirmed", "packed", "shipped", "delivered"];
 const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refunded: "Cancelled - refund initiated" };
-const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside city delivery" };
+const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
 
 function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogProduct | null; shop: CatalogShop; onClose: () => void; onTrack: (no: string) => void }) {
   const { lang } = useLang();
@@ -202,7 +202,7 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
           <p className="text-sm font-semibold">How do you want it?</p>
           {shop.booking && <Opt f="pickup" icon={<Store className="h-5 w-5" />} title="Pickup from store" sub="Pay a small advance now, rest at the store" price="Free" />}
           {shop.local && <Opt f="local" icon={<Truck className="h-5 w-5" />} title="Local delivery" sub={shop.delivery_note || "Within city"} price={charge("local") === 0 ? "Free" : inr(charge("local"))} />}
-          {shop.outside && <Opt f="outside" icon={<Package className="h-5 w-5" />} title="Outside city delivery" sub="Full payment, delivered to your address" price={inr(charge("outside"))} />}
+          {shop.outside && <Opt f="outside" icon={<Package className="h-5 w-5" />} title="Outside Jabalpur delivery" sub="Full payment, delivered to your address" price={inr(charge("outside"))} />}
           {shop.free_delivery_above != null && shop.local && <p className="text-xs text-muted-foreground"><span>Free local delivery above</span> {inr(shop.free_delivery_above)}</p>}
           <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("view")} className="h-11 flex-1">Back</Button><Button onClick={() => setStep("form")} className="h-11 flex-1" disabled={(method === "pickup" && !shop.booking) || (method === "local" && !shop.local) || (method === "outside" && !shop.outside)}>Continue</Button></div>
         </div>}

@@ -75,7 +75,7 @@ export function CatalogSettings() {
           <div className="space-y-1"><Label>Free delivery above (₹)</Label><Input value={f.free_delivery_above} inputMode="numeric" onChange={(e) => set("free_delivery_above", e.target.value)} placeholder="Optional" /></div>
           <div className="space-y-1"><Label>Delivery area note</Label><Input value={f.delivery_note} onChange={(e) => set("delivery_note", e.target.value)} placeholder="Within city" maxLength={80} /></div>
         </div>}
-        <Row k="outside_enabled" title="Outside city delivery" sub="Full payment, sent by courier." />
+        <Row k="outside_enabled" title="Outside Jabalpur delivery" sub="Full payment, sent by courier." />
         {f.outside_enabled && <div className="grid gap-3 pb-2 sm:grid-cols-3">
           <div className="space-y-1"><Label>Outside delivery charge (₹)</Label><Input value={f.outside_charge} inputMode="numeric" onChange={(e) => set("outside_charge", e.target.value)} /></div>
         </div>}
