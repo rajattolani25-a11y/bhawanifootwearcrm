@@ -54,6 +54,8 @@ const DICT: Record<string, { english?: string; hindi: string; hinglish: string }
   "Goods received": { hindi: "माल आया", hinglish: "Maal aaya" },
   "Payment made": { hindi: "भुगतान दिया", hinglish: "Payment diya" },
   "Paid at billing": { hindi: "बिल के समय दिया", hinglish: "Bill ke time diya" },
+  "Total to receive (from customers)": { hindi: "कुल लेना है (ग्राहकों से)", hinglish: "Total lena hai (grahak se)" },
+  "Total to pay (to suppliers)": { hindi: "कुल देना है (सप्लायर को)", hinglish: "Total dena hai (supplier ko)" },
   "days": { hindi: "दिन", hinglish: "din" },
   "Balance is only": { english: "Balance is only", hindi: "बाकी सिर्फ", hinglish: "Baaki sirf" },
 };

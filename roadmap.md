@@ -46,5 +46,5 @@
 - [x] Add forgot password flow with a public reset-password page
 - [x] Ask language (EN/Hindi/Hinglish) before every WhatsApp/SMS message send
 
-- [ ] Khatabook + all screens follow app language (no hardcoded Hinglish)
-- [ ] Khatabook PDF download besides CSV
+- [x] Khatabook + all screens follow app language (no hardcoded Hinglish)
+- [x] Khatabook PDF download besides CSV
