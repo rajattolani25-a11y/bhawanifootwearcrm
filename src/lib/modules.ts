@@ -22,7 +22,7 @@ export const MODULES: ModuleDef[] = [
   { to: "/suppliers", label: "Suppliers", icon: Factory, ownerOnly: true },
   { to: "/customers", label: "Customers", icon: Users, },
   { to: "/khata", label: "Khatabook", icon: BookText },
-  { to: "/bookings", label: "Online Bookings", icon: CalendarCheck },
+  { to: "/bookings", label: "Online Orders", icon: CalendarCheck },
   { to: "/coupons", label: "Rewards & Coupons", icon: Ticket },
   { to: "/inventory-control", label: "Inventory Control", icon: ShieldAlert, ownerOnly: true },
   { to: "/reports", label: "Reports", icon: BarChart3, ownerOnly: true },
