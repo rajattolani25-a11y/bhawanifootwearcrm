@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { downloadCsv } from "@/lib/stock";
+import { fetchAll, one } from "@/lib/fetch-all";
 
 export const Route = createFileRoute("/_authenticated/accounting")({
   head: () => ({ meta: [{ title: "Accounting — SoleStack POS" }, { name: "description", content: "Monthly profit, cash movements, tax and supplier balances." }, { property: "og:title", content: "Accounting — SoleStack POS" }, { property: "og:description", content: "Reconciled retail profit, cash book and tax summary." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: Accounting,
@@ -19,29 +20,34 @@ const sum = <T,>(rows: T[], fn: (row: T) => number) => rows.reduce((a, x) => a +
 function Accounting() {
   const qc = useQueryClient();
   const [month, setMonth] = useState(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0,7));
-  const [tab, setTab] = useState<"Profit & Loss" | "Cash Book" | "Tax & Payables">("Profit & Loss");
+  const [tab, setTab] = useState<"Summary" | "Profit & Loss" | "Cash Book" | "Tax & Payables">("Summary");
   const [f, setF] = useState({ category: "Rent", note: "", amount: "", mode: "Cash" });
   const { data, error, isPending } = useQuery({ queryKey: ["acct", month], queryFn: async () => {
     const [year = 2026, mon = 1] = month.split("-").map(Number); const nextYear = mon === 12 ? year + 1 : year; const nextMonth = String(mon === 12 ? 1 : mon + 1).padStart(2,"0"); const start = `${month}-01T00:00:00+05:30`; const end = `${nextYear}-${nextMonth}-01T00:00:00+05:30`;
     const a = `${month}-01`; const b = `${nextYear}-${nextMonth}-01`;
-    const [e,s,c,p,r,cp,sp,allSales,allPurchases] = await Promise.all([
-      supabase.from("expenses").select("*").gte("spent_on",a).lt("spent_on",b).order("spent_on",{ascending:false}),
-      supabase.from("sales").select("id,total,taxable,gst_amount,payment_mode,paid_amount,due_amount,split_cash,sale_date").gte("sale_date",start).lt("sale_date",end).limit(10000),
-      supabase.from("sale_costs").select("sale_id,total_cost").limit(10000),
-      supabase.from("purchases").select("total,paid_amount,gst_amount,purchase_date").gte("purchase_date",start).lt("purchase_date",end).limit(10000),
-      supabase.from("sale_returns").select("refund,kind,taxable_reversal,gst_reversal,cost_reversal,cash_refund,created_at").gte("created_at",start).lt("created_at",end).limit(10000),
-      supabase.from("credit_payments").select("sale_id,amount,payment_mode,paid_at").limit(10000),
-      supabase.from("supplier_payments").select("amount,payment_mode,paid_at").gte("paid_at",start).lt("paid_at",end).limit(10000),
-      supabase.from("sales").select("due_amount").limit(10000),supabase.from("purchases").select("total,paid_amount").limit(10000),
+    const all = <T,>(f:(x:number,y:number)=>PromiseLike<{data:T[]|null;error:{message:string}|null}>)=>fetchAll(f);
+    const [exp,sales,purchases,returns,cps,supplierPayments,allSales,allPurchases,custs,sups]=await Promise.all([
+      all((x,y)=>supabase.from("expenses").select("*").gte("spent_on",a).lt("spent_on",b).order("spent_on",{ascending:false}).range(x,y)),
+      all((x,y)=>supabase.from("sales").select("id,total,taxable,gst_amount,discount,payment_mode,paid_amount,due_amount,split_cash,sale_date,sale_costs(total_cost)").gte("sale_date",start).lt("sale_date",end).range(x,y)),
+      all((x,y)=>supabase.from("purchases").select("total,paid_amount,gst_amount,purchase_date").gte("purchase_date",start).lt("purchase_date",end).range(x,y)),
+      all((x,y)=>supabase.from("sale_returns").select("refund,kind,taxable_reversal,gst_reversal,cost_reversal,cash_refund,created_at").gte("created_at",start).lt("created_at",end).range(x,y)),
+      all((x,y)=>supabase.from("credit_payments").select("sale_id,amount,payment_mode,paid_at").range(x,y)),
+      all((x,y)=>supabase.from("supplier_payments").select("amount,payment_mode,paid_at").gte("paid_at",start).lt("paid_at",end).range(x,y)),
+      all((x,y)=>supabase.from("sales").select("due_amount").gt("due_amount",0).range(x,y)),
+      all((x,y)=>supabase.from("purchases").select("total,paid_amount").range(x,y)),
+      all((x,y)=>supabase.from("customers").select("opening_balance").gt("opening_balance",0).range(x,y)),
+      all((x,y)=>supabase.from("suppliers").select("opening_balance").gt("opening_balance",0).range(x,y)),
     ]);
-    for(const result of [e,s,c,p,r,cp,sp,allSales,allPurchases]) if(result.error) throw result.error;
-    return { exp:e.data??[], sales:s.data??[], cost:new Map((c.data??[]).map(x=>[x.sale_id,n(x.total_cost)])), purchases:p.data??[], returns:r.data??[], collections:(cp.data??[]).filter(x=>x.paid_at>=new Date(start).toISOString()&&x.paid_at<new Date(end).toISOString()), allCollections:cp.data??[], supplierPayments:sp.data??[], receivable:sum(allSales.data??[],x=>n(x.due_amount)), payable:sum(allPurchases.data??[],x=>n(x.total)-n(x.paid_amount)) };
+    const s0=new Date(start).toISOString(), e0=new Date(end).toISOString();
+    return { exp, sales, cost:new Map(sales.map(x=>[x.id,n(one(x.sale_costs as {total_cost:number}|{total_cost:number}[]|null)?.total_cost)])), purchases, returns, collections:cps.filter(x=>x.paid_at>=s0&&x.paid_at<e0), allCollections:cps, supplierPayments, receivable:sum(allSales,x=>n(x.due_amount))+sum(custs,x=>n(x.opening_balance)), payable:sum(allPurchases,x=>n(x.total)-n(x.paid_amount))+sum(sups,x=>n(x.opening_balance)) };
   }});
   const sales = data?.sales??[]; const returns=(data?.returns??[]).filter(x=>x.kind!=="exchange");
   const gross=sum(sales,x=>n(x.total)); const output=sum(sales,x=>n(x.gst_amount)); const returned=sum(returns,x=>n(x.refund)); const returnedTax=sum(returns,x=>n(x.gst_reversal));
   const netRevenue=gross-output-returned+returnedTax; const cogs=sum(sales,x=>data?.cost.get(x.id)??0)-sum(returns,x=>n(x.cost_reversal));
   const expense=sum(data?.exp??[],x=>n(x.amount)); const profit=netRevenue-cogs-expense;
-  const cashSales=sum(sales,x=>{const initiallyPaid=Math.max(0,n(x.paid_amount)-sum((data?.allCollections??[]).filter(p=>p.sale_id===x.id),p=>n(p.amount)));return x.payment_mode==="Cash"?initiallyPaid:x.payment_mode==="Split"?Math.min(n(x.split_cash),initiallyPaid):0;});
+  const later=new Map<string,number>();for(const p of data?.allCollections??[])later.set(p.sale_id,(later.get(p.sale_id)??0)+n(p.amount));
+  const initPaid=(x:{id:string;paid_amount:number})=>Math.max(0,n(x.paid_amount)-(later.get(x.id)??0));
+  const cashSales=sum(sales,x=>{const initiallyPaid=initPaid(x);return x.payment_mode==="Cash"?initiallyPaid:x.payment_mode==="Split"?Math.min(n(x.split_cash),initiallyPaid):0;});
   const cashCollections=sum((data?.collections??[]).filter(x=>x.payment_mode==="Cash"),x=>n(x.amount));
   const cashRefunds=sum(returns,x=>n(x.cash_refund)); const cashExpenses=sum((data?.exp??[]).filter(x=>x.mode==="Cash"),x=>n(x.amount)); const cashSuppliers=sum((data?.supplierPayments??[]).filter(x=>x.payment_mode==="Cash"),x=>n(x.amount));
   const cashNet=cashSales+cashCollections-cashRefunds-cashExpenses-cashSuppliers;
@@ -51,11 +57,16 @@ function Accounting() {
   const taxRows:[string,number][]=[["Output GST on sales",output],["− GST reversed on returns",-returnedTax],["− Input GST on purchases",-inputTax]];
   async function add(){if(!Number.isFinite(Number(f.amount))||Number(f.amount)<=0){toast.error("Enter a positive amount");return;}const {error}=await supabase.from("expenses").insert({...f,amount:Number(f.amount)});if(error){toast.error(error.message);return;}setF({...f,note:"",amount:""});qc.invalidateQueries({queryKey:["acct"]});}
   async function del(id:string){const {error}=await supabase.from("expenses").delete().eq("id",id);if(error)toast.error(error.message);else qc.invalidateQueries({queryKey:["acct"]});}
-  const lines=tab==="Profit & Loss"?pl:tab==="Cash Book"?cashRows:taxRows;const value=tab==="Profit & Loss"?profit:tab==="Cash Book"?cashNet:taxPayable;
+  const byMode=new Map<string,number>();for(const x of sales){const paid=initPaid(x);if(x.payment_mode==="Split"){const c=Math.min(n(x.split_cash),paid);byMode.set("Cash",(byMode.get("Cash")??0)+c);byMode.set("UPI",(byMode.get("UPI")??0)+paid-c);}else byMode.set(x.payment_mode,(byMode.get(x.payment_mode)??0)+paid);}
+  for(const x of data?.collections??[])byMode.set(x.payment_mode,(byMode.get(x.payment_mode)??0)+n(x.amount));
+  const byCat=new Map<string,number>();for(const x of data?.exp??[])byCat.set(x.category,(byCat.get(x.category)??0)+n(x.amount));
+  const margin=netRevenue>0?((netRevenue-cogs)/netRevenue)*100:0;
+  const summary:[string,number][]=[["Bills",sales.length],["Average bill",sales.length?gross/sales.length:0],["Discount given",sum(sales,x=>n(x.discount))],["New udhar this month",sum(sales,x=>n(x.due_amount)+(later.get(x.id)??0))],["Purchases this month",sum(data?.purchases??[],x=>n(x.total))],...[...byMode].map(([k,v])=>[`Money received · ${k}`,v] as [string,number]),...[...byCat].map(([k,v])=>[`Expense · ${k}`,v] as [string,number])];
+  const lines=tab==="Summary"?summary:tab==="Profit & Loss"?pl:tab==="Cash Book"?cashRows:taxRows;const value=tab==="Summary"||tab==="Profit & Loss"?profit:tab==="Cash Book"?cashNet:taxPayable;
   return <div><PageHeader title="Accounting" subtitle="Profit, cash movements and tax are separate views." actions={<div className="flex gap-2"><Input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="h-10"/><Button variant="outline" onClick={()=>downloadCsv(`accounts-${month}.csv`,[["item","amount"],...lines,[tab==="Profit & Loss"?"Net profit":tab==="Cash Book"?"Net cash movement":"Net GST estimate",value]])}>CSV</Button></div>}/>
-  <div className="mb-4 flex gap-2 overflow-x-auto">{(["Profit & Loss","Cash Book","Tax & Payables"] as const).map(t=><Button key={t} variant={tab===t?"default":"outline"} onClick={()=>setTab(t)}>{t}</Button>)}</div>
+  <div className="mb-4 flex gap-2 overflow-x-auto">{(["Summary","Profit & Loss","Cash Book","Tax & Payables"] as const).map(t=><Button key={t} variant={tab===t?"default":"outline"} onClick={()=>setTab(t)}>{t}</Button>)}</div>
   {error&&<p role="alert" className="text-destructive">Unable to load accounts: {error.message}</p>}{isPending&&<p>Loading accounts…</p>}
-  <div className="grid gap-4 lg:grid-cols-2"><section className="border-t-2 border-primary py-4"><h2 className="mb-3 font-display text-lg font-semibold">{tab} · {month}</h2>{lines.map(([k,v])=><div key={k} className="flex justify-between gap-2 border-b py-2 text-sm"><span>{k}</span><b>{inr(v)}</b></div>)}<div className="flex justify-between gap-2 border-t-2 pt-3 text-lg font-bold"><span>{tab==="Profit & Loss"?"Net profit":tab==="Cash Book"?"Net cash movement":"Net GST estimate"}</span><span>{inr(value)}</span></div>
+  <div className="grid gap-4 lg:grid-cols-2"><section className="border-t-2 border-primary py-4"><h2 className="mb-3 font-display text-lg font-semibold">{tab} · {month}</h2>{tab==="Summary"&&<div className="mb-3 grid grid-cols-2 gap-2">{([["Sales",inr(gross)],["Net profit",inr(profit)],["Margin",`${margin.toFixed(1)}%`],["Lena hai (grahak)",inr(data?.receivable??0)],["Dena hai (supplier)",inr(data?.payable??0)],["Cash movement",inr(cashNet)]] as const).map(([k,v])=><div key={k} className="rounded-lg border bg-card p-3"><p className="text-xs text-muted-foreground">{k}</p><p className="font-display text-lg font-bold">{v}</p></div>)}</div>}{lines.map(([k,v])=><div key={k} className="flex justify-between gap-2 border-b py-2 text-sm"><span>{k}</span><b>{k==="Bills"?v:inr(v)}</b></div>)}<div className="flex justify-between gap-2 border-t-2 pt-3 text-lg font-bold"><span>{tab==="Summary"||tab==="Profit & Loss"?"Net profit":tab==="Cash Book"?"Net cash movement":"Net GST estimate"}</span><span>{inr(value)}</span></div>
   {tab==="Tax & Payables"&&<><p className="mt-4 text-sm">Customer receivables: <b>{inr(data?.receivable??0)}</b></p><p className="text-sm">Supplier payables: <b>{inr(data?.payable??0)}</b></p><p className="mt-2 text-xs text-muted-foreground">GST estimate from recorded bills and purchases; confirm eligibility and returns with your accountant.</p></>}
   {tab==="Profit & Loss"&&<p className="mt-3 text-xs text-muted-foreground">Historical bills with missing cost may overstate profit. Purchase stock at recorded cost for accurate future margins; old records are not silently changed.</p>}
   {tab==="Cash Book"&&<p className="mt-3 text-xs text-muted-foreground">Movement for this month, not an opening or closing cash balance. Supplier payments recorded here; older unrecorded payments are not assumed.</p>}</section>
