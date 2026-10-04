@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AppShell() {
+  const shopName = useShop().name;
   const { user, role, isOwner } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
