@@ -1,4 +1,5 @@
 import { EXTRA, GENERATED } from "@/lib/i18n-dict";
+import { ORDERS } from "@/lib/i18n-orders";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type AppLanguage = "english" | "hindi" | "hinglish";
@@ -7,6 +8,7 @@ export type AppLanguage = "english" | "hindi" | "hinglish";
 const DICT: Record<string, { english?: string; hindi: string; hinglish: string }> = {
   ...GENERATED,
   ...EXTRA,
+  ...ORDERS,
   "SoleStack": { hindi: "SoleStack", hinglish: "SoleStack" },
   "Summary": { hindi: "सारांश", hinglish: "Summary" },
   "Profit & Loss": { hindi: "लाभ और हानि", hinglish: "Munafa-Nuksaan" },
