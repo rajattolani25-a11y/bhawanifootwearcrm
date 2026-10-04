@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { translateMessage } from "@/lib/translate.functions";
+import { translateLocal } from "@/lib/message-templates";
 
 type Lang = "english" | "hindi" | "hinglish";
 type Pending = { kind: "wa" | "sms" | "share"; url: string; text: string; title?: string };
 
-/** Asks the message language before every WhatsApp / SMS / share send. */
+/** Asks the message language before every WhatsApp / SMS / share send (free, offline templates). */
 export function MessageLanguage() {
-  const translate = useServerFn(translateMessage);
   const [p, setP] = useState<Pending | null>(null);
   const [out, setOut] = useState<string | null>(null);
-  const [busy, setBusy] = useState<Lang | null>(null);
+  const busy = null as Lang | null;
   const bypass = useRef(false);
 
   useEffect(() => {
@@ -43,12 +41,9 @@ export function MessageLanguage() {
     return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("solestack-share", onShare); window.open = origOpen; };
   }, []);
 
-  async function pick(lang: Lang) {
+  function pick(lang: Lang) {
     if (!p) return;
-    setBusy(lang);
-    try { setOut((await translate({ data: { text: p.text, lang } })).text); }
-    catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(null); }
+    setOut(translateLocal(p.text, lang));
   }
 
   async function send(text: string) {
