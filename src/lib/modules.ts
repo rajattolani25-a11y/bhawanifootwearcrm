@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, ScanBarcode, Package, Ticket, Truck, Receipt, Factory, Users,
-  ShieldAlert, Megaphone, BarChart3, Calculator, Barcode, Settings, ScrollText, BookOpen, BookText, Ruler,
+  ShieldAlert, Megaphone, BarChart3, Calculator, Barcode, Settings, ScrollText, BookOpen, BookText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,8 +21,7 @@ export const MODULES: ModuleDef[] = [
   { to: "/sales", label: "Sales History", icon: Receipt },
   { to: "/suppliers", label: "Suppliers", icon: Factory, ownerOnly: true },
   { to: "/customers", label: "Customers", icon: Users, },
-  { to: "/khata", label: "Khata", icon: BookText },
-  { to: "/size-finder", label: "Size Finder", icon: Ruler },
+  { to: "/khata", label: "Khatabook", icon: BookText },
   { to: "/coupons", label: "Rewards & Coupons", icon: Ticket },
   { to: "/inventory-control", label: "Inventory Control", icon: ShieldAlert, ownerOnly: true },
   { to: "/reports", label: "Reports", icon: BarChart3, ownerOnly: true },
