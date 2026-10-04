@@ -48,3 +48,6 @@
 
 - [x] Khatabook + all screens follow app language (no hardcoded Hinglish)
 - [x] Khatabook PDF download besides CSV
+- [ ] Catalog Buy Now + 3-tier delivery + Track Order (3 languages)
+- [ ] Catalog redesign: small language switch in header menu, polished interface
+- [ ] Owner full control of catalog/delivery in Settings; professional WhatsApp texts

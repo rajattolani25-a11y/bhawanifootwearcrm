@@ -1,5 +1,12 @@
 # Catalog "Buy Now" + Delivery + Order Tracking (3 languages)
 
+## Catalog redesign
+- Language picker moves out of the big header into a small "EN / हिं / Hinglish" chip in a slim top bar (with Track Order + Call).
+- Cleaner header: shop name, address, open-now line, trust badges.
+- Sticky search + category chips; better product cards (photo, brand, price, MRP cut, "few sizes left" tag, size chips).
+- Product page as a bottom sheet on phone: big photo, size grid, clear price summary, one main button.
+- Friendly empty/error states; works smoothly on small phones.
+
 ## Customer flow (catalog)
 One clean button after size selection: **"Get this pair"**. It opens a small chooser:
 
@@ -30,6 +37,15 @@ How do you want it?
 - Switches: Allow home delivery (on/off), Allow outside-city delivery (on/off).
 - Charges: local (default Rs 30), outside (default Rs 80), optional free-local-delivery above Rs X.
 - Local area note (e.g. "Within city") shown to customer.
+
+## Owner controls (Settings > Online Catalog)
+- Master switches: Catalog on/off, Store pickup reserve on/off, Local delivery on/off, Outside delivery on/off.
+- Advance %, hold hours, local/outside charges, free delivery above Rs X, delivery area note, UPI ID, WhatsApp number.
+- Toggle "show 'few left' tag", per-product show in catalog (existing), bulk show/hide.
+- Live preview link + copy/share catalog link on WhatsApp.
+
+## WhatsApp messages
+- All customer and owner messages rewritten in a clean professional format: greeting, shop name, order no., item, size, amount, delivery type, status, and thank-you line; sent in the chosen language.
 
 ## Language
 - Every new label, button, status, error and WhatsApp message added in English, Hindi and Hinglish.
