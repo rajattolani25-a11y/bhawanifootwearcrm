@@ -1,5 +1,7 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Waiting for owner approval": {"hindi": "मालिक की मंज़ूरी का इंतज़ार", "hinglish": "Owner approval ka intezaar"},
+"Your account is created. The shop owner must approve it in Settings before you can open the app.": {"hindi": "आपका अकाउंट बन गया है। ऐप खोलने से पहले दुकान मालिक को Settings में इसे मंज़ूरी देनी होगी।", "hinglish": "Aapka account ban gaya hai. App kholne se pehle shop owner ko Settings mein approve karna hoga."},
 "Accounting": {
 "hindi": "अकाउंटिंग",
 "hinglish": "Accounting"
