@@ -84,7 +84,7 @@ function AuthPage() {
               {mode === "in"
                 ? "Owner or staff login."
                 : mode === "up"
-                  ? "The first account becomes the Owner. Later accounts join as Staff."
+                  ? "New accounts can open the shop app only after the Owner approves them."
                   : "Enter your email and we will send a link to set a new password."}
             </p>
           </div>
