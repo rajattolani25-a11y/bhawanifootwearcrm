@@ -13,7 +13,7 @@
 
 - Stock lives in `product_variants` (article × size); sales go only through the `create_sale` DB function so stock decrement is atomic and race-safe.
 - Cost/profit are in separate owner-only tables (`product_costs`, `sale_costs`, `sale_item_costs`) because RLS can't hide columns from staff; `sale_items` SELECT is column-restricted.
-- Roles stay in `user_roles`: first signup owner, later staff; owner-only `set_team_role` serializes changes and keeps a last owner, so browser writes stay denied.
+- Roles stay in `user_roles`: first signup owner, later signups get no role (pending, no data access) until an owner approves via `set_team_role`; `remove_team_access` revokes. Both keep a last owner, so browser writes stay denied.
 - Old JSON data imports via `legacy_id` upserts so re-imports never duplicate.
 - Signed-in screens use `_authenticated`; `modules.ts` defines navigation. Inventory groups article sizes; the optional three-language tour lives in the shared shell and changes no shop data.
 - Stock-in and returns go only through `receive_stock` / `process_return` DB functions so stock + ledger stay in sync; bills and labels use the in-page print preview in `src/lib/print.ts` (Thermal/A4/Premium), avoiding mobile popup blocking.
