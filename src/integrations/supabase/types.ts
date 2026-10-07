@@ -1263,6 +1263,7 @@ export type Database = {
         }
         Returns: number
       }
+      remove_team_access: { Args: { _user_id: string }; Returns: undefined }
       reset_store_data: { Args: { _confirmation: string }; Returns: undefined }
       reward_amount: { Args: { _card: string; _m: number }; Returns: number }
       set_team_role: {
