@@ -42,7 +42,8 @@ function SettingsPage() {
         supabase.from("user_roles").select("user_id,role"),
         supabase.from("profiles").select("id,full_name"),
       ]);
-      return (roles ?? []).map((r) => ({ ...r, name: profiles?.find((p) => p.id === r.user_id)?.full_name ?? "" }));
+      return (profiles ?? []).map((p) => ({ user_id: p.id, name: p.full_name ?? "", role: (roles?.find((r) => r.user_id === p.id && r.role === "owner") ?? roles?.find((r) => r.user_id === p.id))?.role ?? null }))
+        .sort((a, b) => Number(!!a.role) - Number(!!b.role));
     },
   });
 
@@ -67,6 +68,18 @@ function SettingsPage() {
       await qc.invalidateQueries({ queryKey: ["team"] });
       toast.success(`Role changed to ${role}`);
       if (userId === user?.id) window.location.reload();
+    } catch (error) { toast.error((error as Error).message); }
+    finally { setChangingRole(null); }
+  }
+
+  async function removeAccess(userId: string) {
+    if (!window.confirm("Remove this person's access? They will not be able to open the shop app.")) return;
+    setChangingRole(userId);
+    try {
+      const { error } = await supabase.rpc("remove_team_access", { _user_id: userId });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["team"] });
+      toast.success("Access removed");
     } catch (error) { toast.error((error as Error).message); }
     finally { setChangingRole(null); }
   }
@@ -198,13 +211,14 @@ function SettingsPage() {
 
       <section className="rounded-xl border bg-card p-5">
         <h2 className="font-semibold">Team</h2>
-        <p className="mb-3 text-sm text-muted-foreground">New accounts join as Staff. Only owners can assign roles; at least one owner must remain. Staff cannot see purchase cost, profit or settings.</p>
+        <p className="mb-3 text-sm text-muted-foreground">New accounts wait for your approval and cannot open anything until you make them Staff or Owner. Staff cannot see purchase cost, profit or settings.</p>
         <ul className="divide-y text-sm">
           {team.map((t) => (
             <li key={t.user_id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-              <span>{t.name || t.user_id.slice(0, 8)} {t.user_id === user?.id ? "(you)" : ""}</span>
+              <span>{t.name || t.user_id.slice(0, 8)} {t.user_id === user?.id ? "(you)" : ""} {!t.role && <span className="ml-1 rounded bg-warning/15 px-1.5 py-0.5 text-xs text-warning">Waiting for approval</span>}</span>
               <div className="flex gap-1" role="group" aria-label={`Role for ${t.name || t.user_id}`}>
-                {(["owner", "staff"] as const).map((role) => <Button key={role} type="button" size="sm" variant={t.role === role ? "default" : "outline"} disabled={!!changingRole || t.role === role} onClick={() => changeRole(t.user_id, role)} aria-label={`Make ${t.name || t.user_id} ${role}`}>{role === "owner" ? "Owner" : "Staff"}</Button>)}
+                {(["owner", "staff"] as const).map((role) => <Button key={role} type="button" size="sm" variant={t.role === role ? "default" : "outline"} disabled={!!changingRole || t.role === role} onClick={() => changeRole(t.user_id, role)} aria-label={`Make ${t.name || t.user_id} ${role}`}>{role === "owner" ? "Owner" : t.role ? "Staff" : "Approve as Staff"}</Button>)}
+                {t.role && t.user_id !== user?.id && <Button type="button" size="sm" variant="ghost" className="text-destructive" disabled={!!changingRole} onClick={() => removeAccess(t.user_id)}>Remove access</Button>}
               </div>
             </li>
           ))}
