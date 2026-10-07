@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AppShell() {
   const shopName = useShop().name;
-  const { user, role, isOwner } = useAuth();
+  const { user, role, isOwner, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { t } = useLang();
@@ -36,6 +36,19 @@ function AppShell() {
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
+  }
+
+  if (!loading && user && !role) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="max-w-sm space-y-3 rounded-xl border bg-card p-6 text-center">
+          <h1 className="text-xl font-semibold">{t("Waiting for owner approval")}</h1>
+          <p className="text-sm text-muted-foreground">{t("Your account is created. The shop owner must approve it in Settings before you can open the app.")}</p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
+          <button onClick={signOut} className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm"><LogOut className="h-4 w-4" /> {t("Sign out")}</button>
+        </div>
+      </div>
+    );
   }
 
   const nav = (
