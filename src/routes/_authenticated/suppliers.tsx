@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FileText, MessageCircle, Trash2 } from "lucide-react";
 import { printHtml } from "@/lib/print";
-import { PDF_CSS } from "./customers";
+import { PDF_CSS } from "@/lib/print";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
