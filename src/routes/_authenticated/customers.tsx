@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Crown, MessageCircle, Search, UserPlus } from "lucide-react";
+import { Crown, FileText, MessageCircle, Search, UserPlus } from "lucide-react";
+import { printHtml } from "@/lib/print";
+
+export const PDF_CSS = `.w{padding:20px;width:760px;color:#111}h1{margin:0;font-size:22px}h2{font-size:15px;margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px;color:#555}.m{color:#666;font-size:12px;margin:2px 0}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:10px}th,td{border-bottom:1px solid #ddd;padding:5px;text-align:left;vertical-align:top}th{background:#f3f3f3}.r{text-align:right}.t td{font-weight:bold;border-top:2px solid #111}.b{font-size:14px;font-weight:bold;margin-top:12px;text-align:right}`;
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
 import { PageHeader } from "@/components/PageHeader";
@@ -34,26 +37,40 @@ function Customers() {
         fetchAll((a, b) => supabase.from("customers").select("*").order("created_at", { ascending: false }).range(a, b)),
         fetchAll((a, b) => supabase.from("sales").select("customer_id,total,due_amount,sale_date").not("customer_id", "is", null).range(a, b)),
       ]);
-       const agg = new Map<string, { spend: number; due: number; last: string }>();
+       const agg = new Map<string, { spend: number; due: number; last: string; bills: number }>();
       for (const s of sales ?? []) {
-         const a = agg.get(s.customer_id!) ?? { spend: 0, due: 0, last: "" };
+         const a = agg.get(s.customer_id!) ?? { spend: 0, due: 0, last: "", bills: 0 };
         a.spend += Number(s.total);
          a.due += Number(s.due_amount);
+        a.bills += 1;
         if (s.sale_date > a.last) a.last = s.sale_date;
         agg.set(s.customer_id!, a);
       }
-       return (cs ?? []).map((c) => ({ ...c, spend: agg.get(c.id)?.spend ?? 0, due: (agg.get(c.id)?.due ?? 0) + Number(c.opening_balance ?? 0), last: agg.get(c.id)?.last ?? "" }));
+       return (cs ?? []).map((c) => ({ ...c, spend: agg.get(c.id)?.spend ?? 0, bills: agg.get(c.id)?.bills ?? 0, due: (agg.get(c.id)?.due ?? 0) + Number(c.opening_balance ?? 0), last: agg.get(c.id)?.last ?? "" }));
     },
   });
+  const shop = useShop();
 
   const list = useMemo(() => {
     const s = q.toLowerCase().trim();
     return s ? data.filter((c) => c.mobile.includes(s) || c.name.toLowerCase().includes(s)) : data;
   }, [data, q]);
 
+  function exportPdf() {
+    const e = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    const rows = [...data].sort((a, b) => b.spend - a.spend);
+    const spend = rows.reduce((a, c) => a + c.spend, 0), due = rows.reduce((a, c) => a + Math.max(0, c.due), 0);
+    const body = `<div class="w"><h1>${e(shop.name)}</h1>${shop.phone ? `<p class="m">${e(shop.phone)}</p>` : ""}<h2>Customer Directory</h2><p class="m">Date: ${e(new Date().toLocaleDateString("en-IN"))} · Customers: ${rows.length}</p>
+<table><thead><tr><th>#</th><th>Name</th><th>Mobile</th><th>Size / Brand</th><th>Stamps</th><th class="r">Bills</th><th>Last visit</th><th class="r">Total spend</th><th class="r">Due</th></tr></thead><tbody>
+${rows.map((c, i) => `<tr><td>${i + 1}</td><td>${e(c.name || "—")}${c.is_premium ? " ★" : ""}</td><td>${e(c.mobile)}</td><td>${e(c.shoe_size || "—")} / ${e(c.brand_preference || "—")}</td><td>R ${c.regular_stamps} · P ${c.premium_stamps}</td><td class="r">${c.bills}</td><td>${c.last ? e(new Date(c.last).toLocaleDateString("en-IN")) : "—"}</td><td class="r">${e(inr(c.spend))}</td><td class="r">${c.due > 0.5 ? e(inr(c.due)) : "—"}</td></tr>`).join("")}
+<tr class="t"><td></td><td colspan="6">Total</td><td class="r">${e(inr(spend))}</td><td class="r">${e(inr(due))}</td></tr></tbody></table>
+<p class="b">Premium members: ${rows.filter((c) => c.is_premium).length} · Total to receive: ${e(inr(due))}</p></div>`;
+    printHtml("Customer Directory", body, PDF_CSS);
+  }
+
   return (
     <div>
-      <PageHeader title="Customers" subtitle="One mobile number = one profile." actions={<Button className="h-11" onClick={() => setAdding(true)}><UserPlus className="h-4 w-4" /> Add customer</Button>} />
+      <PageHeader title="Customers" subtitle="One mobile number = one profile." actions={<div className="flex flex-wrap gap-2"><Button variant="outline" className="h-11" onClick={exportPdf}><FileText className="h-4 w-4" /> Export PDF</Button><Button className="h-11" onClick={() => setAdding(true)}><UserPlus className="h-4 w-4" /> Add customer</Button></div>} />
       <div className="relative mb-4 max-w-md">
         <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mobile or name" className="h-11 pl-9" />

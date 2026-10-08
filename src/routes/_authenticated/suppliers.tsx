@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MessageCircle, Trash2 } from "lucide-react";
+import { FileText, MessageCircle, Trash2 } from "lucide-react";
+import { printHtml } from "@/lib/print";
+import { PDF_CSS } from "./customers";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -52,9 +54,25 @@ function Suppliers() {
     toast.success("Supplier payment saved"); setPayment({ amount: "", mode: "Cash", note: "" }); qc.invalidateQueries({ queryKey: ["purchases-sum"] }); qc.invalidateQueries({ queryKey: ["supplier-payments"] }); qc.invalidateQueries({ queryKey: ["acct"] });
   }
   const current = data.find((s) => s.id === selected);
+  function exportPdf() {
+    const e = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+    let T = 0, P = 0;
+    const rows = data.map((s, i) => {
+      const [tot, paid] = sum(s.id); T += tot; P += paid;
+      const ps = purchases.filter((p) => p.supplier_id === s.id);
+      const last = ps[0];
+      const pairs = ps.reduce((a, p) => a + Number(p.quantity ?? 0), 0);
+      return `<tr><td>${i + 1}</td><td><b>${e(s.name)}</b><br/><span class="m">${e(s.address || "")}</span></td><td>${e(s.phone || "—")}<br/><span class="m">${e(s.gstin || "")}</span></td><td class="r">${pairs}</td><td>${last ? `${e(new Date(last.purchase_date).toLocaleDateString("en-IN"))}<br/><span class="m">${e(last.invoice_no || "")}</span>` : "—"}</td><td class="r">${e(inr(tot))}</td><td class="r">${e(inr(paid))}</td><td class="r"><b>${e(inr(tot - paid))}</b></td></tr>`;
+    }).join("");
+    const body = `<div class="w"><h1>${e(shop.name)}</h1>${shop.phone ? `<p class="m">${e(shop.phone)}</p>` : ""}<h2>Supplier Summary</h2><p class="m">Date: ${e(new Date().toLocaleDateString("en-IN"))} · Suppliers: ${data.length}</p>
+<table><thead><tr><th>#</th><th>Party</th><th>Phone / GSTIN</th><th class="r">Pairs</th><th>Last purchase</th><th class="r">Purchased</th><th class="r">Paid</th><th class="r">Pending</th></tr></thead><tbody>${rows}
+<tr class="t"><td></td><td colspan="4">Total</td><td class="r">${e(inr(T))}</td><td class="r">${e(inr(P))}</td><td class="r">${e(inr(T - P))}</td></tr></tbody></table>
+<p class="b">Total to pay: ${e(inr(T - P))}</p></div>`;
+    printHtml("Supplier Summary", body, PDF_CSS);
+  }
   return (
     <div>
-      <PageHeader title="Suppliers" subtitle="Who you buy from, how much is pending." />
+      <PageHeader title="Suppliers" subtitle="Who you buy from, how much is pending." actions={<Button variant="outline" className="h-11" onClick={exportPdf}><FileText className="h-4 w-4" /> Export PDF</Button>} />
       <div className="mb-4 grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-6">
         <Input placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
