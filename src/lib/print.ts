@@ -141,3 +141,5 @@ function previewDocument(title: string, html: string) {
   document.body.append(wrapper);
   frame.focus();
 }
+
+export const PDF_CSS = `.w{padding:20px;width:760px;color:#111}h1{margin:0;font-size:22px}h2{font-size:15px;margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px;color:#555}.m{color:#666;font-size:12px;margin:2px 0}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:10px}th,td{border-bottom:1px solid #ddd;padding:5px;text-align:left;vertical-align:top}th{background:#f3f3f3}.r{text-align:right}.t td{font-weight:bold;border-top:2px solid #111}.b{font-size:14px;font-weight:bold;margin-top:12px;text-align:right}`;
