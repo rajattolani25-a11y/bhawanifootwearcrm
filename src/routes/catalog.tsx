@@ -74,23 +74,16 @@ function Catalog() {
           </div>
         </div>
       </div>
-      {data.offer && <div className="bg-foreground text-background">
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 py-2 text-center text-xs font-medium tracking-wide">
-          <Sparkles className="h-3.5 w-3.5 shrink-0" /><span className="truncate"><span>{data.offer.title}</span>{data.offer.code && <> · <span>Code</span> <b className="font-mono tracking-widest" data-no-translate>{data.offer.code}</b></>}</span>
+      {data.offer && <button type="button" onClick={() => { if (data.offer?.code) { void navigator.clipboard?.writeText(data.offer.code); } }} className="block w-full bg-foreground text-background">
+        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.18em]">
+          <span className="truncate"><span>{data.offer.title}</span>{offerText(data.offer) && <> · {offerText(data.offer)}</>}{data.offer.code && <> · <span>Code</span> <b className="font-mono" data-no-translate>{data.offer.code}</b></>}</span>
         </div>
-      </div>}
-      <section className="relative overflow-hidden border-b bg-card text-card-foreground">
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-8 sm:pb-16 sm:pt-14">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-primary" data-no-translate>{shop.name}</p>
-          <h1 className="mt-3 max-w-2xl font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">New arrivals, live sizes.</h1>
-          <p className="mt-3 max-w-md text-sm text-muted-foreground sm:text-base">See what's in stock, pick your size, and visit the store to try it on.</p>
-          {data.offer && <div className="mt-6 inline-flex max-w-full items-center gap-3 rounded-full border border-primary/30 bg-background/70 py-1.5 pl-1.5 pr-4 shadow-sm backdrop-blur">
-            <span className="rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">Offer</span>
-            <span className="truncate text-sm"><span>{data.offer.subtitle || data.offer.title}</span>{data.offer.code && offerText(data.offer) && <> · <b>{offerText(data.offer)}</b></>}</span>
-          </div>}
-          {shop.address && <p className="mt-6 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
+      </button>}
+      <section className="border-b bg-card text-card-foreground">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:py-7">
+          <h1 className="font-sans text-2xl font-bold tracking-tight sm:text-3xl">Shop the collection</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Live sizes and prices from our store.</p>
+          {shop.address && <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
         </div>
       </section>
 
@@ -98,45 +91,42 @@ function Catalog() {
         <div className="mx-auto max-w-6xl px-4 py-3">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search brand, article or colour" className="h-10 pl-9" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search brand, article or colour" className="h-10 rounded-full pl-9" />
           </div>
-          <div className="mt-2 flex gap-2 overflow-x-auto">
-            {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 rounded-full border px-4 py-1 text-sm font-medium ${filter === f ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{f}</button>)}
+          <div className="mt-3 flex gap-5 overflow-x-auto text-sm">
+            {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 border-b-2 pb-1.5 font-semibold transition ${filter === f ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{f}</button>)}
           </div>
         </div>
       </div>
 
       <main className="mx-auto max-w-6xl px-4 py-4">
         {brands.length > 2 && <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-          {brands.map((b) => <button key={b} onClick={() => setBrand(b)} className={`shrink-0 rounded-md border px-3 py-1 text-xs font-semibold uppercase ${brand === b ? "border-primary text-primary" : "text-muted-foreground"}`}><span data-no-translate={b !== "All" ? "" : undefined}>{b}</span></button>)}
+          {brands.map((b) => <button key={b} onClick={() => setBrand(b)} className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${brand === b ? "border-foreground bg-foreground text-background" : "text-muted-foreground"}`}><span data-no-translate={b !== "All" ? "" : undefined}>{b}</span></button>)}
         </div>}
         <p className="mb-3 text-xs text-muted-foreground">{list.length} <span>designs</span></p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
             return (
-              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group relative overflow-hidden rounded-2xl border bg-card text-left transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl">
-                <div className="relative aspect-square bg-muted">
-                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" className="h-full w-full object-contain p-2 transition group-hover:scale-105" /> : <div className="flex h-full items-center justify-center font-display text-5xl text-muted-foreground/30">{p.brand.slice(0, 1)}</div>}
-                  {off > 0 && <span className="absolute left-2 top-2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{off}% <span>OFF</span></span>}
-                  {p.few_left && <span className="absolute right-2 top-2 rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">Few sizes left</span>}
+              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group text-left">
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
+                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-5xl font-bold text-muted-foreground/30">{p.brand.slice(0, 1)}</div>}
+                  {p.few_left && <span className="absolute left-2 top-2 rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold text-destructive">Few sizes left</span>}
                 </div>
-                <div className="p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-primary" data-no-translate>{p.brand}</p>
-                  <p className="truncate font-semibold" data-no-translate>{p.article}</p>
-                  <p className="mt-1 flex items-baseline gap-1.5"><span className="font-display text-lg font-bold">{inr(p.price)}</span>{p.mrp > p.price && <span className="text-xs text-muted-foreground line-through">{inr(p.mrp)}</span>}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">{p.sizes.filter((s) => s.available).slice(0, 6).map((s) => <span key={s.id} className="rounded border px-1.5 text-[11px]">{s.size}</span>)}</div>
+                <div className="pt-2.5">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground" data-no-translate>{p.brand}</p>
+                  <p className="truncate text-sm font-semibold" data-no-translate>{p.article}</p>
+                  <p className="mt-1 flex flex-wrap items-baseline gap-1.5"><span className="font-sans text-base font-bold">{inr(p.price)}</span>{off > 0 && <><span className="text-xs text-muted-foreground line-through">{inr(p.mrp)}</span><span className="text-xs font-semibold text-success">{off}% <span>OFF</span></span></>}</p>
+                  <p className="mt-1 truncate text-[11px] text-muted-foreground"><span>Sizes</span>: <span data-no-translate>{p.sizes.filter((s) => s.available).map((s) => s.size).join(", ")}</span></p>
                 </div>
               </button>
             );
           })}
         </div>
         {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
-
         <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
       </main>
       <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
-      {data.offer?.card && data.offer.code && <OfferCard offer={data.offer} views={views} />}
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
