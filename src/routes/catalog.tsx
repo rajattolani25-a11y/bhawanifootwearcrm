@@ -123,6 +123,10 @@ function Catalog() {
             );
           })}
         </div>
+        {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
+        <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
+      </main>
+      <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
