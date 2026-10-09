@@ -74,7 +74,7 @@ function Catalog() {
           </div>
         </div>
       </div>
-      {data.offer && <button type="button" onClick={() => { if (data.offer?.code) { void navigator.clipboard?.writeText(data.offer.code); toast.success("Code copied"); } }} className="block w-full bg-foreground text-background">
+      {data.offer && <button type="button" onClick={() => { if (data.offer?.code) { void navigator.clipboard?.writeText(data.offer.code); } }} className="block w-full bg-foreground text-background">
         <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.18em]">
           <span className="truncate"><span>{data.offer.title}</span>{offerText(data.offer) && <> · {offerText(data.offer)}</>}{data.offer.code && <> · <span>Code</span> <b className="font-mono" data-no-translate>{data.offer.code}</b></>}</span>
         </div>
