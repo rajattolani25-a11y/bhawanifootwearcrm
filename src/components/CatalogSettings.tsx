@@ -81,6 +81,35 @@ export function CatalogSettings() {
         </div>}
       </div>
       <Button onClick={save} className="mt-4">Save</Button>
+      <OfferSettings />
     </section>
+  );
+}
+
+/** Festival offer shown on the catalog; the coupon itself comes from Rewards & Coupons. */
+function OfferSettings() {
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["catalog-offer"], queryFn: async () => (await supabase.from("store_settings").select("offer_enabled,offer_title,offer_subtitle,offer_coupon,offer_card").eq("id", 1).single()).data });
+  const { data: coupons = [] } = useQuery({ queryKey: ["coupons-public"], queryFn: async () => (await supabase.from("coupons").select("code,title").eq("active", true).is("customer_id", null).order("created_at", { ascending: false }).limit(100)).data ?? [] });
+  const [o, setO] = useState({ offer_enabled: false, offer_title: "", offer_subtitle: "", offer_coupon: "", offer_card: true });
+  useEffect(() => { if (data) setO({ offer_enabled: data.offer_enabled, offer_title: data.offer_title ?? "", offer_subtitle: data.offer_subtitle ?? "", offer_coupon: data.offer_coupon ?? "", offer_card: data.offer_card }); }, [data]);
+  async function save() {
+    const { error } = await supabase.from("store_settings").update({ offer_enabled: o.offer_enabled, offer_title: o.offer_title.trim().slice(0, 60) || null, offer_subtitle: o.offer_subtitle.trim().slice(0, 120) || null, offer_coupon: o.offer_coupon || null, offer_card: o.offer_card }).eq("id", 1);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["catalog-offer"] }); toast.success("Offer saved");
+  }
+  return (
+    <div className="mt-6 border-t pt-4">
+      <h3 className="font-semibold">Festival offer on catalog</h3>
+      <p className="mb-2 text-xs text-muted-foreground">Pick a coupon from Rewards & Coupons. Customers can use it on online orders too.</p>
+      <label className="flex items-center justify-between gap-3 py-2"><span className="text-sm font-medium">Show offer</span><Switch checked={o.offer_enabled} onCheckedChange={(v) => setO({ ...o, offer_enabled: v })} /></label>
+      {o.offer_enabled && <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1"><Label>Offer title</Label><Input value={o.offer_title} onChange={(e) => setO({ ...o, offer_title: e.target.value })} placeholder="Diwali Special" maxLength={60} /></div>
+        <div className="space-y-1"><Label>Coupon</Label><select value={o.offer_coupon} onChange={(e) => setO({ ...o, offer_coupon: e.target.value })} className="h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">No coupon (only message)</option>{coupons.map((c) => <option key={c.code} value={c.code}>{c.code}{c.title ? ` — ${c.title}` : ""}</option>)}</select></div>
+        <div className="space-y-1 sm:col-span-2"><Label>Short message</Label><Input value={o.offer_subtitle} onChange={(e) => setO({ ...o, offer_subtitle: e.target.value })} placeholder="Celebrate in new shoes" maxLength={120} /></div>
+        <label className="flex items-center justify-between gap-3 py-2 sm:col-span-2"><span><span className="block text-sm font-medium">Show small offer card</span><span className="block text-xs text-muted-foreground">Appears once, after the customer looks at a few designs.</span></span><Switch checked={o.offer_card} onCheckedChange={(v) => setO({ ...o, offer_card: v })} /></label>
+      </div>}
+      <Button onClick={save} variant="outline" className="mt-3">Save offer</Button>
+    </div>
   );
 }
