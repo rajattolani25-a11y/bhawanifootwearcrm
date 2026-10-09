@@ -32,3 +32,4 @@
 - Catalog bookings take stock out immediately (`create_catalog_booking`, BOOKING_HOLD) and return it on cancel/expiry; pickup bills go through `complete_catalog_booking`, which releases the hold and calls `create_sale` in one transaction, so stock never double-counts.
 - Product photos are compressed on the device (max 1080px WebP) before upload, and the old file is deleted on replace.
 - Catalog orders: pickup = advance, local/outside delivery = full payment + server-computed charge via `create_catalog_order`; public tracking only through `track_catalog_order` (order no. + mobile); status history is logged by trigger.
+- Catalog festival offer settings live in `store_settings` (offer_*) and are read via `public_catalog_offer`; online-order coupons are checked/redeemed inside `create_catalog_order` (`catalog_coupon_amount`, once per mobile) so the same Rewards coupons work at POS and online.
