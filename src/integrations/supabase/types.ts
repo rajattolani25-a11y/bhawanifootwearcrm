@@ -21,6 +21,8 @@ export type Database = {
           area: string | null
           booking_no: string
           confirmed_at: string | null
+          coupon_code: string | null
+          coupon_discount: number
           created_at: string
           customer_name: string
           delivery_charge: number
@@ -43,6 +45,8 @@ export type Database = {
           area?: string | null
           booking_no: string
           confirmed_at?: string | null
+          coupon_code?: string | null
+          coupon_discount?: number
           created_at?: string
           customer_name: string
           delivery_charge?: number
@@ -65,6 +69,8 @@ export type Database = {
           area?: string | null
           booking_no?: string
           confirmed_at?: string | null
+          coupon_code?: string | null
+          coupon_discount?: number
           created_at?: string
           customer_name?: string
           delivery_charge?: number
@@ -1012,6 +1018,11 @@ export type Database = {
           hold_hours: number
           id: number
           local_charge: number
+          offer_card: boolean
+          offer_coupon: string | null
+          offer_enabled: boolean
+          offer_subtitle: string | null
+          offer_title: string | null
           outside_charge: number
           outside_enabled: boolean
           pickup_enabled: boolean
@@ -1037,6 +1048,11 @@ export type Database = {
           hold_hours?: number
           id?: number
           local_charge?: number
+          offer_card?: boolean
+          offer_coupon?: string | null
+          offer_enabled?: boolean
+          offer_subtitle?: string | null
+          offer_title?: string | null
           outside_charge?: number
           outside_enabled?: boolean
           pickup_enabled?: boolean
@@ -1062,6 +1078,11 @@ export type Database = {
           hold_hours?: number
           id?: number
           local_charge?: number
+          offer_card?: boolean
+          offer_coupon?: string | null
+          offer_enabled?: boolean
+          offer_subtitle?: string | null
+          offer_title?: string | null
           outside_charge?: number
           outside_enabled?: boolean
           pickup_enabled?: boolean
@@ -1184,6 +1205,19 @@ export type Database = {
         Args: { _id: string; _note: string }
         Returns: undefined
       }
+      catalog_coupon_amount: {
+        Args: {
+          _code: string
+          _lock?: boolean
+          _mobile: string
+          _subtotal: number
+        }
+        Returns: Json
+      }
+      check_catalog_coupon: {
+        Args: { _code: string; _mobile: string; _variant_id: string }
+        Returns: Json
+      }
       collect_credit_payment: {
         Args: {
           _amount: number
@@ -1206,17 +1240,30 @@ export type Database = {
         Args: { _mobile: string; _name: string; _variant_id: string }
         Returns: Json
       }
-      create_catalog_order: {
-        Args: {
-          _address: string
-          _area: string
-          _fulfillment: string
-          _mobile: string
-          _name: string
-          _variant_id: string
-        }
-        Returns: Json
-      }
+      create_catalog_order:
+        | {
+            Args: {
+              _address: string
+              _area: string
+              _fulfillment: string
+              _mobile: string
+              _name: string
+              _variant_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _address: string
+              _area: string
+              _coupon: string
+              _fulfillment: string
+              _mobile: string
+              _name: string
+              _variant_id: string
+            }
+            Returns: Json
+          }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
       ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
       expire_catalog_bookings: { Args: never; Returns: number }
@@ -1240,6 +1287,7 @@ export type Database = {
         Returns: number
       }
       public_catalog: { Args: never; Returns: Json }
+      public_catalog_offer: { Args: never; Returns: Json }
       quick_add_product: {
         Args: { _cost?: number; _product: Json; _sizes: Json }
         Returns: Json

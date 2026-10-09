@@ -127,6 +127,13 @@
       "when": 1791375079720,
       "tag": "0017_owner_approved_login",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791537674389,
+      "tag": "0018_catalog_offer_coupons",
+      "breakpoints": true
     }
   ]
 }
