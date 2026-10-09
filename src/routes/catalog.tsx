@@ -58,7 +58,6 @@ function Catalog() {
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
-  const delivers = shop.local || shop.outside;
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,7 +115,7 @@ function Catalog() {
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
             return (
-              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group relative overflow-hidden rounded-xl border bg-card text-left transition hover:-translate-y-0.5 hover:shadow-lg">
+              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group relative overflow-hidden rounded-2xl border bg-card text-left transition duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl">
                 <div className="relative aspect-square bg-muted">
                   {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" className="h-full w-full object-contain p-2 transition group-hover:scale-105" /> : <div className="flex h-full items-center justify-center font-display text-5xl text-muted-foreground/30">{p.brand.slice(0, 1)}</div>}
                   {off > 0 && <span className="absolute left-2 top-2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{off}% <span>OFF</span></span>}
