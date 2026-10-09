@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clock, Globe, MapPin, MessageCircle, Package, Phone, Search, ShieldCheck, Store, Truck, X } from "lucide-react";
-import { createBooking, getCatalog, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
+import { Check, Clock, Globe, MapPin, MessageCircle, Package, Phone, Search, ShieldCheck, Sparkles, Copy, Store, Truck, X } from "lucide-react";
+import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
 import { enquiryText, proofText } from "@/lib/order-messages";
 import { inr } from "@/lib/modules";
@@ -46,6 +46,7 @@ function Catalog() {
   const [brand, setBrand] = useState("All");
   const [open, setOpen] = useState<CatalogProduct | null>(null);
   const [track, setTrack] = useState<string | null>(null);
+  const [views, setViews] = useState(0);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand))], [products]);
@@ -73,18 +74,26 @@ function Catalog() {
             {shop.phone && <a href={`tel:${shop.phone}`} className="rounded-full border border-border p-1.5" aria-label="Call store"><Phone className="h-3.5 w-3.5" /></a>}
           </div>
         </div>
-        <div className="mx-auto max-w-6xl px-4 pb-7 pt-4 sm:pb-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Footwear Catalog</p>
-          <h1 className="mt-1 font-display text-3xl font-bold leading-tight sm:text-5xl">New arrivals, live sizes.</h1>
-          <p className="mt-2 max-w-xl text-sm opacity-80">See what's in stock, pick your size, and visit the store to try it on.</p>
-          {shop.address && <p className="mt-3 flex items-center gap-1.5 text-sm opacity-80"><MapPin className="h-4 w-4 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <span className="flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1"><Store className="h-3.5 w-3.5" /><span>Try in store</span></span>
-            {delivers && <span className="flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1"><Truck className="h-3.5 w-3.5" /><span>Home delivery</span></span>}
-            <span className="flex items-center gap-1 rounded-full bg-secondary text-secondary-foreground px-3 py-1"><ShieldCheck className="h-3.5 w-3.5" /><span>Direct UPI, no extra fee</span></span>
-          </div>
-        </div>
       </div>
+      {data.offer && <div className="bg-foreground text-background">
+        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 py-2 text-center text-xs font-medium tracking-wide">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" /><span className="truncate"><span>{data.offer.title}</span>{data.offer.code && <> · <span>Code</span> <b className="font-mono tracking-widest" data-no-translate>{data.offer.code}</b></>}</span>
+        </div>
+      </div>}
+      <section className="relative overflow-hidden border-b bg-card text-card-foreground">
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-8 sm:pb-16 sm:pt-14">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-primary" data-no-translate>{shop.name}</p>
+          <h1 className="mt-3 max-w-2xl font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">New arrivals, live sizes.</h1>
+          <p className="mt-3 max-w-md text-sm text-muted-foreground sm:text-base">See what's in stock, pick your size, and visit the store to try it on.</p>
+          {data.offer && <div className="mt-6 inline-flex max-w-full items-center gap-3 rounded-full border border-primary/30 bg-background/70 py-1.5 pl-1.5 pr-4 shadow-sm backdrop-blur">
+            <span className="rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">Offer</span>
+            <span className="truncate text-sm"><span>{data.offer.subtitle || data.offer.title}</span>{data.offer.code && offerText(data.offer) && <> · <b>{offerText(data.offer)}</b></>}</span>
+          </div>}
+          {shop.address && <p className="mt-6 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
+        </div>
+      </section>
 
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 py-3">
@@ -107,7 +116,7 @@ function Catalog() {
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
             return (
-              <button key={p.id} onClick={() => setOpen(p)} className="group relative overflow-hidden rounded-xl border bg-card text-left transition hover:-translate-y-0.5 hover:shadow-lg">
+              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group relative overflow-hidden rounded-xl border bg-card text-left transition hover:-translate-y-0.5 hover:shadow-lg">
                 <div className="relative aspect-square bg-muted">
                   {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" className="h-full w-full object-contain p-2 transition group-hover:scale-105" /> : <div className="flex h-full items-center justify-center font-display text-5xl text-muted-foreground/30">{p.brand.slice(0, 1)}</div>}
                   {off > 0 && <span className="absolute left-2 top-2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{off}% <span>OFF</span></span>}
@@ -125,14 +134,10 @@ function Catalog() {
         </div>
         {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
 
-        <div className="mt-10 grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-3">
-          <div className="flex gap-3"><Store className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Try in store</p><p className="text-sm text-muted-foreground">Visit us and try the pair before you buy.</p></div></div>
-          <div className="flex gap-3"><MessageCircle className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Ask on WhatsApp</p><p className="text-sm text-muted-foreground">We confirm your size before you come.</p></div></div>
-          <div className="flex gap-3"><ShieldCheck className="h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold">Live stock</p><p className="text-sm text-muted-foreground">Only sizes in stock are shown.</p></div></div>
-        </div>
         <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
       </main>
-      <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
+      <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
+      {data.offer?.card && data.offer.code && <OfferCard offer={data.offer} views={views} />}
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
@@ -143,7 +148,42 @@ const STEPS_DELIVERY = ["pending", "confirmed", "packed", "shipped", "delivered"
 const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refunded: "Cancelled - refund initiated" };
 const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
 
-function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogProduct | null; shop: CatalogShop; onClose: () => void; onTrack: (no: string) => void }) {
+function offerText(o: NonNullable<CatalogOffer>) {
+  if (!o.value) return "";
+  const v = o.kind === "percent" ? `${o.value}% OFF` : `${inr(o.value)} OFF`;
+  return o.min_bill ? `${v} above ${inr(o.min_bill)}` : v;
+}
+
+function OfferCard({ offer, views }: { offer: NonNullable<CatalogOffer>; views: number }) {
+  const [show, setShow] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (sessionStorage.getItem("offer-seen")) return;
+    const t = setTimeout(() => setShow(true), 20000);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => { if (views >= 2 && !sessionStorage.getItem("offer-seen")) setShow(true); }, [views]);
+  if (!show) return null;
+  const close = () => { sessionStorage.setItem("offer-seen", "1"); setShow(false); };
+  return (
+    <div className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-md animate-in slide-in-from-bottom-6 fade-in duration-500">
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-4 pr-10 shadow-2xl">
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/20 blur-2xl" />
+        <button onClick={close} aria-label="Close" className="absolute right-2 top-2 rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary"><span>{offer.title}</span></p>
+        <p className="mt-1 font-display text-lg font-bold leading-tight">{offerText(offer) || offer.subtitle}</p>
+        {offer.subtitle && offerText(offer) && <p className="text-xs text-muted-foreground">{offer.subtitle}</p>}
+        <button onClick={() => { void navigator.clipboard?.writeText(offer.code ?? ""); setCopied(true); setTimeout(close, 1500); }} className="mt-3 flex w-full items-center justify-between rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 px-3 py-2">
+          <span className="font-mono text-base font-bold tracking-[0.2em]" data-no-translate>{offer.code}</span>
+          <span className="flex items-center gap-1 text-xs font-semibold text-primary">{copied ? <><Check className="h-3.5 w-3.5" /> <span>Copied</span></> : <><Copy className="h-3.5 w-3.5" /> <span>Tap to copy</span></>}</span>
+        </button>
+        <p className="mt-2 text-[11px] text-muted-foreground">Use this code when you place your order.</p>
+      </div>
+    </div>
+  );
+}
+
+function ProductDialog({ product, shop, onClose, onTrack, offerCode }: { product: CatalogProduct | null; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
   const { lang } = useLang();
   const [size, setSize] = useState<string | null>(null);
   const [step, setStep] = useState<"view" | "method" | "form" | "done">("view");
@@ -155,20 +195,30 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<BookingResult | null>(null);
+  const [code, setCode] = useState(offerCode);
+  const [disc, setDisc] = useState<{ code: string; amount: number } | null>(null);
+  const [cErr, setCErr] = useState("");
   if (!product) return null;
   const chosen = product.sizes.find((s) => s.id === size);
   const label = `${product.brand} ${product.article}`;
   const wa = waTo(shop.phone, enquiryText(lang, shop.name, label, chosen?.size ?? ""));
   const canOrder = shop.booking || shop.local || shop.outside;
   const charge = (f: Fulfillment) => (f === "pickup" ? 0 : f === "local" ? (shop.free_delivery_above != null && product.price >= shop.free_delivery_above ? 0 : shop.local_charge) : shop.outside_charge);
-  const payNow = method === "pickup" ? Math.ceil(product.price * shop.advance_percent / 100) : product.price + charge(method);
+  const net = product.price - (disc?.amount ?? 0);
+  const payNow = method === "pickup" ? Math.ceil(net * shop.advance_percent / 100) : net + (method === "local" && shop.free_delivery_above != null && net >= shop.free_delivery_above ? 0 : charge(method));
+  async function applyCoupon() {
+    if (!chosen || !code.trim()) return;
+    setCErr(""); setDisc(null);
+    try { setDisc(await checkCoupon({ data: { variantId: chosen.id, code: code.trim(), mobile: mobile.replace(/[\s-]/g, "") } })); }
+    catch (e) { setCErr((e as Error).message.replace(/^.*?:\s*/, "")); }
+  }
   const delivery = method !== "pickup";
   const valid = name.trim().length >= 2 && /^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, "")) && (!delivery || address.trim().length >= 10);
 
   async function order() {
     if (!chosen) return;
     setBusy(true); setErr("");
-    try { setRes(await createBooking({ data: { variantId: chosen.id, name, mobile: mobile.replace(/[\s-]/g, ""), fulfillment: method, address: delivery ? address : "", area: delivery ? area : "" } })); setStep("done"); }
+    try { setRes(await createBooking({ data: { variantId: chosen.id, name, mobile: mobile.replace(/[\s-]/g, ""), fulfillment: method, address: delivery ? address : "", area: delivery ? area : "", coupon: disc?.code ?? "" } })); setStep("done"); }
     catch (e) { setErr((e as Error).message.replace(/^.*?:\s*/, "")); }
     finally { setBusy(false); }
   }
@@ -213,9 +263,10 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
           <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
             <div className="flex justify-between"><span data-no-translate>{label}</span><span><span>Size</span> <b>{chosen.size}</b></span></div>
             <div className="flex justify-between"><span>Price</span><span>{inr(product.price)}</span></div>
+            {disc && <div className="flex justify-between text-primary"><span><span>Coupon</span> <span data-no-translate>{disc.code}</span></span><span>− {inr(disc.amount)}</span></div>}
             {delivery && <div className="flex justify-between"><span>Delivery charge</span><span>{charge(method) ? inr(charge(method)) : <span>Free</span>}</span></div>}
             <div className="flex justify-between border-t pt-1 text-base font-semibold"><span>{method === "pickup" ? "Advance to pay now" : "Total to pay"}</span><span>{inr(payNow)}</span></div>
-            {method === "pickup" && <p className="text-xs text-muted-foreground"><span>Balance at store:</span> {inr(product.price - payNow)} · <span>Pair kept aside for</span> {shop.hold_hours} <span>hours</span></p>}
+            {method === "pickup" && <p className="text-xs text-muted-foreground"><span>Balance at store:</span> {inr(net - payNow)} · <span>Pair kept aside for</span> {shop.hold_hours} <span>hours</span></p>}
           </div>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" maxLength={60} className="h-11" />
           <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="Mobile number" inputMode="numeric" maxLength={14} className="h-11" />
@@ -223,6 +274,12 @@ function ProductDialog({ product, shop, onClose, onTrack }: { product: CatalogPr
             <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full address (house, street, landmark)" maxLength={300} rows={3} />
             <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="City / Pincode" maxLength={80} className="h-11" />
           </>}
+          <div className="flex gap-2">
+            <Input value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setDisc(null); }} placeholder="Coupon code (optional)" maxLength={30} className="h-11 font-mono uppercase" />
+            <Button type="button" variant="outline" className="h-11" disabled={!code.trim() || !/^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, ""))} onClick={applyCoupon}>Apply</Button>
+          </div>
+          {disc && <p className="flex items-center gap-1 text-xs font-semibold text-primary"><Check className="h-3.5 w-3.5" /> <span>You save</span> {inr(disc.amount)}</p>}
+          {cErr && <p className="text-xs text-destructive">{cErr}</p>}
           {err && <p className="text-sm text-destructive">{err}</p>}
           <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("method")} className="h-11 flex-1">Back</Button><Button disabled={busy || !valid} onClick={order} className="h-11 flex-1">{busy ? "Please wait…" : "Place order"}</Button></div>
         </div>}
