@@ -8,6 +8,7 @@ import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
 import { ThemeControl } from "@/components/ThemeControl";
 import { GuidedTour } from "@/components/GuidedTour";
+import { UniversalSearch } from "@/components/UniversalSearch";
 import { MessageLanguage } from "@/components/MessageLanguage";
 import { LanguageProvider, useLang } from "@/lib/i18n";
 
@@ -113,6 +114,7 @@ function AppShell() {
           <button onClick={() => setOpen(true)} aria-label="Menu"><Menu className="h-6 w-6" /></button>
           <span className="font-display font-semibold">SoleStack POS</span>
         </header>
+        <div className="border-b bg-card/60 px-3 py-2 md:px-5"><div className="max-w-md"><UniversalSearch /></div></div>
         <main className={cn("min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />
         </main>
