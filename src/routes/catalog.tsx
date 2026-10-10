@@ -126,7 +126,7 @@ function Catalog() {
         {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
         <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
       </main>
-      <ProductDialog key={open?.id ?? "none"} product={open} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
+      <ProductDialog key={open?.id ?? "none"} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
@@ -172,7 +172,16 @@ function OfferCard({ offer, views }: { offer: NonNullable<CatalogOffer>; views: 
   );
 }
 
-function ProductDialog({ product, shop, onClose, onTrack, offerCode }: { product: CatalogProduct | null; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
+const TYPE_WORDS = ["sneaker", "running", "sports", "loafer", "sandal", "slipper", "flip", "slide", "boot", "formal", "belly", "ballerina", "clog", "crocs", "heel", "wedge", "juti", "mojari", "kolhapuri", "school", "canvas", "floater"];
+function similarTo(p: CatalogProduct, all: CatalogProduct[]) {
+  const words = TYPE_WORDS.filter((w) => p.article.toLowerCase().includes(w));
+  return all
+    .filter((x) => x.id !== p.id && x.category === p.category && (!p.gender || !x.gender || x.gender === p.gender) && x.sizes.some((s) => s.available) && x.price >= p.price * 0.7 && x.price <= p.price * 1.3)
+    .map((x) => ({ x, score: (words.some((w) => x.article.toLowerCase().includes(w)) ? 50 : 0) + (x.brand === p.brand ? 30 : 0) + (p.color && x.color === p.color ? 10 : 0) - Math.abs(x.price - p.price) / Math.max(p.price, 1) * 10 }))
+    .sort((a, b) => b.score - a.score).slice(0, 4).map((r) => r.x);
+}
+
+function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode }: { product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
   const { lang } = useLang();
   const [size, setSize] = useState<string | null>(null);
   const [step, setStep] = useState<"view" | "method" | "form" | "done">("view");
@@ -239,6 +248,16 @@ function ProductDialog({ product, shop, onClose, onTrack, offerCode }: { product
             {canOrder && <Button disabled={!chosen} onClick={() => setStep("method")} className="h-12 w-full">{chosen ? "Get this pair" : "Select a size to continue"}</Button>}
           </div>
           <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p><b className="block">Exchange policy</b><span className="text-muted-foreground">No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</span></p></div>
+          {(() => { const sim = similarTo(product, all); return sim.length > 0 && <div>
+            <p className="mb-2 text-sm font-semibold">Similar pairs you might like</p>
+            <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+              {sim.map((s) => <button key={s.id} onClick={() => onPick(s)} className="w-28 shrink-0 snap-start text-left">
+                <div className="aspect-square overflow-hidden rounded-lg border bg-muted">{s.image && <img src={s.image} alt={`${s.brand} ${s.article}`} loading="lazy" className="h-full w-full object-contain p-1.5" />}</div>
+                <p className="mt-1 truncate text-xs font-medium" data-no-translate>{s.brand} {s.article}</p>
+                <p className="text-xs font-bold">{inr(s.price)}</p>
+              </button>)}
+            </div>
+          </div>; })()}
         </div>}
         {step === "method" && chosen && <div className="space-y-3">
           <p className="text-sm font-semibold">How do you want it?</p>
