@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
 import { Button } from "@/components/ui/button";
+import { UniversalSearch } from "@/components/UniversalSearch";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — SoleStack POS" }, { name: "description", content: "Retail control room: sales, stock and alerts." }, { property: "og:title", content: "Dashboard — SoleStack POS" }, { property: "og:description", content: "Retail control room." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -129,6 +130,7 @@ function Dashboard() {
 
   return (
     <div className="space-y-5">
+      <div className="max-w-xl"><UniversalSearch /></div>
       {/* Header */}
       <section className="relative overflow-hidden rounded-lg bg-sidebar p-6 text-sidebar-foreground md:p-8">
         <div className="relative flex flex-wrap items-end justify-between gap-4">
