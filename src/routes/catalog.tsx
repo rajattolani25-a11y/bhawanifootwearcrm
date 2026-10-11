@@ -361,3 +361,16 @@ function TrackDialog({ initial, onClose }: { initial: string; onClose: () => voi
     </Dialog>
   );
 }
+
+/** Strict auto type from article name. First matching rule wins; no keyword = only in "All" (never a wrong section). */
+const TYPE_RULES: [string, RegExp][] = [
+  ["School", /\bschool\b|\buniform\b/i],
+  ["Formal", /\bformal\b|\boxford\b|\bderby\b|\bloafer|\bmocc?asin|\bbrogue|\bmojari|\bjutti|\bbellies\b|\bbelly\b|\bpump/i],
+  ["Sports", /\bsports?\b|\brunn(ing|er)\b|\btrain(er|ing)\b|\bgym\b|\bjogg|\btrek|\bwalking\b|\bcourt\b|\btennis\b|\bfootball\b|\bstuds?\b/i],
+  ["Sneakers", /\bsneak|\bcasual shoe|\bcanvas\b/i],
+  ["Sandals", /\bsandal|\bfloater|\bkolhapuri|\bwedge|\bheel/i],
+  ["Slippers", /\bslipper|\bchappal|\bflip ?flop|\bslides?\b|\bclog|\bcrocs?\b|\bhawai/i],
+];
+function detectType(article: string) {
+  return TYPE_RULES.find(([, rx]) => rx.test(article))?.[0] ?? "Other";
+}
