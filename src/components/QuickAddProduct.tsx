@@ -25,7 +25,8 @@ function parseSizes(text: string) {
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => String(a + i));
 
 /** Indian footwear size chart per category: all sizes + quick 1-tap sets. */
-const SIZE_CHART: Record<string, { all: string[]; sets: [string, string[], string][] }> = {
+type Chart = { all: string[]; sets: [string, string[], string][] };
+const SIZE_CHART: Record<"Gents" | "Ladies" | "Boys" | "Girls" | "Kids", Chart> = {
   Gents: { all: range(6, 12), sets: [["6-10", range(6, 10), "Regular"], ["11-12", range(11, 12), "Bade size"]] },
   Ladies: { all: range(5, 12), sets: [["5-9", range(5, 9), "Regular"], ["10-12", range(10, 12), "Plus size"]] },
   Boys: { all: range(1, 5), sets: [["1-5", range(1, 5), "Full set"]] },
@@ -45,10 +46,10 @@ export function QuickAddProduct({ open, onClose, onAdded, mode = "stock", initia
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setF((x) => ({ ...x, article: initialArticle || x.article })); }, [open, initialArticle]);
-  const chart = SIZE_CHART[f.category] ?? SIZE_CHART.Gents;
+  const chart: Chart = SIZE_CHART[f.category as keyof typeof SIZE_CHART] ?? SIZE_CHART.Gents;
   const sizes = [...new Set([...picked, ...parseSizes(extraSizes)])].sort(sizeSort);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
-  const pickCategory = (c: string) => { setF({ ...f, category: c }); setPicked(SIZE_CHART[c].sets[0][1]); };
+  const pickCategory = (c: string) => { setF({ ...f, category: c }); setPicked(SIZE_CHART[c as keyof typeof SIZE_CHART].sets[0]?.[1] ?? []); };
   const toggleSet = (list: string[]) => setPicked((p) => (list.every((s) => p.includes(s)) ? p.filter((s) => !list.includes(s)) : [...new Set([...p, ...list])]));
   const toggleSize = (s: string) => setPicked((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
 
