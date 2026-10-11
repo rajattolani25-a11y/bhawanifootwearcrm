@@ -48,13 +48,18 @@ function Catalog() {
   const [track, setTrack] = useState<string | null>(null);
   const [views, setViews] = useState(0);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
-  const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
+  const [ptype, setPtype] = useState("All");
+  const [fsize, setFsize] = useState("All");
+  const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand))], [products]);
+  const types = useMemo(() => ["All", ...TYPE_RULES.map(([t]) => t).filter((t) => products.some((p) => p.ptype === t))], [products]);
+  const sizeList = useMemo(() => ["All", ...[...new Set(products.filter((p) => filter === "All" || p.category === filter).flatMap((p) => p.sizes.filter((s) => s.available).map((s) => s.size)))].sort((a, b) => (parseFloat(a) || 99) - (parseFloat(b) || 99) || a.localeCompare(b))], [products, filter]);
   const list = useMemo(() => {
     const s = q.toLowerCase().trim();
     return products.filter((p) => (filter === "All" || p.category === filter) && (brand === "All" || p.brand === brand) &&
+      (ptype === "All" || p.ptype === ptype) && (fsize === "All" || p.sizes.some((x) => x.size === fsize && x.available)) &&
       (!s || [p.brand, p.article, p.color, p.category].some((f) => f?.toLowerCase().includes(s))));
-  }, [products, q, filter, brand]);
+  }, [products, q, filter, brand, ptype, fsize]);
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
@@ -100,8 +105,15 @@ function Catalog() {
       </div>
 
       <main className="mx-auto max-w-6xl px-4 py-4">
-        {brands.length > 2 && <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+        {types.length > 2 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+          {types.map((t) => <button key={t} onClick={() => setPtype(t)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${ptype === t ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{t}</button>)}
+        </div>}
+        {brands.length > 2 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
           {brands.map((b) => <button key={b} onClick={() => setBrand(b)} className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${brand === b ? "border-foreground bg-foreground text-background" : "text-muted-foreground"}`}><span data-no-translate={b !== "All" ? "" : undefined}>{b}</span></button>)}
+        </div>}
+        {sizeList.length > 2 && <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">Size</span>
+          {sizeList.map((z) => <button key={z} onClick={() => setFsize(z)} className={`h-8 min-w-8 shrink-0 rounded-md border px-2 text-xs font-semibold ${fsize === z ? "border-foreground bg-foreground text-background" : "text-muted-foreground"}`}>{z}</button>)}
         </div>}
         <p className="mb-3 text-xs text-muted-foreground">{list.length} <span>designs</span></p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
