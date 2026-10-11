@@ -23,7 +23,7 @@ export const Route = createFileRoute("/catalog")({
   component: () => <LanguageProvider><Catalog /></LanguageProvider>,
 });
 
-const FILTERS = ["All", "Gents", "Ladies", "Boys", "Girls"] as const;
+const FILTERS = ["All", "Gents", "Ladies", "Boys", "Girls", "Kids"] as const;
 const waNum = (p?: string | null) => { const m = (p ?? "").replace(/\D/g, ""); return m.length === 10 ? `91${m}` : m; };
 const waTo = (phone: string | null, text: string) => (phone ? `https://wa.me/${waNum(phone)}?text=${encodeURIComponent(text)}` : null);
 
@@ -105,16 +105,14 @@ function Catalog() {
       </div>
 
       <main className="mx-auto max-w-6xl px-4 py-4">
-        {types.length > 2 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-          {types.map((t) => <button key={t} onClick={() => setPtype(t)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${ptype === t ? "border-primary bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{t}</button>)}
-        </div>}
-        {brands.length > 2 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-          {brands.map((b) => <button key={b} onClick={() => setBrand(b)} className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${brand === b ? "border-foreground bg-foreground text-background" : "text-muted-foreground"}`}><span data-no-translate={b !== "All" ? "" : undefined}>{b}</span></button>)}
-        </div>}
-        {sizeList.length > 2 && <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">
-          <span className="shrink-0 text-xs font-medium text-muted-foreground">Size</span>
-          {sizeList.map((z) => <button key={z} onClick={() => setFsize(z)} className={`h-8 min-w-8 shrink-0 rounded-md border px-2 text-xs font-semibold ${fsize === z ? "border-foreground bg-foreground text-background" : "text-muted-foreground"}`}>{z}</button>)}
-        </div>}
+        <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
+          {([["Type", types, ptype, setPtype], ["Brand", brands, brand, setBrand], ["Size", sizeList, fsize, setFsize]] as [string, string[], string, (v: string) => void][]).filter(([, opts]) => opts.length > 2).map(([label, opts, val, setVal]) => (
+            <select key={label} aria-label={label} value={val} onChange={(e) => setVal(e.target.value)} className={`h-8 shrink-0 rounded-full border bg-background px-3 text-xs font-semibold ${val !== "All" ? "border-foreground text-foreground" : "text-muted-foreground"}`}>
+              {opts.map((o) => <option key={o} value={o}>{o === "All" ? `${label} ▾` : label === "Size" ? `Size ${o}` : o}</option>)}
+            </select>
+          ))}
+          {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className="shrink-0 text-xs font-semibold text-primary">Clear</button>}
+        </div>
         <p className="mb-3 text-xs text-muted-foreground">{list.length} <span>designs</span></p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
           {list.map((p) => {
