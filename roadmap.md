@@ -51,3 +51,5 @@
 - [x] Catalog Buy Now + 3-tier delivery + Track Order (3 languages)
 - [x] Catalog redesign: small language switch in header menu, polished interface
 - [x] Owner full control of catalog/delivery in Settings; professional WhatsApp texts
+
+- [x] Catalog: Search by Photo (on-device matching, WhatsApp to owner always available)
