@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Clock, Globe, MapPin, MessageCircle, Package, Phone, Search, ShieldCheck, Sparkles, Copy, Store, Truck, X } from "lucide-react";
+import { Camera, Check, Clock, Globe, MapPin, MessageCircle, Package, Phone, Search, ShieldCheck, Sparkles, Copy, Store, Truck, X } from "lucide-react";
+import { PhotoSearch } from "@/components/PhotoSearch";
 import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
 import { enquiryText, proofText } from "@/lib/order-messages";
@@ -49,6 +50,8 @@ function Catalog() {
   const [views, setViews] = useState(0);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
   const [ptype, setPtype] = useState("All");
+  const [photo, setPhoto] = useState(false);
+  const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand))], [products]);
@@ -96,8 +99,10 @@ function Catalog() {
         <div className="mx-auto max-w-6xl px-4 py-3">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search brand, article or colour" className="h-10 rounded-full pl-9" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search footwear, brand or photo..." className="h-10 rounded-full pl-9 pr-11" />
+            <button type="button" onClick={() => setPhoto(true)} aria-label="Search by photo" className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"><Camera className="h-4 w-4" /></button>
           </div>
+          <PhotoSearch open={photo} onClose={() => setPhoto(false)} products={products} shopName={shop.name} lang={lang} waLink={(text) => waTo(shop.phone, text)} onPick={(p) => setOpen(p)} />
           <div className="mt-3 flex gap-5 overflow-x-auto text-sm">
             {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 border-b-2 pb-1.5 font-semibold transition ${filter === f ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{f}</button>)}
           </div>
