@@ -198,7 +198,16 @@ export function PhotoSearch({ open, onClose, products, shopName, waLink, lang, o
         ) : (
           <div className="relative overflow-hidden rounded-xl bg-muted">
             <img src={preview} alt="" className="mx-auto max-h-56 object-contain" />
-            <div className="pointer-events-none absolute inset-[12%] rounded-lg border-2 border-background/80 shadow-[0_0_0_999px_hsl(0_0%_0%/0.25)]" />
+            <div className="pointer-events-none absolute inset-[12%] rounded-lg border-2 border-background/80 shadow-[0_0_0_999px_hsl(0_0%_0%/0.25)]">
+              {(busy || print === undefined) && (
+                <>
+                  {["left-0 top-0 border-l-2 border-t-2", "right-0 top-0 border-r-2 border-t-2", "left-0 bottom-0 border-l-2 border-b-2", "right-0 bottom-0 border-r-2 border-b-2"].map((c) => (
+                    <span key={c} className={`absolute h-5 w-5 rounded-sm border-primary ${c}`} />
+                  ))}
+                  <span className="photo-scan-line absolute inset-x-1 h-0.5 rounded-full bg-primary shadow-[0_0_12px_2px_var(--color-primary)]" />
+                </>
+              )}
+            </div>
             <button onClick={() => { reset(); fileRef.current?.click(); }} className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-background/90 px-2.5 py-1 text-xs font-medium"><RotateCcw className="h-3 w-3" />{t.retake}</button>
           </div>
         )}

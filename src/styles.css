@@ -119,3 +119,7 @@
   }
   h1, h2, h3 { font-family: var(--font-display); letter-spacing: 0; }
 }
+
+@keyframes photo-scan { 0%, 100% { top: 4%; } 50% { top: 94%; } }
+.photo-scan-line { animation: photo-scan 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .photo-scan-line { animation: none; top: 50%; } }
