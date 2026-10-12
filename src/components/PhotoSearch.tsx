@@ -53,8 +53,8 @@ function dominant(px: Lab[]): Lab | null {
   if (px.length < 8) return null;
   const buckets = new Map<string, Lab[]>();
   for (const p of px) { const k = `${Math.round(p[0] / 18)}|${Math.round(p[1] / 16)}|${Math.round(p[2] / 16)}`; (buckets.get(k) ?? buckets.set(k, []).get(k)!).push(p); }
-  const big = [...buckets.values()].sort((a, b) => b.length - a.length)[0];
-  return [0, 1, 2].map((i) => big.reduce((s, p) => s + p[i], 0) / big.length) as Lab;
+  const big = [...buckets.values()].sort((a, b) => b.length - a.length)[0]!;
+  return [0, 1, 2].map((i) => big.reduce((s, p) => s + p[i]!, 0) / big.length) as Lab;
 }
 
 function fingerprint(img: HTMLImageElement, cropCentre: boolean): Print | null {
@@ -64,7 +64,7 @@ function fingerprint(img: HTMLImageElement, cropCentre: boolean): Print | null {
   const side = Math.min(w, h) * (1 - 2 * m);
   ctx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, N, N);
   const d = ctx.getImageData(0, 0, N, N).data;
-  const lab = (x: number, y: number) => { const i = (y * N + x) * 4; return toLab([d[i], d[i + 1], d[i + 2]]); };
+  const lab = (x: number, y: number) => { const i = (y * N + x) * 4; return toLab([d[i]!, d[i + 1]!, d[i + 2]!]); };
   // Background = border colour. Normalise brightness against it (lighting tolerance).
   const border: Lab[] = []; for (let i = 0; i < N; i++) border.push(lab(i, 0), lab(i, N - 1), lab(0, i), lab(N - 1, i));
   const bg = dominant(border)!;
@@ -89,7 +89,7 @@ function fingerprint(img: HTMLImageElement, cropCentre: boolean): Print | null {
 function namedPrint(color: string | null): Print | null {
   const words = (color ?? "").toLowerCase().split(/[^a-z]+/).filter((w) => NAMED[w]);
   if (!words.length) return null;
-  return { upper: toLab(NAMED[words[0]]), sole: toLab(NAMED[words[1] ?? words[0]]), ratio: 0, fill: 0 };
+  return { upper: toLab(NAMED[words[0]!]!), sole: toLab(NAMED[words[1] ?? words[0]!]!), ratio: 0, fill: 0 };
 }
 
 const TXT = {
