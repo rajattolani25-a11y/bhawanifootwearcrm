@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Camera, Check, Clock, Globe, MapPin, MessageCircle, Package, Phone, Search, ShieldCheck, Sparkles, Copy, Store, Truck, X } from "lucide-react";
+import { Camera, Check, Clock, Globe, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, Sparkles, Sun, Copy, Store, Truck, X } from "lucide-react";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
@@ -49,17 +49,20 @@ function Catalog() {
   const [track, setTrack] = useState<string | null>(null);
   const [views, setViews] = useState(0);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
-  // Catalog always uses its own clean customer theme, independent of the app's dark/light setting.
+  // Catalog has its own customer theme (light by default, customer can switch in footer), independent of the app's setting.
+  const [dark, setDark] = useState(false);
+  useEffect(() => { if (localStorage.getItem("catalog-theme") === "dark") setDark(true); }, []);
   useEffect(() => {
     const el = document.documentElement;
     const wasDark = el.classList.contains("dark");
     const prev = el.style.colorScheme;
-    const force = () => { el.classList.remove("dark"); el.style.colorScheme = "light"; };
+    const force = () => { el.classList.toggle("dark", dark); el.style.colorScheme = dark ? "dark" : "light"; };
     force();
-    const obs = new MutationObserver(() => { if (el.classList.contains("dark")) force(); });
+    const obs = new MutationObserver(() => { if (el.classList.contains("dark") !== dark) force(); });
     obs.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => { obs.disconnect(); if (wasDark) el.classList.add("dark"); el.style.colorScheme = prev; };
-  }, []);
+    return () => { obs.disconnect(); el.classList.toggle("dark", wasDark); el.style.colorScheme = prev; };
+  }, [dark]);
+  const toggleTheme = () => { const d = !dark; setDark(d); localStorage.setItem("catalog-theme", d ? "dark" : "light"); };
   const [ptype, setPtype] = useState("All");
   const [photo, setPhoto] = useState(false);
   const { lang } = useLang();
@@ -150,7 +153,13 @@ function Catalog() {
           })}
         </div>
         {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
-        <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
+        <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground">
+          <span data-no-translate>© {shop.name}</span>
+          <span aria-hidden>·</span>
+          <button onClick={toggleTheme} aria-label="Switch theme" className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 font-medium hover:bg-muted">
+            {dark ? <><Sun className="h-3.5 w-3.5" /><span>Light</span></> : <><Moon className="h-3.5 w-3.5" /><span>Dark</span></>}
+          </button>
+        </div>
       </main>
       <ProductDialog key={open?.id ?? "none"} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
