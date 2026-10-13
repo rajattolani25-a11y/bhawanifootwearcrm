@@ -31,7 +31,7 @@ const waTo = (phone: string | null, text: string) => (phone ? `https://wa.me/${w
 function LangChip() {
   const { lang, setLang } = useLang();
   return (
-    <label className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs" data-no-translate>
+    <label className="flex h-8 items-center gap-1 rounded-full border border-border px-2.5 text-xs" data-no-translate>
       <Globe className="h-3.5 w-3.5" />
       <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as AppLanguage)} className="bg-transparent text-xs font-medium outline-none [&>option]:text-foreground">
         <option value="english">EN</option><option value="hindi">हिंदी</option><option value="hinglish">Hinglish</option>
@@ -99,51 +99,51 @@ function Catalog() {
         </div>
       </button>}
       <section className="border-b bg-card text-card-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:py-7">
-          <h1 className="font-sans text-2xl font-bold tracking-tight sm:text-3xl">Shop the collection</h1>
+        <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-7">
+          <h1 className="font-sans text-xl font-bold tracking-tight sm:text-3xl">Shop the collection</h1>
           <p className="mt-1 text-sm text-muted-foreground">Live sizes and prices from our store.</p>
           {shop.address && <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
         </div>
       </section>
 
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-3">
+        <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search footwear, brand or photo..." className="h-10 rounded-full pl-9 pr-11" />
             <button type="button" onClick={() => setPhoto(true)} aria-label="Search by photo" className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"><Camera className="h-4 w-4" /></button>
           </div>
           <PhotoSearch open={photo} onClose={() => setPhoto(false)} products={products} shopName={shop.name} lang={lang} waLink={(text) => waTo(shop.phone, text)} onPick={(p) => setOpen(p)} />
-          <div className="mt-3 flex gap-5 overflow-x-auto text-sm">
+          <div className="mt-2 flex gap-5 overflow-x-auto pt-1 text-sm [scrollbar-width:none]">
             {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 border-b-2 pb-1.5 font-semibold transition ${filter === f ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{f}</button>)}
           </div>
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl px-4 py-4">
-        <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
+      <main className="mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-4">
+        <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
           {([["Type", types, ptype, setPtype], ["Brand", brands, brand, setBrand], ["Size", sizeList, fsize, setFsize]] as [string, string[], string, (v: string) => void][]).filter(([, opts]) => opts.length > 2).map(([label, opts, val, setVal]) => (
-            <select key={label} aria-label={label} value={val} onChange={(e) => setVal(e.target.value)} className={`h-8 shrink-0 rounded-full border bg-background px-3 text-xs font-semibold ${val !== "All" ? "border-foreground text-foreground" : "text-muted-foreground"}`}>
+            <select key={label} aria-label={label} value={val} onChange={(e) => setVal(e.target.value)} className={`h-8 shrink-0 rounded-full border bg-card px-3 text-xs font-semibold ${val !== "All" ? "border-foreground text-foreground" : "text-muted-foreground"}`}>
               {opts.map((o) => <option key={o} value={o}>{o === "All" ? `${label} ▾` : label === "Size" ? `Size ${o}` : o}</option>)}
             </select>
           ))}
           {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className="shrink-0 text-xs font-semibold text-primary">Clear</button>}
         </div>
         <p className="mb-3 text-xs text-muted-foreground">{list.length} <span>designs</span></p>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
             return (
-              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group text-left">
-                <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
+              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group flex flex-col overflow-hidden rounded-xl border bg-card text-left shadow-sm transition hover:shadow-md">
+                <div className="relative aspect-square overflow-hidden bg-muted/60">
                   {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-5xl font-bold text-muted-foreground/30">{p.brand.slice(0, 1)}</div>}
                   {p.few_left && <span className="absolute left-2 top-2 rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold text-destructive">Few sizes left</span>}
                 </div>
-                <div className="pt-2.5">
+                <div className="flex flex-1 flex-col p-2.5">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground" data-no-translate>{p.brand}</p>
                   <p className="truncate text-sm font-semibold" data-no-translate>{p.article}</p>
                   <p className="mt-1 flex flex-wrap items-baseline gap-1.5"><span className="font-sans text-base font-bold">{inr(p.price)}</span>{off > 0 && <><span className="text-xs text-muted-foreground line-through">{inr(p.mrp)}</span><span className="text-xs font-semibold text-success">{off}% <span>OFF</span></span></>}</p>
-                  <p className="mt-1 truncate text-[11px] text-muted-foreground"><span>Sizes</span>: <span data-no-translate>{p.sizes.filter((s) => s.available).map((s) => s.size).join(", ")}</span></p>
+                  <p className="mt-auto truncate pt-1 text-[11px] text-muted-foreground"><span>Sizes</span>: <span data-no-translate>{p.sizes.filter((s) => s.available).map((s) => s.size).join(", ")}</span></p>
                 </div>
               </button>
             );
