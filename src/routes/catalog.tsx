@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Camera, Check, Clock, Globe, MapPin, MessageCircle, Package, Phone, Search, ShieldCheck, Sparkles, Copy, Store, Truck, X } from "lucide-react";
+import { Camera, Check, Clock, Globe, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, Sparkles, Sun, Copy, Store, Truck, X } from "lucide-react";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
@@ -49,17 +49,20 @@ function Catalog() {
   const [track, setTrack] = useState<string | null>(null);
   const [views, setViews] = useState(0);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
-  // Catalog always uses its own clean customer theme, independent of the app's dark/light setting.
+  // Catalog has its own customer theme (light by default, customer can switch in footer), independent of the app's setting.
+  const [dark, setDark] = useState(false);
+  useEffect(() => { if (localStorage.getItem("catalog-theme") === "dark") setDark(true); }, []);
   useEffect(() => {
     const el = document.documentElement;
     const wasDark = el.classList.contains("dark");
     const prev = el.style.colorScheme;
-    const force = () => { el.classList.remove("dark"); el.style.colorScheme = "light"; };
+    const force = () => { el.classList.toggle("dark", dark); el.style.colorScheme = dark ? "dark" : "light"; };
     force();
-    const obs = new MutationObserver(() => { if (el.classList.contains("dark")) force(); });
+    const obs = new MutationObserver(() => { if (el.classList.contains("dark") !== dark) force(); });
     obs.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => { obs.disconnect(); if (wasDark) el.classList.add("dark"); el.style.colorScheme = prev; };
-  }, []);
+    return () => { obs.disconnect(); el.classList.toggle("dark", wasDark); el.style.colorScheme = prev; };
+  }, [dark]);
+  const toggleTheme = () => { const d = !dark; setDark(d); localStorage.setItem("catalog-theme", d ? "dark" : "light"); };
   const [ptype, setPtype] = useState("All");
   const [photo, setPhoto] = useState(false);
   const { lang } = useLang();
