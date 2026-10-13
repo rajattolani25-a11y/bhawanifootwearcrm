@@ -153,7 +153,13 @@ function Catalog() {
           })}
         </div>
         {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
-        <p className="py-6 text-center text-xs text-muted-foreground" data-no-translate>© {shop.name}</p>
+        <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground">
+          <span data-no-translate>© {shop.name}</span>
+          <span aria-hidden>·</span>
+          <button onClick={toggleTheme} aria-label="Switch theme" className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 font-medium hover:bg-muted">
+            {dark ? <><Sun className="h-3.5 w-3.5" /><span>Light</span></> : <><Moon className="h-3.5 w-3.5" /><span>Dark</span></>}
+          </button>
+        </div>
       </main>
       <ProductDialog key={open?.id ?? "none"} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
