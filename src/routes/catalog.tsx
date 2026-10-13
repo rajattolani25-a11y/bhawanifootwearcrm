@@ -49,6 +49,17 @@ function Catalog() {
   const [track, setTrack] = useState<string | null>(null);
   const [views, setViews] = useState(0);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
+  // Catalog always uses its own clean customer theme, independent of the app's dark/light setting.
+  useEffect(() => {
+    const el = document.documentElement;
+    const wasDark = el.classList.contains("dark");
+    const prev = el.style.colorScheme;
+    const force = () => { el.classList.remove("dark"); el.style.colorScheme = "light"; };
+    force();
+    const obs = new MutationObserver(() => { if (el.classList.contains("dark")) force(); });
+    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => { obs.disconnect(); if (wasDark) el.classList.add("dark"); el.style.colorScheme = prev; };
+  }, []);
   const [ptype, setPtype] = useState("All");
   const [photo, setPhoto] = useState(false);
   const { lang } = useLang();
@@ -70,15 +81,15 @@ function Catalog() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card text-card-foreground">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-2.5">
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary font-display text-sm font-bold text-primary-foreground" data-no-translate>{shop.name.slice(0, 1)}</span>
-            <span className="truncate font-display font-bold" data-no-translate>{shop.name}</span>
+            <span className="truncate text-[15px] font-bold" data-no-translate>{shop.name}</span>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <button onClick={() => setTrack("")} className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium"><Package className="h-3.5 w-3.5" /><span>Track order</span></button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button onClick={() => setTrack("")} aria-label="Track order" className="flex h-8 items-center gap-1 rounded-full border border-border px-2.5 text-xs font-medium"><Package className="h-3.5 w-3.5" /><span className="hidden min-[400px]:inline">Track order</span></button>
             <LangChip />
-            {shop.phone && <a href={`tel:${shop.phone}`} className="rounded-full border border-border p-1.5" aria-label="Call store"><Phone className="h-3.5 w-3.5" /></a>}
+            {shop.phone && <a href={`tel:${shop.phone}`} className="flex h-8 w-8 items-center justify-center rounded-full border border-border" aria-label="Call store"><Phone className="h-3.5 w-3.5" /></a>}
           </div>
         </div>
       </div>
