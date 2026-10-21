@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Camera, Check, Clock, Globe, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, Sparkles, Sun, Copy, Store, Truck, X } from "lucide-react";
+import { ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
+import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
@@ -31,7 +32,7 @@ const waTo = (phone: string | null, text: string) => (phone ? `https://wa.me/${w
 function LangChip() {
   const { lang, setLang } = useLang();
   return (
-    <label className="flex h-8 items-center gap-1 rounded-full border border-border px-2.5 text-xs" data-no-translate>
+    <label className={styles["language"]} data-no-translate>
       <Globe className="h-3.5 w-3.5" />
       <select aria-label="Language" value={lang} onChange={(e) => setLang(e.target.value as AppLanguage)} className="bg-transparent text-xs font-medium outline-none [&>option]:text-foreground">
         <option value="english">EN</option><option value="hindi">हिंदी</option><option value="hinglish">Hinglish</option>
@@ -65,6 +66,7 @@ function Catalog() {
   const toggleTheme = () => { const d = !dark; setDark(d); localStorage.setItem("catalog-theme", d ? "dark" : "light"); };
   const [ptype, setPtype] = useState("All");
   const [photo, setPhoto] = useState(false);
+  const [help, setHelp] = useState(false);
   const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
@@ -81,91 +83,133 @@ function Catalog() {
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
 
+  const copy = CATALOG_COPY[lang];
+  const resetFilters = () => { setQ(""); setFilter("All"); setPtype("All"); setBrand("All"); setFsize("All"); };
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b bg-card text-card-foreground">
-        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary font-display text-sm font-bold text-primary-foreground" data-no-translate>{shop.name.slice(0, 1)}</span>
-            <span className="truncate text-[15px] font-bold" data-no-translate>{shop.name}</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button onClick={() => setTrack("")} aria-label="Track order" className="flex h-8 items-center gap-1 rounded-full border border-border px-2.5 text-xs font-medium"><Package className="h-3.5 w-3.5" /><span className="hidden min-[400px]:inline">Track order</span></button>
+    <div className={styles["store"]} data-theme={dark ? "dark" : "light"}>
+      <header className={styles["header"]}>
+        <div className={styles["headerInner"]}>
+          <a href="#catalog-collection" className={styles["identity"]} aria-label={shop.name}>
+            <span className={styles["logo"]}><ShoppingBag aria-hidden="true" /></span>
+            <span className={styles["wordmark"]} data-no-translate>{shop.name}</span>
+          </a>
+          <div className={styles["headerActions"]}>
+            <button onClick={() => setTrack("")} aria-label="Track order" className={styles["trackButton"]}><Package aria-hidden="true" /><span>Track order</span></button>
             <LangChip />
-            {shop.phone && <a href={`tel:${shop.phone}`} className="flex h-8 w-8 items-center justify-center rounded-full border border-border" aria-label="Call store"><Phone className="h-3.5 w-3.5" /></a>}
+            {shop.phone && <a href={`tel:${shop.phone}`} className={styles["iconButton"]} aria-label="Call store"><Phone aria-hidden="true" /></a>}
           </div>
         </div>
-      </div>
-      {data.offer && <button type="button" onClick={() => { if (data.offer?.code) { void navigator.clipboard?.writeText(data.offer.code); } }} className="block w-full bg-foreground text-background">
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-4 py-2 text-center text-[11px] font-medium uppercase tracking-[0.18em]">
-          <span className="truncate"><span>{data.offer.title}</span>{offerText(data.offer) && <> · {offerText(data.offer)}</>}{data.offer.code && <> · <span>Code</span> <b className="font-mono" data-no-translate>{data.offer.code}</b></>}</span>
-        </div>
+      </header>
+      {data.offer && <button type="button" onClick={() => { if (data.offer?.code) void navigator.clipboard?.writeText(data.offer.code); }} className={styles["offer"]}>
+        <span>{data.offer.title}</span>{offerText(data.offer) && <> · {offerText(data.offer)}</>}{data.offer.code && <> · <span>Code</span> <b data-no-translate>{data.offer.code}</b></>}
+        {data.offer.code && <Copy aria-hidden="true" />}
       </button>}
-      <section className="border-b bg-card text-card-foreground">
-        <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-7">
-          <h1 className="font-sans text-xl font-bold tracking-tight sm:text-3xl">Shop the collection</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Live sizes and prices from our store.</p>
-          {shop.address && <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 shrink-0" /><span data-no-translate>{shop.address}</span></p>}
+
+      <section className={styles["welcome"]}>
+        <div className={styles["welcomeInner"]}>
+          <div>
+            <p className={styles["eyebrow"]} data-no-translate>{copy.eyebrow}</p>
+            <h1 data-no-translate>{copy.heading}</h1>
+            <p className={styles["intro"]}>Live sizes and prices from our store.</p>
+            {shop.address && <p className={styles["address"]}><MapPin aria-hidden="true" /><span data-no-translate>{shop.address}</span></p>}
+          </div>
+          <div className={styles["services"]}>
+            {shop.booking && <span><Store aria-hidden="true" /><span>Store pickup</span></span>}
+            {(shop.local || shop.outside) && <span><Truck aria-hidden="true" /><span>{shop.local ? "Local delivery" : "Outside Jabalpur delivery"}</span></span>}
+          </div>
         </div>
       </section>
 
-      <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search footwear, brand or photo..." className="h-10 rounded-full pl-9 pr-11" />
-            <button type="button" onClick={() => setPhoto(true)} aria-label="Search by photo" className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"><Camera className="h-4 w-4" /></button>
+      <div className={styles["discovery"]}>
+        <div className={styles["discoveryInner"]}>
+          <div className={styles["search"]}>
+            <Search aria-hidden="true" />
+            <input aria-label={copy.search} value={q} onChange={(e) => setQ(e.target.value)} placeholder={copy.search} data-no-translate />
+            {q && <button onClick={() => setQ("")} aria-label="Clear search"><X aria-hidden="true" /></button>}
+            <button type="button" onClick={() => setPhoto(true)} aria-label="Ask about a photo" title={copy.photo}><Camera aria-hidden="true" /></button>
           </div>
-          <PhotoSearch open={photo} onClose={() => setPhoto(false)} products={products} shopName={shop.name} lang={lang} waLink={(text) => waTo(shop.phone, text)} onPick={(p) => setOpen(p)} />
-          <div className="mt-2 flex gap-5 overflow-x-auto pt-1 text-sm [scrollbar-width:none]">
-            {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} className={`shrink-0 border-b-2 pb-1.5 font-semibold transition ${filter === f ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{f}</button>)}
-          </div>
+          <nav className={styles["categories"]} aria-label={copy.categories}>
+            {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
+              {f === "All" && <ShoppingBag aria-hidden="true" />}<span>{f}</span>
+            </button>)}
+          </nav>
         </div>
       </div>
+      <PhotoSearch open={photo} onClose={() => setPhoto(false)} products={products} shopName={shop.name} lang={lang} waLink={(text) => waTo(shop.phone, text)} onPick={(p) => setOpen(p)} />
 
-      <main className="mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-4">
-        <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-          {([["Type", types, ptype, setPtype], ["Brand", brands, brand, setBrand], ["Size", sizeList, fsize, setFsize]] as [string, string[], string, (v: string) => void][]).filter(([, opts]) => opts.length > 2).map(([label, opts, val, setVal]) => (
-            <select key={label} aria-label={label} value={val} onChange={(e) => setVal(e.target.value)} className={`h-8 shrink-0 rounded-full border bg-card px-3 text-xs font-semibold ${val !== "All" ? "border-foreground text-foreground" : "text-muted-foreground"}`}>
-              {opts.map((o) => <option key={o} value={o}>{o === "All" ? `${label} ▾` : label === "Size" ? `Size ${o}` : o}</option>)}
-            </select>
-          ))}
-          {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className="shrink-0 text-xs font-semibold text-primary">Clear</button>}
+      <main id="catalog-collection" className={styles["collection"]}>
+        <div className={styles["collectionHeader"]}>
+          <div><h2>Shop the collection</h2><p>{list.length} <span>designs</span></p></div>
+          <div className={styles["filters"]}>
+            {([["Type", types, ptype, setPtype], ["Brand", brands, brand, setBrand], ["Size", sizeList, fsize, setFsize]] as [string, string[], string, (v: string) => void][]).filter(([, opts]) => opts.length > 1).map(([label, opts, val, setVal]) => (
+              <label key={label} className={styles["filter"]}>
+                <span>{label}</span>
+                <select aria-label={label} value={val} onChange={(e) => setVal(e.target.value)}>
+                  {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </label>
+            ))}
+            {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className={styles["clear"]}>Clear</button>}
+          </div>
         </div>
-        <p className="mb-3 text-xs text-muted-foreground">{list.length} <span>designs</span></p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <div className={styles["productGrid"]}>
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
+            const available = p.sizes.filter((size) => size.available);
             return (
-              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className="group flex flex-col overflow-hidden rounded-xl border bg-card text-left shadow-sm transition hover:shadow-md">
-                <div className="relative aspect-square overflow-hidden bg-muted/60">
-                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" className="h-full w-full object-contain p-3 transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-5xl font-bold text-muted-foreground/30">{p.brand.slice(0, 1)}</div>}
-                  {p.few_left && <span className="absolute left-2 top-2 rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold text-destructive">Few sizes left</span>}
+              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className={styles["productCard"]} aria-label={`${p.brand} ${p.article}`}>
+                <div className={styles["productImage"]}>
+                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" /> : <div className={styles["imageFallback"]}><ShoppingBag aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}
+                  {off > 0 && <span className={styles["discount"]}>{off}% <span>OFF</span></span>}
+                  {p.few_left && <span className={styles["limited"]}>Few sizes left</span>}
                 </div>
-                <div className="flex flex-1 flex-col p-2.5">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground" data-no-translate>{p.brand}</p>
-                  <p className="truncate text-sm font-semibold" data-no-translate>{p.article}</p>
-                  <p className="mt-1 flex flex-wrap items-baseline gap-1.5"><span className="font-sans text-base font-bold">{inr(p.price)}</span>{off > 0 && <><span className="text-xs text-muted-foreground line-through">{inr(p.mrp)}</span><span className="text-xs font-semibold text-success">{off}% <span>OFF</span></span></>}</p>
-                  <p className="mt-auto truncate pt-1 text-[11px] text-muted-foreground"><span>Sizes</span>: <span data-no-translate>{p.sizes.filter((s) => s.available).map((s) => s.size).join(", ")}</span></p>
+                <div className={styles["productInfo"]}>
+                  <p className={styles["brand"]} data-no-translate>{p.brand}</p>
+                  <h3 data-no-translate>{p.article}</h3>
+                  <p className={styles["price"]}><strong>{inr(p.price)}</strong>{off > 0 && <del>{inr(p.mrp)}</del>}</p>
+                  <div className={styles["sizeSummary"]}><span>Sizes</span><span className={styles["sizeChips"]} data-no-translate>{available.length ? available.map((size) => <span key={size.id}>{size.size}</span>) : "—"}</span></div>
+                  <span className={styles["cardAction"]}><span>{available.length ? "Choose size" : "Out of stock"}</span><ArrowRight aria-hidden="true" /></span>
                 </div>
               </button>
             );
           })}
         </div>
-        {list.length === 0 && <div className="py-16 text-center"><p className="font-semibold">No designs found.</p><p className="text-sm text-muted-foreground">Try another search or category.</p></div>}
-        <div className="flex items-center justify-center gap-3 py-6 text-xs text-muted-foreground">
-          <span data-no-translate>© {shop.name}</span>
-          <span aria-hidden>·</span>
-          <button onClick={toggleTheme} aria-label="Switch theme" className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 font-medium hover:bg-muted">
-            {dark ? <><Sun className="h-3.5 w-3.5" /><span>Light</span></> : <><Moon className="h-3.5 w-3.5" /><span>Dark</span></>}
-          </button>
-        </div>
+        {list.length === 0 && <div className={styles["empty"]}><Search aria-hidden="true" /><h3>No designs found.</h3><p>Try another search or category.</p><button onClick={resetFilters} data-no-translate>{copy.reset}</button></div>}
+        <footer className={styles["footer"]}>
+          <div><p data-no-translate>{shop.name}</p>{shop.address && <span data-no-translate>{shop.address}</span>}</div>
+          <div className={styles["footerActions"]}>
+            <button onClick={() => setHelp(true)} data-no-translate>{copy.help}</button>
+            <button onClick={toggleTheme} aria-label="Switch theme">{dark ? <><Sun aria-hidden="true" /><span>Light</span></> : <><Moon aria-hidden="true" /><span>Dark</span></>}</button>
+          </div>
+        </footer>
       </main>
+      <nav className={styles["bottomNav"]} aria-label={copy.navigation}>
+        <a href="#catalog-collection" aria-current="page"><ShoppingBag aria-hidden="true" /><span data-no-translate>{copy.shop}</span></a>
+        <button onClick={() => setTrack("")}><Package aria-hidden="true" /><span data-no-translate>{copy.orders}</span></button>
+        <button onClick={() => setHelp(true)}><HelpCircle aria-hidden="true" /><span data-no-translate>{copy.help}</span></button>
+      </nav>
+      <Dialog open={help} onOpenChange={setHelp}>
+        <DialogContent className={`${styles["dialog"]} sm:max-w-md`}>
+          <DialogHeader><DialogTitle data-no-translate>{copy.help}</DialogTitle></DialogHeader>
+          <p className="font-semibold" data-no-translate>{shop.name}</p>
+          {shop.address && <p className="text-sm text-muted-foreground" data-no-translate>{shop.address}</p>}
+          {shop.phone && <Button asChild variant="outline" className="h-12"><a href={`tel:${shop.phone}`}><Phone className="h-4 w-4" /><span>Call store</span><span data-no-translate>{shop.phone}</span></a></Button>}
+          {shop.phone && <Button asChild className="h-12"><a href={waTo(shop.phone, enquiryText(lang, shop.name, "", ""))!} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /><span>Ask on WhatsApp & visit store</span></a></Button>}
+          <Button variant="secondary" className="h-12" onClick={() => { setHelp(false); setTrack(""); }}><Package className="h-4 w-4" /><span>Track order</span></Button>
+        </DialogContent>
+      </Dialog>
       <ProductDialog key={open?.id ?? "none"} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
 }
+
+const CATALOG_COPY: Record<AppLanguage, { eyebrow: string; heading: string; search: string; photo: string; categories: string; reset: string; shop: string; orders: string; help: string; navigation: string }> = {
+  english: { eyebrow: "GOOD FOOTWEAR. EVERY DAY.", heading: "Find your everyday pair.", search: "Search footwear or brand", photo: "Ask about a photo on WhatsApp", categories: "Footwear categories", reset: "Clear all filters", shop: "Shop", orders: "Orders", help: "Help", navigation: "Catalog navigation" },
+  hindi: { eyebrow: "हर दिन, आराम के साथ।", heading: "अपनी पसंद की जोड़ी चुनें।", search: "जूते, चप्पल या ब्रांड खोजें", photo: "फोटो के बारे में WhatsApp पर पूछें", categories: "फुटवियर श्रेणियाँ", reset: "सभी फ़िल्टर हटाएँ", shop: "खरीदें", orders: "ऑर्डर", help: "मदद", navigation: "कैटलॉग नेविगेशन" },
+  hinglish: { eyebrow: "HAR DIN KE LIYE ACHHE FOOTWEAR.", heading: "Apni pasand ki jodi chunein.", search: "Footwear ya brand khojein", photo: "Photo ke baare mein WhatsApp par poochein", categories: "Footwear categories", reset: "Saare filters hatayein", shop: "Shop", orders: "Orders", help: "Madad", navigation: "Catalog navigation" },
+};
 
 const STEPS_PICKUP = ["pending", "confirmed", "packed", "picked"];
 const STEPS_DELIVERY = ["pending", "confirmed", "packed", "shipped", "delivered"];
@@ -267,7 +311,7 @@ function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className={`${styles["dialog"]} max-h-[92vh] overflow-y-auto sm:max-w-lg`}>
         <DialogHeader><DialogTitle><span data-no-translate>{label}</span></DialogTitle></DialogHeader>
         {step === "view" && <div className="flex flex-col gap-4">
           <div className="aspect-square overflow-hidden rounded-lg bg-muted">{product.image ? <img src={product.image} alt={label} className="h-full w-full object-contain p-3" /> : null}</div>
@@ -360,7 +404,7 @@ function TrackDialog({ initial, onClose }: { initial: string; onClose: () => voi
   const when = (s: string) => r?.history?.filter((h) => h.status === s).pop()?.at;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className={`${styles["dialog"]} max-h-[92vh] overflow-y-auto sm:max-w-md`}>
         <DialogHeader><DialogTitle>Track your order</DialogTitle></DialogHeader>
         <Input value={no} onChange={(e) => setNo(e.target.value.toUpperCase())} placeholder="Order no. (e.g. BK-1004-AB12)" className="h-11" />
         <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="Mobile number" inputMode="numeric" maxLength={14} className="h-11" />

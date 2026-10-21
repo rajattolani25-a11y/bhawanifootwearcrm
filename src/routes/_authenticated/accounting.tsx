@@ -13,8 +13,10 @@ import { printHtml } from "@/lib/print";
 import { useLang } from "@/lib/i18n";
 import { useShop } from "@/hooks/use-shop";
 import { fetchAll, one } from "@/lib/fetch-all";
+import { requireOwnerRoute } from "@/lib/owner-route";
 
 export const Route = createFileRoute("/_authenticated/accounting")({
+  beforeLoad: requireOwnerRoute,
   head: () => ({ meta: [{ title: "Accounting — SoleStack POS" }, { name: "description", content: "Monthly profit, cash movements, tax and supplier balances." }, { property: "og:title", content: "Accounting — SoleStack POS" }, { property: "og:description", content: "Reconciled retail profit, cash book and tax summary." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: Accounting,
 });
 const CATS = ["Rent", "Salary", "Electricity", "Transport", "Tea/Snacks", "Marketing", "Repair", "Other"];

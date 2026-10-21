@@ -1,7 +1,7 @@
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Printer, MessageCircle, Undo2, IndianRupee } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,20 +29,41 @@ function Sales() {
   const shop = useShop();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  useEffect(() => {
+    if (q.trim() === search) return;
+    const timer = window.setTimeout(() => {
+      setSearch(q.trim());
+      setPage(0);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [q, search]);
   const [ret, setRet] = useState<SaleRow | null>(null);
   const [collect, setCollect] = useState<SaleRow | null>(null);
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState("Cash");
-  const { data = [] } = useQuery({
-    queryKey: ["sales"],
+  const { data, error, isPending } = useQuery({
+    queryKey: ["sales", search, page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("sales")
-        .select("id,bill_no,sale_date,customer_name,payment_mode,total,due_amount,customers(mobile),sale_items(id,product_name,size,qty,price)")
+        .select("id,bill_no,sale_date,customer_name,payment_mode,total,due_amount,customers(mobile),customer_match:customers(),sale_items(id,product_name,size,qty,price)", { count: "exact" });
+      if (search) {
+        // Empty embedding lets the mobile match join the OR without filtering
+        // out bills that match by bill number/name but have no customer.
+        const pattern = `%${search.replace(/[\\%_]/g, "\\$&")}%`;
+        const quoted = `"${pattern.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+        query = query.ilike("customer_match.mobile", pattern)
+          .or(`bill_no.ilike.${quoted},customer_name.ilike.${quoted},customer_match.not.is.null`);
+      }
+      const { data, error, count } = await query
         .order("sale_date", { ascending: false })
-        .limit(300);
+        .order("id", { ascending: false })
+        .range(page * pageSize, (page + 1) * pageSize - 1);
       if (error) throw error;
-      return data as unknown as SaleRow[];
+      return { rows: data as unknown as SaleRow[], count: count ?? 0 };
     },
   });
   const { data: returns = [] } = useQuery({
@@ -50,8 +71,7 @@ function Sales() {
     queryFn: async () => (await supabase.from("sale_returns").select("sale_item_id,qty")).data ?? [],
   });
   const returned = (id: string) => returns.filter((r) => r.sale_item_id === id).reduce((a, r) => a + r.qty, 0);
-  const s = q.toLowerCase();
-  const list = data.filter((x) => !s || x.bill_no.toLowerCase().includes(s) || (x.customer_name ?? "").toLowerCase().includes(s) || x.customers?.mobile.includes(s));
+  const list = data?.rows ?? [];
   const reprint = (b: string, d: PrintDesign) => printBill(b, d).catch((e) => toast.error(e.message));
   async function collectPayment() {
     if (!collect) return;
@@ -65,6 +85,7 @@ function Sales() {
   return (
     <div>
       <PageHeader title="Sales History" subtitle="Re-print bill, WhatsApp bill, return or exchange." actions={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Bill no, name or mobile" className="h-10 w-64" />} />
+      {error && <p role="alert" className="mb-3 text-destructive">Unable to load sales: {error.message}</p>}
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
@@ -92,9 +113,14 @@ function Sales() {
                 </td>
               </tr>
             ))}
-            {list.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No bills.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{isPending ? "Loading bills…" : error ? "Bills could not be loaded." : "No bills."}</td></tr>}
           </tbody>
         </table>
+      </div>
+      <div className="mt-3 flex items-center justify-end gap-3">
+        <span className="text-sm text-muted-foreground">Page {page + 1} · {data?.count ?? 0} bills</span>
+        <Button variant="outline" disabled={page === 0 || isPending} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+        <Button variant="outline" disabled={!data || (page + 1) * pageSize >= data.count || isPending} onClick={() => setPage((p) => p + 1)}>Next</Button>
       </div>
       <ReturnDialog sale={ret} onClose={() => setRet(null)} returned={returned} onDone={() => qc.invalidateQueries()} />
       <Dialog open={!!collect} onOpenChange={(o) => !o && setCollect(null)}>

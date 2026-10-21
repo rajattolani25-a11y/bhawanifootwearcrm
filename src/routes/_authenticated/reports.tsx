@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { inr } from "@/lib/modules";
 import { downloadCsv } from "@/lib/stock";
 import { fetchAll, one } from "@/lib/fetch-all";
+import { requireOwnerRoute } from "@/lib/owner-route";
 
 export const Route = createFileRoute("/_authenticated/reports")({
+  beforeLoad: requireOwnerRoute,
   head: () => ({ meta: [{ title: "Reports — SoleStack POS" }, { name: "description", content: "Sales, GST, profit, brand and size reports." }, { property: "og:title", content: "Reports — SoleStack POS" }, { property: "og:description", content: "Sales, tax and footwear performance reports." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Reports,
 });

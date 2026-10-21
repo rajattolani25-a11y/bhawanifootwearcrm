@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine, PackagePlus, Ticket } from "lucide-react";
+import { Banknote, CreditCard, ReceiptText as ReceiptTextIcon, Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine, PackagePlus, Ticket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import { addSignedImages } from "@/lib/product-images";
 import { billMessage, shareText, smsLink } from "@/lib/messages";
 import { sizeSort } from "@/lib/stock";
 import { QuickAddProduct } from "@/components/QuickAddProduct";
+import { useLang } from "@/lib/i18n";
+import styles from "./pos.module.css";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -30,6 +32,9 @@ const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/
 
 function POS() {
   const shop = useShop();
+  const { lang } = useLang();
+  const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
+  const copy = POS_COPY[lang];
   const qc = useQueryClient();
   const searchRef = useRef<HTMLInputElement>(null);
   const mobileRef = useRef<HTMLInputElement>(null);
@@ -72,7 +77,7 @@ function POS() {
     localStorage.setItem(HOLD_KEY, JSON.stringify(h));
   };
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], error: productsError, isPending: productsPending } = useQuery({
     queryKey: ["pos-products"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -333,64 +338,48 @@ function POS() {
   const waText = done ? billMessage({ shop: shop.name, name: done.name, billNo: done.bill_no, total: done.total, paid: done.paid, due: done.due, stamp: done.stamp, rewards: done.unlocked }) : "";
 
   return (
-    <div className="grid min-h-[calc(100vh-2.5rem)] gap-3 md:h-[calc(100vh-4.5rem)] md:min-h-[460px] md:grid-cols-[minmax(0,1fr)_320px] md:overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
-      {/* LEFT: products */}
-      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-card">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2">
-          <div><h1 className="text-lg font-bold">POS Billing</h1><p className="text-[11px] text-muted-foreground">Scan, choose size and complete the bill</p></div>
-          <span className="hidden items-center gap-1.5 rounded-md bg-success/15 px-2 py-1 text-[10px] font-semibold text-success sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />Ready</span>
+    <div className={styles["workspace"]} data-mobile-pane={mobilePane}>
+      <nav className={styles["mobileTabs"]} aria-label={copy.workspace}>
+        <button aria-pressed={mobilePane === "products"} onClick={() => setMobilePane("products")}><PackagePlus aria-hidden="true" /><span>{copy.products}</span></button>
+        <button aria-pressed={mobilePane === "cart"} onClick={() => setMobilePane("cart")}><ReceiptTextIcon /><span>{copy.cart}</span><b>{cart.reduce((a, i) => a + i.qty, 0)}</b></button>
+      </nav>
+      <section className={styles["productsPanel"]} aria-label={copy.products}>
+        <header className={styles["productHeader"]}>
+          <div><p className={styles["eyebrow"]} data-no-translate>{shop.name}</p><h1>POS Billing</h1><p>Scan, choose size and complete the bill</p></div>
+          <span className={styles["status"]} role="status">{productsPending ? "Loading…" : productsError ? "Unavailable" : "Ready"}</span>
+        </header>
+        <div className={styles["searchBar"]}>
+          <div className={styles["searchInput"]}><Search aria-hidden="true" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} aria-label="Search or scan products" placeholder="F2 · Scan barcode or search article" /></div>
+          <Button variant="outline" size="icon" title="Scan with phone camera" aria-label="Scan with phone camera" onClick={() => setCameraOpen(true)}><ScanLine className="h-4 w-4" /></Button>
+          <Button variant="outline" onClick={() => setQuickOpen(true)} aria-label="Quick add product"><PackagePlus className="h-4 w-4" /><span className={styles["quickAddText"]}>Quick add</span></Button>
         </div>
-        <div className="flex shrink-0 gap-2 p-3 pb-2"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} placeholder="F2 · Scan barcode or search article" className="h-9 pl-9 text-sm" /></div><Button variant="outline" size="icon" className="h-9 w-9" title="Scan with phone camera" aria-label="Scan with phone camera" onClick={()=>setCameraOpen(true)}><ScanLine className="h-4 w-4"/></Button><Button variant="outline" className="h-9 px-2.5 text-xs" onClick={()=>setQuickOpen(true)}><PackagePlus className="h-4 w-4"/><span className="hidden sm:inline">Quick add</span></Button></div>
-        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-1">
-          {cats.map((c) => (
-             <Button key={c} size="sm" variant={cat === c ? "default" : "secondary"} onClick={() => setCat(c)} className="h-7 shrink-0 px-2.5 text-xs">{c}</Button>
-          ))}
+        <div className={styles["categories"]} role="group" aria-label="Category">
+          {cats.map((c) => <button key={c} aria-pressed={cat === c} onClick={() => setCat(c)}>{c}</button>)}
         </div>
-        <div className="flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2">
-          {brands.map((b) => (
-             <Button key={b} size="sm" variant="outline" onClick={() => setBrand(b)} className={`h-7 shrink-0 px-2.5 text-[10px] uppercase ${brand === b ? "border-primary text-primary" : "text-muted-foreground"}`}>{b}</Button>
-          ))}
+        <div className={styles["brands"]} role="group" aria-label="Brand">
+          {brands.map((b) => <button key={b} aria-pressed={brand === b} onClick={() => setBrand(b)} data-no-translate>{b}</button>)}
         </div>
-        {held.length > 0 && (
-          <div className="flex shrink-0 flex-wrap gap-2 px-3 pb-2">
-            {held.map((h) => (
-              <Button key={h.id} variant="outline" size="sm" onClick={() => resume(h)} className="h-7 border-warning bg-warning/15 px-2 text-xs">
-                <Play className="h-3 w-3" /> {h.label} · {h.cart.reduce((a, i) => a + i.qty, 0)} pairs
-              </Button>
-            ))}
-          </div>
-        )}
-        <div className="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto px-3 pb-3 sm:grid-cols-2 xl:grid-cols-3">
-          {list.map((p) => (
-            <div key={p.id} className="overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary">
-              <div className="flex h-16 items-center gap-2 bg-muted/50 p-2">
-                <div className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-background">{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center font-display text-lg text-muted-foreground/35">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}</div>
-                <div className="min-w-0 flex-1"><p className="text-[9px] font-bold uppercase text-primary">{p.brand}</p><p className="truncate text-sm font-semibold">{p.article}</p><p className="text-xs font-bold">{inr(p.selling_price)}</p></div>
-              </div>
-              <div className="flex flex-wrap gap-1 p-2">
-                {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => addVariant(p, v)}
-                    className={`min-w-9 rounded-md px-1.5 py-1 text-xs font-bold transition active:scale-95 ${v.stock <= 0 ? "bg-destructive/15 text-destructive line-through" : "bg-success/15 text-success hover:bg-success hover:text-success-foreground"}`}
-                  >
-                    {v.size}
-                    <span className="block text-[9px] font-medium opacity-80">{v.stock}</span>
-                  </button>
-                ))}
-              </div>
+        {held.length > 0 && <div className={styles["heldBills"]}>
+          {held.map((h) => <button key={h.id} onClick={() => resume(h)}><Play aria-hidden="true" /><span>{h.label} · {h.cart.reduce((a, i) => a + i.qty, 0)} pairs</span></button>)}
+        </div>}
+        <div className={styles["productGrid"]}>
+          {list.map((p) => <article key={p.id} className={styles["productCard"]}>
+            <div className={styles["productPhoto"]}>{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} loading="lazy" /> : <div className={styles["photoFallback"]}><PackagePlus aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}</div>
+            <div className={styles["productInfo"]}><p className={styles["productBrand"]} data-no-translate>{p.brand}</p><h2 data-no-translate>{p.article}</h2><strong>{inr(p.selling_price)}</strong></div>
+            <div className={styles["quickSizes"]} role="group" aria-label={`${p.brand} ${p.article} sizes`}>
+              {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => <button key={v.id} onClick={() => addVariant(p, v)} aria-label={`${p.brand} ${p.article}, size ${v.size}, ${v.stock} in stock`} data-available={v.stock > 0}>
+                <b>{v.size}</b><span>{v.stock} <span>left</span></span>
+              </button>)}
             </div>
-          ))}
-          {!list.length && <p className="text-sm text-muted-foreground">No products found.</p>}
+          </article>)}
+          {!list.length && <div className={styles["emptyProducts"]}><Search aria-hidden="true" /><p>{productsPending ? "Loading products…" : productsError ? "Unable to load products." : "No products found."}</p>{productsError && <button onClick={() => qc.refetchQueries({ queryKey: ["pos-products"] })}>Try again</button>}</div>}
         </div>
+        <div className={styles["shortcuts"]}><span>F2 · Search</span><span>F4 · Customer</span><span>F8 · Complete Sale</span></div>
       </section>
 
-      {/* RIGHT: cart */}
-       <aside className="min-h-0 md:h-full">
-         <div className="flex h-full min-h-[460px] flex-col overflow-hidden rounded-lg border bg-card">
-          {/* customer */}
-           <div className="shrink-0 border-b p-3">
-             <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Active transaction · {cart.reduce((a, i) => a + i.qty, 0)} pairs</p>{cart.length > 0 && <Button variant="ghost" size="sm" onClick={reset} className="h-6 px-2 text-[10px] text-destructive">Clear</Button>}</div>
+      <aside className={styles["cartPanel"]} aria-label={copy.cart}>
+        <div className={styles["customerSection"]}>
+          <div className={styles["cartHeading"]}><h2>{copy.cart} <span>({cart.reduce((a, i) => a + i.qty, 0)})</span></h2>{cart.length > 0 && <button onClick={reset} className={styles["clearCart"]}><Trash2 aria-hidden="true" /><span>Clear</span></button>}</div>
             {customer ? (
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -413,36 +402,32 @@ function POS() {
                 )}
               </>
             )}
-          </div>
 
-          {/* items */}
-           <div className="min-h-[36px] flex-1 space-y-1.5 overflow-y-auto p-2.5">
-            {cart.map((i) => (
-               <div key={i.variant_id} className="flex items-center gap-1.5 rounded-md bg-muted/60 p-1.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{i.brand} {i.product_name}</p>
-                  <p className="text-xs text-muted-foreground">Size <b className="text-foreground">{i.size}</b> · {inr(i.price)}</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button className="rounded bg-card p-1.5" onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))}><Minus className="h-3 w-3" /></button>
-                  <span className="w-6 text-center text-sm font-bold">{i.qty}</span>
-                  <button className="rounded bg-card p-1.5" onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.min(x.max, x.qty + 1) } : x)))}><Plus className="h-3 w-3" /></button>
-                </div>
-                <p className="w-16 text-right text-sm font-semibold">{inr(i.price * i.qty)}</p>
-                <button onClick={() => setCart((c) => c.filter((x) => x.variant_id !== i.variant_id))}><Trash2 className="h-4 w-4 text-destructive" /></button>
-              </div>
-            ))}
-            {!cart.length && <p className="py-10 text-center text-sm text-muted-foreground">Scan or tap a size to add.</p>}
-          </div>
-
-          {/* totals */}
-           <div className="shrink-0 space-y-1 border-t bg-muted/25 p-2.5">
+        </div>
+        <div className={styles["cartItems"]}>
+          {cart.map((i) => <div key={i.variant_id} className={styles["cartItem"]}>
+            <div className={styles["cartItemText"]}><p data-no-translate>{i.brand} {i.product_name}</p><span>Size <b>{i.size}</b> · {inr(i.price)}</span></div>
+            <div className={styles["quantity"]}>
+              <button aria-label={`Decrease ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))}><Minus aria-hidden="true" /></button>
+              <span>{i.qty}</span>
+              <button aria-label={`Increase ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.min(x.max, x.qty + 1) } : x)))}><Plus aria-hidden="true" /></button>
+            </div>
+            <strong className={styles["itemAmount"]}>{inr(i.price * i.qty)}</strong>
+            <button className={styles["removeItem"]} aria-label={`Remove ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.filter((x) => x.variant_id !== i.variant_id))}><Trash2 aria-hidden="true" /></button>
+          </div>)}
+          {!cart.length && <div className={styles["emptyCart"]}><ReceiptTextIcon /><p>Scan or tap a size to add.</p></div>}
+        </div>
+        <section className={styles["checkout"]} aria-label={copy.payment}>
             {reward && (
               <div className={`flex items-center justify-between rounded-lg p-2.5 text-sm ${rewardOn ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground line-through"}`}>
                 <span className="flex items-center gap-1.5"><Gift className="h-4 w-4" /> {reward.card === "premium" ? "Premium" : "Regular"} reward −{inr(reward.amount)}</span>
                 <button className="text-xs font-semibold underline" onClick={() => setRewardOn(!rewardOn)}>{rewardOn ? "Remove" : "Apply"}</button>
               </div>
             )}
+
+          <details className={styles["billOptions"]}>
+            <summary>{copy.options}<span>{copy.optionHint}</span></summary>
+            <div className={styles["optionFields"]}>
             {coupon ? (
               <div className="flex items-center justify-between rounded-lg bg-accent p-2 text-sm text-accent-foreground">
                 <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {coupon.code}{coupon.title ? ` · ${coupon.title}` : ""} −{inr(coupon.amount)}</span>
@@ -450,8 +435,8 @@ function POS() {
               </div>
             ) : (
               <div className="flex gap-1.5">
-                <Input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") void checkCoupon(couponInput); }} placeholder="Coupon code" className="h-7 text-xs uppercase" aria-label="Coupon code" />
-                <Button type="button" variant="secondary" className="h-7 px-2 text-[11px]" disabled={!couponInput.trim() || !cart.length} onClick={() => checkCoupon(couponInput)}><Ticket className="h-3.5 w-3.5" /> Apply</Button>
+                <Input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") void checkCoupon(couponInput); }} placeholder="Coupon code" className="h-9 text-sm uppercase" aria-label="Coupon code" />
+                <Button type="button" variant="secondary" className="h-9 px-3 text-xs" disabled={!couponInput.trim() || !cart.length} onClick={() => checkCoupon(couponInput)}><Ticket className="h-3.5 w-3.5" /> Apply</Button>
               </div>
             )}
             {customer && (
@@ -463,66 +448,61 @@ function POS() {
                 </div>
               </div>
             )}
-             <div className="grid grid-cols-3 gap-1.5 text-[9px] font-medium text-muted-foreground">
+             <div className="grid grid-cols-3 gap-1.5 text-xs font-medium text-muted-foreground">
               <label>Bill type
-                 <select value={billType} onChange={(e) => setBillType(e.target.value as "gst" | "simple")} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
+                 <select value={billType} onChange={(e) => setBillType(e.target.value as "gst" | "simple")} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1 text-xs text-foreground">
                   <option value="gst">GST Invoice</option><option value="simple">Cash Memo</option>
                 </select>
               </label>
               <label>Tax mode
-                 <select value={taxMode} disabled={billType !== "gst"} onChange={(e) => setTaxMode(e.target.value as "inclusive" | "exclusive")} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
+                 <select value={taxMode} disabled={billType !== "gst"} onChange={(e) => setTaxMode(e.target.value as "inclusive" | "exclusive")} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1 text-xs text-foreground">
                   <option value="exclusive">Exclusive (Add)</option><option value="inclusive">Inclusive (Extract)</option>
                 </select>
               </label>
               <label>Print style
-                 <select value={design} onChange={(e) => setDesign(e.target.value as PrintDesign)} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
+                 <select value={design} onChange={(e) => setDesign(e.target.value as PrintDesign)} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1 text-xs text-foreground">
                   <option>Thermal</option><option>A4</option><option>Premium</option>
                 </select>
               </label>
             </div>
-             <div className="grid grid-cols-2 gap-1.5 text-[9px] font-medium text-muted-foreground">
-               <label>Bill discount ₹<Input value={billDiscount} onChange={(e) => setBillDiscount(e.target.value)} inputMode="decimal" placeholder="0" className="mt-0.5 h-7 text-xs" /></label>
+             <div className="grid grid-cols-2 gap-1.5 text-xs font-medium text-muted-foreground">
+               <label>Bill discount ₹<Input value={billDiscount} onChange={(e) => setBillDiscount(e.target.value)} inputMode="decimal" placeholder="0" className="mt-0.5 h-9 text-sm" /></label>
               <label>GST %
-                 <select value={billType === "gst" ? rate : 0} disabled={billType !== "gst"} onChange={(e) => setRate(Number(e.target.value))} className="mt-0.5 h-7 w-full rounded-md border bg-background px-1 text-[11px] text-foreground">
+                 <select value={billType === "gst" ? rate : 0} disabled={billType !== "gst"} onChange={(e) => setRate(Number(e.target.value))} className="mt-0.5 h-9 w-full rounded-md border bg-background px-1 text-xs text-foreground">
                   {billType !== "gst" && <option value={0}>No GST</option>}
                   {[5, 12, 18].map((r) => <option key={r} value={r}>{r}%</option>)}
                 </select>
               </label>
             </div>
-            <div className="grid grid-cols-5 gap-1.5">
-              {(["Cash", "UPI", "Card", "Split", "Credit"] as const).map((m) => (
-                 <Button key={m} type="button" variant={pay === m ? "default" : "secondary"} onClick={() => setPay(m)} className="h-7 px-1 text-[10px]">{m}</Button>
-              ))}
+
             </div>
-             {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" placeholder={`Cash part · rest ${inr(bill.total - (Number(splitCash) || 0))}`} className="h-7 text-xs" />}
-            <div>
-               <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" placeholder={pay === "Credit" ? "Advance received · customer required" : "Amount received · blank = exact"} className="h-7 text-xs" />
-               <div className="mt-1 grid grid-cols-4 gap-1">
-                {[["Exact", 0], ["+100", 100], ["+500", 500], ["+1000", 1000]].map(([l, v]) => (
-                   <Button key={l} type="button" variant="secondary" onClick={() => setReceived(String(v === 0 ? bill.total : (Number(received) || 0) + Number(v)))} className="h-6 px-1 text-[10px]">{l}</Button>
-                ))}
-              </div>
-            </div>
-             <div className="grid grid-cols-2 gap-x-3 rounded-md bg-muted/60 p-2 text-[11px]">
+          </details>
+          <div className={styles["breakdown"]}>
               <Row k="Subtotal" v={inr(bill.subtotal)} />
               <Row k={couponAmt || rewardAmt ? "Discount (all)" : "Bill discount"} v={`−${inr(bill.discount)}`} />
               {bill.rate > 0 && <Row k="Taxable" v={inr(bill.taxable)} />}
               {bill.rate > 0 && <Row k={`GST ${bill.rate}% ${taxMode === "inclusive" ? "(incl.)" : "(added)"}`} v={inr(bill.gst)} />}
               <Row k={due > 0 ? "Due" : "Change"} v={inr(due > 0 ? due : change)} />
-               <div className="col-span-2 mt-1 flex items-end justify-between border-t pt-1">
-                <span className="font-semibold">Total</span>
-                 <span className="font-display text-xl font-bold">{inr(bill.total)}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-[auto_1fr] gap-2">
-               <Button variant="outline" className="h-8" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
-               <Button className="h-8 text-sm" onClick={complete} disabled={!cart.length || busy}>
-                {busy ? "Saving…" : `F8 · Complete Sale ${inr(bill.total)}`}
-              </Button>
-            </div>
+
           </div>
-        </div>
+          <div className={styles["paymentMethods"]} role="group" aria-label={copy.payment}>
+            {(["Cash", "UPI", "Card", "Split", "Credit"] as const).map((m) => <button key={m} type="button" aria-pressed={pay === m} onClick={() => setPay(m)}>{m === "Cash" ? <Banknote aria-hidden="true" /> : m === "UPI" ? <Smartphone aria-hidden="true" /> : m === "Card" ? <CreditCard aria-hidden="true" /> : null}<span>{m}</span></button>)}
+          </div>
+          {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" aria-label="Split cash amount" placeholder={`Cash part · rest ${inr(bill.total - (Number(splitCash) || 0))}`} className={styles["received"]} />}
+          <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" aria-label="Amount received" placeholder={pay === "Credit" ? "Advance received · customer required" : "Amount received · blank = exact"} className={styles["received"]} />
+          <div className={styles["quickAmounts"]}>
+            {[["Exact", 0], ["+100", 100], ["+500", 500], ["+1000", 1000]].map(([l, v]) => <button key={l} type="button" onClick={() => setReceived(String(v === 0 ? bill.total : (Number(received) || 0) + Number(v)))}>{l}</button>)}
+          </div>
+        </section>
+        <footer className={styles["paymentFooter"]}>
+          <div className={styles["grandTotal"]}><span>Total</span><strong>{inr(bill.total)}</strong></div>
+          <div className={styles["saleActions"]}>
+            <Button variant="outline" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
+            <Button onClick={complete} disabled={!cart.length || busy}>{busy ? "Saving…" : `F8 · Complete Sale ${inr(bill.total)}`}</Button>
+          </div>
+        </footer>
       </aside>
+      <button className={styles["mobileCartBar"]} onClick={() => setMobilePane("cart")}><span>{copy.cart} · {cart.reduce((a, i) => a + i.qty, 0)} pairs</span><strong>{inr(bill.total)} →</strong></button>
 
       <Dialog open={!!done} onOpenChange={(o) => !o && setDone(null)}>
         <DialogContent className="sm:max-w-sm">
@@ -576,3 +556,9 @@ function Row({ k, v }: { k: string; v: string }) {
     </div>
   );
 }
+
+const POS_COPY = {
+  english: { products: "Products", cart: "Cart", payment: "Payment", options: "Bill options", optionHint: "Coupon, tax & print", workspace: "POS workspace" },
+  hindi: { products: "प्रोडक्ट", cart: "कार्ट", payment: "भुगतान", options: "बिल विकल्प", optionHint: "कूपन, टैक्स और प्रिंट", workspace: "बिलिंग स्क्रीन" },
+  hinglish: { products: "Products", cart: "Cart", payment: "Payment", options: "Bill ke options", optionHint: "Coupon, tax aur print", workspace: "POS workspace" },
+};
