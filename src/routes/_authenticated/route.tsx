@@ -10,6 +10,7 @@ import { ThemeControl } from "@/components/ThemeControl";
 import { GuidedTour } from "@/components/GuidedTour";
 import { MessageLanguage } from "@/components/MessageLanguage";
 import { LanguageProvider, useLang } from "@/lib/i18n";
+import styles from "./workspace.module.css";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -52,7 +53,7 @@ function AppShell() {
   }
 
   const nav = (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
+    <nav className={`${styles["navigation"]} flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2`}>
       {items.map((m) => (
         <Link
           key={m.to}
@@ -97,10 +98,10 @@ function AppShell() {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col bg-sidebar">
+          <aside className="absolute left-0 top-0 flex h-dvh w-64 max-w-[calc(100vw-32px)] flex-col bg-sidebar pb-[env(safe-area-inset-bottom)]">
             <div className="flex items-center justify-between px-6 py-5">
               <span className="font-display text-lg font-semibold text-sidebar-accent-foreground">SoleStack</span>
-              <button onClick={() => setOpen(false)} className="text-sidebar-foreground"><X className="h-5 w-5" /></button>
+              <button onClick={() => setOpen(false)} aria-label="Close menu" className="grid h-11 w-11 place-items-center text-sidebar-foreground"><X className="h-5 w-5" /></button>
             </div>
             {nav}
             {footer}
@@ -109,11 +110,11 @@ function AppShell() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b bg-card/90 px-4 py-3 backdrop-blur lg:hidden">
-          <button onClick={() => setOpen(true)} aria-label="Menu"><Menu className="h-6 w-6" /></button>
+        <header className={`${styles["mobileHeader"]} sticky top-0 z-30 flex items-center gap-3 border-b bg-card/90 px-4 backdrop-blur lg:hidden`}>
+          <button onClick={() => setOpen(true)} aria-label="Menu" className="grid h-11 min-w-11 place-items-center"><Menu className="h-6 w-6" /></button>
           <span className="font-display font-semibold">SoleStack POS</span>
         </header>
-        <main className={cn("min-h-0 flex-1 p-3 md:p-5")}>
+        <main className={cn(styles["content"], "min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />
         </main>
         <GuidedTour />

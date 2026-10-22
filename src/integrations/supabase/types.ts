@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_hero_settings: {
+        Row: {
+          id: number
+          enabled: boolean
+          image_path: string | null
+          offer_kind: string
+          offer_value: number
+          custom_text: string
+          heading: string
+          subtitle: string
+          button_label: string
+          action: string
+          product_id: string | null
+          category: string
+          motion: boolean
+          image_scale: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          enabled?: boolean
+          image_path?: string | null
+          offer_kind?: string
+          offer_value?: number
+          custom_text?: string
+          heading?: string
+          subtitle?: string
+          button_label?: string
+          action?: string
+          product_id?: string | null
+          category?: string
+          motion?: boolean
+          image_scale?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          enabled?: boolean
+          image_path?: string | null
+          offer_kind?: string
+          offer_value?: number
+          custom_text?: string
+          heading?: string
+          subtitle?: string
+          button_label?: string
+          action?: string
+          product_id?: string | null
+          category?: string
+          motion?: boolean
+          image_scale?: number
+          updated_at?: string
+        }
+        Relationships: [{ foreignKeyName: "catalog_hero_settings_product_id_fkey"; columns: ["product_id"]; isOneToOne: false; referencedRelation: "products"; referencedColumns: ["id"] }]
+      }
       catalog_bookings: {
         Row: {
           address: string | null
@@ -1197,6 +1251,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      catalog_hero_storage_usage: { Args: never; Returns: Json }
+      is_saved_hero_image: { Args: { _name: string }; Returns: boolean }
+      public_catalog_hero: { Args: never; Returns: Json }
+      is_catalog_hero_image: { Args: { _name: string }; Returns: boolean }
       backup_sale_items: {
         Args: { _limit?: number; _offset?: number }
         Returns: Json[]

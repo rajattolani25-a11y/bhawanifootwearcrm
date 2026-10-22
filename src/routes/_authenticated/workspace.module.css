@@ -1,0 +1,42 @@
+.content {
+  min-width: 0;
+  --workspace-header-height: 56px;
+}
+.mobileHeader {
+  height: 56px;
+}
+.content :where(:global(.grid)) > * {
+  min-width: 0;
+}
+.content :where(table) {
+  text-align: left;
+}
+@media (max-width: 767px) {
+  .content {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+  .content
+    :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .content :where(button, a:global(.inline-flex)) {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-height: 44px;
+    height: auto;
+  }
+  .content :where(:global(.overflow-x-auto)) {
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+  }
+  .content :where(th, td) {
+    min-width: 85px;
+  }
+  .navigation a {
+    min-height: 44px;
+  }
+}

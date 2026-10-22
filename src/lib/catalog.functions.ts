@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { HERO_BUCKET, type PublicHero } from "./catalog-hero";
 
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
 export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; mrp: number; price: number; image: string | null; few_left?: boolean; sizes: CatalogSize[] };
 export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
-export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer };
+export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null };
 export type BookingResult = { booking_no: string; advance: number; price: number; delivery_charge: number; fulfillment: Fulfillment; upi_id: string; shop: string; phone: string | null; product: string; size: string; hold_hours: number; coupon_code?: string | null; coupon_discount?: number };
 export type TrackResult = { booking_no: string; product: string; size: string; status: string; fulfillment: Fulfillment; price: number; advance: number; delivery_charge: number; created_at: string; expires_at: string; history: { status: string; at: string }[] } | null;
 
@@ -41,7 +42,25 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
   }
   if (!d.shop) return { enabled: false };
   const { data: offer } = await sb.rpc("public_catalog_offer");
-  return { enabled: true, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image: p.image ? urls.get(p.image) ?? null : null })) };
+  // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
+  let hero: PublicHero | null = null;
+  try {
+    const { data: raw } = await sb.rpc("public_catalog_hero");
+    const parsed = z.object({
+      image_path: z.string().regex(/^hero\/[0-9a-f-]{36}\.(png|webp)$/),
+      offer_kind: z.enum(["up-to", "percent", "amount", "starting", "custom"]), offer_value: z.coerce.number().positive().max(1000000),
+      custom_text: z.string().min(1).max(40), heading: z.string().min(1).max(60), subtitle: z.string().max(120),
+      button_label: z.string().min(1).max(30), action: z.enum(["collection", "product", "category", "whatsapp"]),
+      product_id: z.string().uuid().nullable(), category: z.enum(["All", "Gents", "Ladies", "Boys", "Girls", "Kids"]),
+      motion: z.boolean(), image_scale: z.number().int().min(65).max(100),
+    }).safeParse(raw);
+    if (parsed.success) {
+      const { image_path, ...settings } = parsed.data;
+      const { data: signed } = await sb.storage.from(HERO_BUCKET).createSignedUrl(image_path, 3600);
+      if (signed?.signedUrl) hero = { ...settings, image: signed.signedUrl };
+    }
+  } catch { /* Existing catalog remains available. */ }
+  return { enabled: true, hero, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image: p.image ? urls.get(p.image) ?? null : null })) };
 });
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;

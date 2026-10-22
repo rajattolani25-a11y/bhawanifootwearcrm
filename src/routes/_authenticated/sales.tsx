@@ -117,7 +117,7 @@ function Sales() {
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex items-center justify-end gap-3">
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2 sm:gap-3">
         <span className="text-sm text-muted-foreground">Page {page + 1} · {data?.count ?? 0} bills</span>
         <Button variant="outline" disabled={page === 0 || isPending} onClick={() => setPage((p) => p - 1)}>Previous</Button>
         <Button variant="outline" disabled={!data || (page + 1) * pageSize >= data.count || isPending} onClick={() => setPage((p) => p + 1)}>Next</Button>

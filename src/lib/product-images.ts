@@ -15,7 +15,7 @@ export async function addSignedImages<T extends { image_url?: string | null }>(r
   return Promise.all(rows.map(async (row) => ({ ...row, image_src: await signedProductImage(row.image_url) })));
 }
 
-/** Resize to max 1080px and re-encode as WebP (JPEG fallback) on the device before upload. */
+/** Resize to max 1080px; preserve transparent cutouts for product/hero reuse. */
 export async function compressImage(file: File): Promise<{ blob: Blob; ext: string; type: string }> {
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return { blob: file, ext: file.name.split(".").pop()?.toLowerCase() || "jpg", type: file.type };
@@ -24,14 +24,21 @@ export async function compressImage(file: File): Promise<{ blob: Blob; ext: stri
   const canvas = document.createElement("canvas");
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close?.();
+  const pixels = ctx.getImageData(0, 0, w, h).data;
+  let transparent = false;
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i]! < 255) { transparent = true; break; }
+  }
   const encode = (type: string) => new Promise<Blob | null>((res) => canvas.toBlob(res, type, QUALITY));
   let blob = await encode("image/webp");
   let type = "image/webp", ext = "webp";
-  if (!blob || blob.type !== "image/webp") { blob = await encode("image/jpeg"); type = "image/jpeg"; ext = "jpg"; }
+  if (!blob || blob.type !== "image/webp") {
+    type = transparent ? "image/png" : "image/jpeg"; ext = transparent ? "png" : "jpg";
+    blob = await encode(type);
+  }
   if (!blob || blob.size >= file.size) return { blob: file, ext: file.name.split(".").pop()?.toLowerCase() || "jpg", type: file.type };
   return { blob, ext, type };
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { CatalogHeroPreview } from "@/components/CatalogHeroPreview";
 
 const COLS = "business_name,business_phone,catalog_enabled,booking_enabled,pickup_enabled,delivery_enabled,outside_enabled,local_charge,outside_charge,free_delivery_above,delivery_note,show_few_left,upi_id,advance_percent,hold_hours";
 const EMPTY = { business_phone: "", catalog_enabled: true, booking_enabled: false, pickup_enabled: true, delivery_enabled: false, outside_enabled: false, local_charge: "30", outside_charge: "80", free_delivery_above: "", delivery_note: "", show_few_left: true, upi_id: "", advance_percent: "50", hold_hours: "24" };
@@ -82,6 +83,7 @@ export function CatalogSettings() {
       </div>
       <Button onClick={save} className="mt-4">Save</Button>
       <OfferSettings />
+      <CatalogHeroPreview />
     </section>
   );
 }

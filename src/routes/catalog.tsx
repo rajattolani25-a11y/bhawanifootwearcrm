@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
+import { CatalogHero } from "@/components/CatalogHero";
 import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
 import { enquiryText, proofText } from "@/lib/order-messages";
@@ -85,6 +86,36 @@ function Catalog() {
 
   const copy = CATALOG_COPY[lang];
   const resetFilters = () => { setQ(""); setFilter("All"); setPtype("All"); setBrand("All"); setFsize("All"); };
+  const heroAction = () => {
+    const hero = data.hero;
+    if (!hero) return;
+    if (hero.action === "whatsapp" && shop.phone) {
+      const link = waTo(shop.phone, `Hello ${shop.name}, I would like to ask about: ${hero.heading}`);
+      if (link) window.open(link, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (hero.action === "product") {
+      const product = products.find((p) => p.id === hero.product_id);
+      if (product) { setOpen(product); return; }
+    }
+    resetFilters();
+    if (hero.action === "category" && FILTERS.some((f) => f === hero.category)) setFilter(hero.category as (typeof FILTERS)[number]);
+    document.getElementById("catalog-collection")?.scrollIntoView({ block: "start" });
+  };
+  const introduction = <section className={styles["welcome"]}>
+    <div className={styles["welcomeInner"]}>
+      <div>
+        <p className={styles["eyebrow"]} data-no-translate>{copy.eyebrow}</p>
+        <h1 data-no-translate>{copy.heading}</h1>
+        <p className={styles["intro"]}>Live sizes and prices from our store.</p>
+        {shop.address && <p className={styles["address"]}><MapPin aria-hidden="true" /><span data-no-translate>{shop.address}</span></p>}
+      </div>
+      <div className={styles["services"]}>
+        {shop.booking && <span><Store aria-hidden="true" /><span>Store pickup</span></span>}
+        {(shop.local || shop.outside) && <span><Truck aria-hidden="true" /><span>{shop.local ? "Local delivery" : "Outside Jabalpur delivery"}</span></span>}
+      </div>
+    </div>
+  </section>;
 
   return (
     <div className={styles["store"]} data-theme={dark ? "dark" : "light"}>
@@ -106,20 +137,7 @@ function Catalog() {
         {data.offer.code && <Copy aria-hidden="true" />}
       </button>}
 
-      <section className={styles["welcome"]}>
-        <div className={styles["welcomeInner"]}>
-          <div>
-            <p className={styles["eyebrow"]} data-no-translate>{copy.eyebrow}</p>
-            <h1 data-no-translate>{copy.heading}</h1>
-            <p className={styles["intro"]}>Live sizes and prices from our store.</p>
-            {shop.address && <p className={styles["address"]}><MapPin aria-hidden="true" /><span data-no-translate>{shop.address}</span></p>}
-          </div>
-          <div className={styles["services"]}>
-            {shop.booking && <span><Store aria-hidden="true" /><span>Store pickup</span></span>}
-            {(shop.local || shop.outside) && <span><Truck aria-hidden="true" /><span>{shop.local ? "Local delivery" : "Outside Jabalpur delivery"}</span></span>}
-          </div>
-        </div>
-      </section>
+      {data.hero ? <CatalogHero key={data.hero.image} hero={data.hero} onAction={heroAction} fallback={introduction} /> : introduction}
 
       <div className={styles["discovery"]}>
         <div className={styles["discoveryInner"]}>

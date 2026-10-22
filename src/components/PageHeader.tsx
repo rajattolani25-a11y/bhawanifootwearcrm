@@ -4,12 +4,12 @@ import { useLang } from "@/lib/i18n";
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   const { t } = useLang();
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold md:text-3xl">{t(title)}</h1>
+    <div className="mb-5 flex min-w-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-end md:mb-6">
+      <div className="min-w-0 flex-1">
+        <h1 className="break-words text-2xl font-bold md:text-3xl">{t(title)}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{t(subtitle)}</p>}
       </div>
-      {actions}
+      {actions && <div className="flex min-w-0 max-w-full flex-wrap gap-2 [&>div]:flex-wrap">{actions}</div>}
     </div>
   );
 }

@@ -132,25 +132,25 @@ function Dashboard() {
     <div className="space-y-5">
       <div className="max-w-xl"><UniversalSearch /></div>
       {/* Header */}
-      <section className="relative overflow-hidden rounded-lg bg-sidebar p-6 text-sidebar-foreground md:p-8">
+      <section className="relative overflow-hidden rounded-lg border bg-card p-4 text-card-foreground sm:p-6 md:p-8">
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sidebar-primary">Retail Control Room · {data?.settings?.business_name}</p>
-            <h1 className="mt-2 text-2xl font-bold text-sidebar-accent-foreground md:text-3xl">{greet}{name ? `, ${name}` : ""}. The counter is live.</h1>
-            <p className="mt-1 text-sm text-sidebar-foreground/70">Today’s sales, stock movement and urgent actions—updated as they happen.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Retail Control Room · {data?.settings?.business_name}</p>
+            <h1 className="mt-2 text-2xl font-bold text-foreground md:text-3xl">{greet}{name ? `, ${name}` : ""}. The counter is live.</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Today’s sales, stock movement and urgent actions—updated as they happen.</p>
           </div>
-           <div className="flex items-center gap-4">
-             <div className="border-r border-sidebar-border pr-4 text-right"><p className="font-display text-xl font-bold text-sidebar-accent-foreground">{clock.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p><p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/60">{clock.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · IST</p></div>
-           <div className="flex flex-wrap gap-2">
-            <Button asChild className="h-11"><Link to="/pos">New Bill</Link></Button>
+           <div className="flex min-w-0 w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+             <div className="border-border text-left sm:border-r sm:pr-4 sm:text-right"><p className="font-display text-xl font-bold text-foreground">{clock.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">{clock.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · IST</p></div>
+           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button asChild className="col-span-2 h-11 sm:col-span-1"><Link to="/pos">New Bill</Link></Button>
             {isOwner && <Button asChild variant="secondary" className="h-11"><Link to="/purchase">Receive Stock</Link></Button>}
             <Button asChild variant="secondary" className="h-11"><Link to="/customers">Customers</Link></Button>
           </div>
            </div>
         </div>
-        <div className="relative mt-5 flex items-center gap-3 overflow-hidden rounded-lg bg-sidebar-accent px-3 py-2 text-sm">
+        <div className="relative mt-5 flex items-center gap-3 overflow-hidden rounded-lg bg-muted px-3 py-2 text-sm">
           <span className="flex items-center gap-1.5 rounded bg-success px-2 py-0.5 text-xs font-bold text-success-foreground"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-foreground" />LIVE</span>
-          <p className="truncate text-sidebar-accent-foreground">{ticker}</p>
+          <p className="truncate text-foreground">{ticker}</p>
         </div>
       </section>
 
@@ -162,13 +162,13 @@ function Dashboard() {
         <Score caution label="Credit Due" value={inr(m.credit)} hint="Customer receivable" />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1fr_340px]">
+      <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-5">
           <Panel eyebrow="Revenue trend" title="Last 7 Days Performance">
-            <div className="flex h-48 items-end gap-2">
+            <div className="flex h-48 min-w-0 items-end gap-1 sm:gap-2">
               {m.trend.map((t) => (
-                <div key={t.label} className="flex flex-1 flex-col items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">{t.value ? inr(t.value) : ""}</span>
+                <div key={t.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                  <span title={inr(t.value)} className="max-w-full text-center text-[9px] text-muted-foreground sm:text-[10px]">{t.value ? `₹${new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 }).format(t.value)}` : ""}</span>
                   <div className="w-full rounded-t-md bg-primary/85 transition-all" style={{ height: `${Math.max(3, (t.value / maxTrend) * 140)}px` }} />
                   <span className="text-xs text-muted-foreground">{t.label}</span>
                 </div>
@@ -182,15 +182,15 @@ function Dashboard() {
         </div>
 
         <aside className="space-y-3">
-          <Action tone="dark" label="Owner Morning" text={m.target ? `Target ${inr(m.target)} · ${targetPct}% done · ${m.low} low sizes` : `${m.low} low sizes to watch today`} />
+          <Action tone="muted" label="Owner Morning" text={m.target ? `Target ${inr(m.target)} · ${targetPct}% done · ${m.low} low sizes` : `${m.low} low sizes to watch today`} />
           <Action label="Shop Closing" text={`Cash in ${inr(m.cashIn)} · GST ${inr(m.gst)} · ${m.returning} customers billed`} />
           <Action tone="success" label="Next Action" text={nextAction} />
           <Panel eyebrow="Live operations" title="Control Stats">
             <div className="grid grid-cols-3 gap-2">
               {[["Pairs", m.pairs.toLocaleString("en-IN")], ["Cash In", inr(m.cashIn)], ["GST", inr(m.gst)], ["Low", String(m.low)], ["Out", String(m.out)], ["Bills", String(m.bills)]].map(([k, v]) => (
-                <div key={k} className="rounded-lg bg-muted p-2.5">
+                <div key={k} className="min-w-0 rounded-lg bg-muted p-2 sm:p-2.5">
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{k}</p>
-                  <p className="font-display font-semibold">{v}</p>
+                  <p className="break-words font-display text-sm font-semibold sm:text-base">{v}</p>
                 </div>
               ))}
             </div>
@@ -244,9 +244,9 @@ function Dashboard() {
 
 function Score({ label, value, hint, main, caution, progress }: { label: string; value: string; hint: string; main?: boolean; caution?: boolean; progress?: number }) {
   return (
-    <article className={`rounded-xl border p-5 ${main ? "bg-primary text-primary-foreground" : "bg-card"}`}>
+    <article className={`min-w-0 rounded-xl border p-3 sm:p-5 ${main ? "bg-primary text-primary-foreground" : "bg-card"}`}>
       <p className={`text-xs uppercase tracking-wide ${main ? "opacity-80" : "text-muted-foreground"}`}>{label}</p>
-      <p className={`mt-2 font-display text-2xl font-bold md:text-3xl ${caution ? "text-warning-foreground" : ""}`}>{value}</p>
+      <p className={`mt-2 break-words font-display text-xl font-bold sm:text-2xl md:text-3xl ${caution ? "text-warning-foreground" : ""}`}>{value}</p>
       <p className={`mt-1 text-xs ${main ? "opacity-80" : "text-muted-foreground"}`}>{hint}</p>
       {progress !== undefined && <div className="mt-3 h-1.5 rounded-full bg-primary-foreground/25"><div className="h-1.5 rounded-full bg-primary-foreground" style={{ width: `${progress}%` }} /></div>}
     </article>
@@ -255,7 +255,7 @@ function Score({ label, value, hint, main, caution, progress }: { label: string;
 
 function Panel({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
   return (
-    <article className="rounded-xl border bg-card p-5">
+    <article className="min-w-0 rounded-xl border bg-card p-3 sm:p-5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
       <h3 className="mb-4 font-semibold">{title}</h3>
       {children}
@@ -263,8 +263,8 @@ function Panel({ eyebrow, title, children }: { eyebrow: string; title: string; c
   );
 }
 
-function Action({ label, text, tone }: { label: string; text: string; tone?: "dark" | "success" }) {
-  const cls = tone === "dark" ? "bg-sidebar text-sidebar-accent-foreground" : tone === "success" ? "bg-accent text-accent-foreground" : "bg-card border";
+function Action({ label, text, tone }: { label: string; text: string; tone?: "muted" | "success" }) {
+  const cls = tone === "muted" ? "border bg-muted text-foreground" : tone === "success" ? "bg-accent text-accent-foreground" : "bg-card border";
   return (
     <article className={`rounded-xl p-4 ${cls}`}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-70">{label}</p>
@@ -283,15 +283,15 @@ function Donut({ rows }: { rows: { label: string; value: number }[] }) {
     return `${COLORS[i % COLORS.length]} ${from}deg ${(acc / total) * 360}deg`;
   });
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex min-w-0 flex-col items-center gap-4 sm:flex-row sm:gap-5">
       <div className="relative h-32 w-32 shrink-0 rounded-full" style={{ background: `conic-gradient(${stops.join(",")})` }}>
         <div className="absolute inset-[22%] flex items-center justify-center rounded-full bg-card text-xs font-semibold">{inr(total)}</div>
       </div>
-      <ul className="flex-1 space-y-1.5 text-sm">
+      <ul className="w-full min-w-0 flex-1 space-y-1.5 text-sm">
         {rows.map((r, i) => (
           <li key={r.label} className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COLORS[i % COLORS.length] }} />
-            <span className="flex-1 truncate font-medium">{r.label}</span>
+            <span className="min-w-0 flex-1 truncate font-medium">{r.label}</span>
             <span className="text-muted-foreground">{inr(r.value)}</span>
           </li>
         ))}

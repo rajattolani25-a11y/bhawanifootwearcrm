@@ -1,5 +1,5 @@
 .workspace {
-  --primary: oklch(.52 .17 37);
+  --primary: #4d625c;
   --primary-foreground: #fff;
   --pos-line: var(--border);
   display: grid;
@@ -9,7 +9,7 @@
   min-height: 460px;
   color: var(--foreground);
 }
-:global(.dark) .workspace { --primary: oklch(.78 .13 43); --primary-foreground: #25180f; }
+:global(.dark) .workspace { --primary: #b6c9c0; --primary-foreground: #1d2923; }
 .workspace :is(button, input, select):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .workspace button { touch-action: manipulation; }
 .productsPanel, .cartPanel { min-width: 0; min-height: 0; overflow: hidden; background: var(--card); border: 1px solid var(--pos-line); border-radius: 15px; }
@@ -28,7 +28,7 @@
 .searchBar > button:first-of-type { width: 44px; }
 .categories, .brands { display: flex; gap: 7px; flex-shrink: 0; overflow-x: auto; margin: 0 20px; padding: 2px 0 10px; scrollbar-width: thin; }
 .categories button, .brands button { flex-shrink: 0; min-height: 36px; padding: 6px 16px; border: 1px solid var(--pos-line); border-radius: 9px; font-size: 12px; font-weight: 600; }
-.categories button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+.categories button[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: var(--primary); border-color: var(--primary); }
 .brands { gap: 6px; padding-bottom: 14px; }
 .brands button { min-height: 30px; padding: 4px 10px; border-radius: 6px; font-size: 10px; color: var(--muted-foreground); }
 .brands button[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 8%, transparent); border-color: var(--primary); color: var(--primary); }
@@ -89,7 +89,7 @@
 .paymentMethods { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
 .paymentMethods button { display: flex; align-items: center; justify-content: center; gap: 5px; grid-column: span 2; min-height: 40px; padding: 6px 4px; border: 1px solid var(--pos-line); border-radius: 8px; background: var(--card); font-size: 12px; font-weight: 600; }
 .paymentMethods button:nth-last-child(-n+2) { grid-column: span 3; min-height: 29px; font-size: 11px; font-weight: 500; }
-.paymentMethods button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+.paymentMethods button[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: var(--primary); border-color: var(--primary); }
 .paymentMethods svg { width: 15px; height: 15px; }
 .received { height: 40px; margin-bottom: 8px; font-size: 12px; background: var(--card); }
 .quickAmounts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
@@ -133,9 +133,9 @@
 }
 @media (max-width: 767px) {
   .workspace { display: flex; flex-direction: column; height: auto; min-height: calc(100dvh - 80px); padding-bottom: 72px; gap: 10px; }
-  .mobileTabs { position: sticky; top: 51px; z-index: 20; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px; background: var(--card); border: 1px solid var(--pos-line); border-radius: 11px; }
+  .mobileTabs { position: sticky; top: var(--workspace-header-height, 56px); z-index: 20; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px; background: var(--card); border: 1px solid var(--pos-line); border-radius: 11px; }
   .mobileTabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; border-radius: 7px; font-size: 13px; font-weight: 600; }
-  .mobileTabs button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+  .mobileTabs button[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 10%, var(--card)); color: var(--primary); }
   .mobileTabs svg { width: 17px; height: 17px; }
   .mobileTabs b { min-width: 22px; padding: 1px 5px; border-radius: 5px; font-size: 11px; background: color-mix(in srgb, var(--muted-foreground) 14%, transparent); }
   .workspace[data-mobile-pane="products"] .cartPanel, .workspace[data-mobile-pane="cart"] .productsPanel { display: none; }

@@ -32,6 +32,7 @@ function SettingsPage() {
 
   const { data: settings } = useQuery({
     queryKey: ["settings"],
+    enabled: !loading && isOwner,
     queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data,
   });
   const { data: team = [] } = useQuery({
@@ -57,7 +58,8 @@ function SettingsPage() {
       });
   }, [settings]);
 
-  if (!loading && !isOwner) return <p className="text-muted-foreground">Only the Owner can open Settings.</p>;
+  if (loading) return <p role="status" className="text-muted-foreground">Checking owner access…</p>;
+  if (!isOwner) return <p className="text-muted-foreground">Only the Owner can open Settings.</p>;
 
   async function changeRole(userId: string, role: "owner" | "staff") {
     if (!window.confirm(`Change this team member to ${role}? Their access will change immediately.`)) return;

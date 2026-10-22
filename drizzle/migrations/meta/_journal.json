@@ -134,6 +134,13 @@
       "when": 1791537674389,
       "tag": "0018_catalog_offer_coupons",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792657069402,
+      "tag": "0019_catalog_hero",
+      "breakpoints": true
     }
   ]
 }
