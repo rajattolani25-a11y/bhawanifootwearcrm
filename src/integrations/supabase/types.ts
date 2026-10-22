@@ -104,6 +104,68 @@ export type Database = {
           },
         ]
       }
+      catalog_hero_settings: {
+        Row: {
+          action: string
+          button_label: string
+          category: string
+          custom_text: string
+          enabled: boolean
+          heading: string
+          id: number
+          image_path: string | null
+          image_scale: number
+          motion: boolean
+          offer_kind: string
+          offer_value: number
+          product_id: string | null
+          subtitle: string
+          updated_at: string
+        }
+        Insert: {
+          action?: string
+          button_label?: string
+          category?: string
+          custom_text?: string
+          enabled?: boolean
+          heading?: string
+          id?: number
+          image_path?: string | null
+          image_scale?: number
+          motion?: boolean
+          offer_kind?: string
+          offer_value?: number
+          product_id?: string | null
+          subtitle?: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          button_label?: string
+          category?: string
+          custom_text?: string
+          enabled?: boolean
+          heading?: string
+          id?: number
+          image_path?: string | null
+          image_scale?: number
+          motion?: boolean
+          offer_kind?: string
+          offer_value?: number
+          product_id?: string | null
+          subtitle?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_hero_settings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_redemptions: {
         Row: {
           amount: number
@@ -1214,6 +1276,7 @@ export type Database = {
         }
         Returns: Json
       }
+      catalog_hero_storage_usage: { Args: never; Returns: Json }
       check_catalog_coupon: {
         Args: { _code: string; _mobile: string; _variant_id: string }
         Returns: Json
@@ -1274,8 +1337,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_catalog_hero_image: { Args: { _name: string }; Returns: boolean }
       is_catalog_image: { Args: { _name: string }; Returns: boolean }
       is_member: { Args: { _user_id: string }; Returns: boolean }
+      is_saved_hero_image: { Args: { _name: string }; Returns: boolean }
       process_return: {
         Args: {
           _damaged: boolean
@@ -1287,6 +1352,7 @@ export type Database = {
         Returns: number
       }
       public_catalog: { Args: never; Returns: Json }
+      public_catalog_hero: { Args: never; Returns: Json }
       public_catalog_offer: { Args: never; Returns: Json }
       quick_add_product: {
         Args: { _cost?: number; _product: Json; _sizes: Json }
