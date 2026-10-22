@@ -1,85 +1,86 @@
--- Additive catalog presentation only; existing checkout/stock RPCs are untouched.
-CREATE TABLE public.catalog_hero_settings (
-  id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  enabled boolean NOT NULL DEFAULT false,
-  image_path text CHECK (image_path IS NULL OR image_path ~ '^hero/[0-9a-f-]{36}\.(png|webp)$'),
-  offer_kind text NOT NULL DEFAULT 'up-to' CHECK (offer_kind IN ('up-to', 'percent', 'amount', 'starting', 'custom')),
-  offer_value numeric NOT NULL DEFAULT 40 CHECK (offer_value > 0 AND offer_value <= 1000000),
-  custom_text text NOT NULL DEFAULT 'New collection' CHECK (length(custom_text) BETWEEN 1 AND 40),
-  heading text NOT NULL DEFAULT 'Fresh pairs. Better prices.' CHECK (length(heading) BETWEEN 1 AND 60),
-  subtitle text NOT NULL DEFAULT 'On selected footwear · Terms apply' CHECK (length(subtitle) <= 120),
-  button_label text NOT NULL DEFAULT 'Shop offers' CHECK (length(button_label) BETWEEN 1 AND 30),
-  action text NOT NULL DEFAULT 'collection' CHECK (action IN ('collection', 'product', 'category', 'whatsapp')),
-  product_id uuid REFERENCES public.products(id) ON DELETE SET NULL,
-  category text NOT NULL DEFAULT 'All' CHECK (category IN ('All', 'Gents', 'Ladies', 'Boys', 'Girls', 'Kids')),
-  motion boolean NOT NULL DEFAULT true,
-  image_scale integer NOT NULL DEFAULT 90 CHECK (image_scale BETWEEN 65 AND 100),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (offer_kind NOT IN ('up-to', 'percent') OR offer_value <= 100),
-  CHECK (NOT enabled OR image_path IS NOT NULL)
-);
-INSERT INTO public.catalog_hero_settings(id) VALUES (1);
-ALTER TABLE public.catalog_hero_settings ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.catalog_hero_settings FROM anon, authenticated;
-GRANT SELECT, UPDATE ON public.catalog_hero_settings TO authenticated;
-GRANT ALL ON public.catalog_hero_settings TO service_role;
-CREATE POLICY "Owner reads hero settings" ON public.catalog_hero_settings FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'owner'));
-CREATE POLICY "Owner updates hero settings" ON public.catalog_hero_settings FOR UPDATE TO authenticated
-  USING (public.has_role(auth.uid(), 'owner')) WITH CHECK (public.has_role(auth.uid(), 'owner'));
-
-CREATE FUNCTION public.stamp_catalog_hero() RETURNS trigger
-LANGUAGE plpgsql SET search_path = public AS $$
-BEGIN NEW.updated_at := clock_timestamp(); RETURN NEW; END $$;
-CREATE TRIGGER catalog_hero_timestamp BEFORE UPDATE ON public.catalog_hero_settings
-  FOR EACH ROW EXECUTE FUNCTION public.stamp_catalog_hero();
-
-INSERT INTO storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
-  VALUES ('catalog-hero-images', 'catalog-hero-images', false, 5242880, ARRAY['image/png', 'image/webp']);
-CREATE POLICY "Owner reads hero images" ON storage.objects FOR SELECT TO authenticated
-  USING (bucket_id = 'catalog-hero-images' AND public.has_role(auth.uid(), 'owner'));
-CREATE POLICY "Owner uploads hero images" ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'catalog-hero-images' AND public.has_role(auth.uid(), 'owner'));
-
--- Protect the saved file even when the hero is OFF or a save response is lost.
-CREATE FUNCTION public.is_saved_hero_image(_name text) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.catalog_hero_settings WHERE id = 1 AND image_path = _name)
-$$;
-REVOKE ALL ON FUNCTION public.is_saved_hero_image(text) FROM public;
-GRANT EXECUTE ON FUNCTION public.is_saved_hero_image(text) TO authenticated;
-CREATE POLICY "Owner deletes replaced hero images" ON storage.objects FOR DELETE TO authenticated
-  USING (bucket_id = 'catalog-hero-images' AND public.has_role(auth.uid(), 'owner') AND NOT public.is_saved_hero_image(name));
-
-CREATE FUNCTION public.is_catalog_hero_image(_name text) RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (SELECT 1 FROM public.catalog_hero_settings h JOIN public.store_settings s ON s.id = 1
-    WHERE h.id = 1 AND h.enabled AND s.catalog_enabled AND h.image_path = _name)
-$$;
-REVOKE ALL ON FUNCTION public.is_catalog_hero_image(text) FROM public;
-GRANT EXECUTE ON FUNCTION public.is_catalog_hero_image(text) TO anon, authenticated;
-CREATE POLICY "Public reads active hero image" ON storage.objects FOR SELECT TO anon, authenticated
-  USING (bucket_id = 'catalog-hero-images' AND public.is_catalog_hero_image(name));
-
-CREATE FUNCTION public.public_catalog_hero() RETURNS jsonb
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT jsonb_build_object('image_path', h.image_path, 'offer_kind', h.offer_kind,
-    'offer_value', h.offer_value, 'custom_text', h.custom_text, 'heading', h.heading,
-    'subtitle', h.subtitle, 'button_label', h.button_label, 'action', h.action,
-    'product_id', h.product_id, 'category', h.category, 'motion', h.motion, 'image_scale', h.image_scale)
-  FROM public.catalog_hero_settings h JOIN public.store_settings s ON s.id = 1
-  WHERE h.id = 1 AND h.enabled AND s.catalog_enabled AND h.image_path IS NOT NULL
-$$;
-REVOKE ALL ON FUNCTION public.public_catalog_hero() FROM public;
-GRANT EXECUTE ON FUNCTION public.public_catalog_hero() TO anon, authenticated;
-
-CREATE FUNCTION public.catalog_hero_storage_usage() RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF NOT public.has_role(auth.uid(), 'owner') THEN RAISE EXCEPTION 'Owner access required'; END IF;
-  RETURN (SELECT jsonb_build_object('photo_bytes', coalesce(sum((metadata->>'size')::bigint), 0), 'photos', count(*),
-    'current_bytes', coalesce(sum(CASE WHEN public.is_saved_hero_image(name) THEN (metadata->>'size')::bigint ELSE 0 END), 0))
-    FROM storage.objects WHERE bucket_id = 'catalog-hero-images');
-END $$;
-REVOKE ALL ON FUNCTION public.catalog_hero_storage_usage() FROM public, anon;
-GRANT EXECUTE ON FUNCTION public.catalog_hero_storage_usage() TO authenticated;
+-- The content of this migration cannot be applied: storage buckets cannot be created in SQL; re-applied as a later migration with the bucket created separately.
+-- -- Additive catalog presentation only; existing checkout/stock RPCs are untouched.
+-- CREATE TABLE public.catalog_hero_settings (
+--   id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+--   enabled boolean NOT NULL DEFAULT false,
+--   image_path text CHECK (image_path IS NULL OR image_path ~ '^hero/[0-9a-f-]{36}\.(png|webp)$'),
+--   offer_kind text NOT NULL DEFAULT 'up-to' CHECK (offer_kind IN ('up-to', 'percent', 'amount', 'starting', 'custom')),
+--   offer_value numeric NOT NULL DEFAULT 40 CHECK (offer_value > 0 AND offer_value <= 1000000),
+--   custom_text text NOT NULL DEFAULT 'New collection' CHECK (length(custom_text) BETWEEN 1 AND 40),
+--   heading text NOT NULL DEFAULT 'Fresh pairs. Better prices.' CHECK (length(heading) BETWEEN 1 AND 60),
+--   subtitle text NOT NULL DEFAULT 'On selected footwear · Terms apply' CHECK (length(subtitle) <= 120),
+--   button_label text NOT NULL DEFAULT 'Shop offers' CHECK (length(button_label) BETWEEN 1 AND 30),
+--   action text NOT NULL DEFAULT 'collection' CHECK (action IN ('collection', 'product', 'category', 'whatsapp')),
+--   product_id uuid REFERENCES public.products(id) ON DELETE SET NULL,
+--   category text NOT NULL DEFAULT 'All' CHECK (category IN ('All', 'Gents', 'Ladies', 'Boys', 'Girls', 'Kids')),
+--   motion boolean NOT NULL DEFAULT true,
+--   image_scale integer NOT NULL DEFAULT 90 CHECK (image_scale BETWEEN 65 AND 100),
+--   updated_at timestamptz NOT NULL DEFAULT now(),
+--   CHECK (offer_kind NOT IN ('up-to', 'percent') OR offer_value <= 100),
+--   CHECK (NOT enabled OR image_path IS NOT NULL)
+-- );
+-- INSERT INTO public.catalog_hero_settings(id) VALUES (1);
+-- ALTER TABLE public.catalog_hero_settings ENABLE ROW LEVEL SECURITY;
+-- REVOKE ALL ON public.catalog_hero_settings FROM anon, authenticated;
+-- GRANT SELECT, UPDATE ON public.catalog_hero_settings TO authenticated;
+-- GRANT ALL ON public.catalog_hero_settings TO service_role;
+-- CREATE POLICY "Owner reads hero settings" ON public.catalog_hero_settings FOR SELECT TO authenticated
+--   USING (public.has_role(auth.uid(), 'owner'));
+-- CREATE POLICY "Owner updates hero settings" ON public.catalog_hero_settings FOR UPDATE TO authenticated
+--   USING (public.has_role(auth.uid(), 'owner')) WITH CHECK (public.has_role(auth.uid(), 'owner'));
+-- 
+-- CREATE FUNCTION public.stamp_catalog_hero() RETURNS trigger
+-- LANGUAGE plpgsql SET search_path = public AS $$
+-- BEGIN NEW.updated_at := clock_timestamp(); RETURN NEW; END $$;
+-- CREATE TRIGGER catalog_hero_timestamp BEFORE UPDATE ON public.catalog_hero_settings
+--   FOR EACH ROW EXECUTE FUNCTION public.stamp_catalog_hero();
+-- 
+-- INSERT INTO storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
+--   VALUES ('catalog-hero-images', 'catalog-hero-images', false, 5242880, ARRAY['image/png', 'image/webp']);
+-- CREATE POLICY "Owner reads hero images" ON storage.objects FOR SELECT TO authenticated
+--   USING (bucket_id = 'catalog-hero-images' AND public.has_role(auth.uid(), 'owner'));
+-- CREATE POLICY "Owner uploads hero images" ON storage.objects FOR INSERT TO authenticated
+--   WITH CHECK (bucket_id = 'catalog-hero-images' AND public.has_role(auth.uid(), 'owner'));
+-- 
+-- -- Protect the saved file even when the hero is OFF or a save response is lost.
+-- CREATE FUNCTION public.is_saved_hero_image(_name text) RETURNS boolean
+-- LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+--   SELECT EXISTS (SELECT 1 FROM public.catalog_hero_settings WHERE id = 1 AND image_path = _name)
+-- $$;
+-- REVOKE ALL ON FUNCTION public.is_saved_hero_image(text) FROM public;
+-- GRANT EXECUTE ON FUNCTION public.is_saved_hero_image(text) TO authenticated;
+-- CREATE POLICY "Owner deletes replaced hero images" ON storage.objects FOR DELETE TO authenticated
+--   USING (bucket_id = 'catalog-hero-images' AND public.has_role(auth.uid(), 'owner') AND NOT public.is_saved_hero_image(name));
+-- 
+-- CREATE FUNCTION public.is_catalog_hero_image(_name text) RETURNS boolean
+-- LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+--   SELECT EXISTS (SELECT 1 FROM public.catalog_hero_settings h JOIN public.store_settings s ON s.id = 1
+--     WHERE h.id = 1 AND h.enabled AND s.catalog_enabled AND h.image_path = _name)
+-- $$;
+-- REVOKE ALL ON FUNCTION public.is_catalog_hero_image(text) FROM public;
+-- GRANT EXECUTE ON FUNCTION public.is_catalog_hero_image(text) TO anon, authenticated;
+-- CREATE POLICY "Public reads active hero image" ON storage.objects FOR SELECT TO anon, authenticated
+--   USING (bucket_id = 'catalog-hero-images' AND public.is_catalog_hero_image(name));
+-- 
+-- CREATE FUNCTION public.public_catalog_hero() RETURNS jsonb
+-- LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+--   SELECT jsonb_build_object('image_path', h.image_path, 'offer_kind', h.offer_kind,
+--     'offer_value', h.offer_value, 'custom_text', h.custom_text, 'heading', h.heading,
+--     'subtitle', h.subtitle, 'button_label', h.button_label, 'action', h.action,
+--     'product_id', h.product_id, 'category', h.category, 'motion', h.motion, 'image_scale', h.image_scale)
+--   FROM public.catalog_hero_settings h JOIN public.store_settings s ON s.id = 1
+--   WHERE h.id = 1 AND h.enabled AND s.catalog_enabled AND h.image_path IS NOT NULL
+-- $$;
+-- REVOKE ALL ON FUNCTION public.public_catalog_hero() FROM public;
+-- GRANT EXECUTE ON FUNCTION public.public_catalog_hero() TO anon, authenticated;
+-- 
+-- CREATE FUNCTION public.catalog_hero_storage_usage() RETURNS jsonb
+-- LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+-- BEGIN
+--   IF NOT public.has_role(auth.uid(), 'owner') THEN RAISE EXCEPTION 'Owner access required'; END IF;
+--   RETURN (SELECT jsonb_build_object('photo_bytes', coalesce(sum((metadata->>'size')::bigint), 0), 'photos', count(*),
+--     'current_bytes', coalesce(sum(CASE WHEN public.is_saved_hero_image(name) THEN (metadata->>'size')::bigint ELSE 0 END), 0))
+--     FROM storage.objects WHERE bucket_id = 'catalog-hero-images');
+-- END $$;
+-- REVOKE ALL ON FUNCTION public.catalog_hero_storage_usage() FROM public, anon;
+-- GRANT EXECUTE ON FUNCTION public.catalog_hero_storage_usage() TO authenticated;
