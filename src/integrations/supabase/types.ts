@@ -104,12 +104,6 @@ export type Database = {
           },
         ]
       }
-      catalog_presentation_settings: {
-        Row: { id: number; gallery_enabled: boolean; category_accents: boolean; motion_enabled: boolean }
-        Insert: { id?: number; gallery_enabled?: boolean; category_accents?: boolean; motion_enabled?: boolean }
-        Update: { gallery_enabled?: boolean; category_accents?: boolean; motion_enabled?: boolean }
-        Relationships: []
-      }
       catalog_hero_settings: {
         Row: {
           action: string
@@ -171,6 +165,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      catalog_presentation_settings: {
+        Row: {
+          category_accents: boolean
+          gallery_enabled: boolean
+          id: number
+          motion_enabled: boolean
+        }
+        Insert: {
+          category_accents?: boolean
+          gallery_enabled?: boolean
+          id?: number
+          motion_enabled?: boolean
+        }
+        Update: {
+          category_accents?: boolean
+          gallery_enabled?: boolean
+          id?: number
+          motion_enabled?: boolean
+        }
+        Relationships: []
       }
       coupon_redemptions: {
         Row: {
