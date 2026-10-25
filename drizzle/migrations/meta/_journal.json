@@ -148,6 +148,13 @@
       "when": 1792662034786,
       "tag": "0020_catalog_hero_apply",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792952978166,
+      "tag": "0021_catalog_presentation_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { CatalogPresentationSettings } from "@/components/CatalogPresentationSettings";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -59,6 +60,7 @@ export function CatalogSettings() {
       <nav aria-label="Catalog settings sections" className="mb-4 flex flex-wrap gap-2 text-xs">
         <a className="rounded-lg border px-3 py-2" href="#catalog-order-controls">Orders & delivery</a>
         <a className="rounded-lg border px-3 py-2" href="#catalog-offer-controls">Offers & coupons</a>
+        <a className="rounded-lg border px-3 py-2" href="#catalog-appearance-controls">Catalog appearance</a>
         <a className="rounded-lg border px-3 py-2" href="#catalog-hero-controls">Hero & animation</a>
         <Link className="rounded-lg border px-3 py-2" to="/products" search={{ article: "" }}>Products in catalog</Link>
       </nav>
@@ -95,6 +97,7 @@ export function CatalogSettings() {
         </div>}
       </div>
       <Button onClick={save} disabled={saving} className="mt-4">{saving ? "Saving…" : "Save catalog settings"}</Button>
+      <CatalogPresentationSettings />
       <div id="catalog-offer-controls" className="scroll-mt-20"><OfferSettings /></div>
       <div id="catalog-hero-controls" className="scroll-mt-20"><CatalogHeroPreview /></div>
     </section>

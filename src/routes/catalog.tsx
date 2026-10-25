@@ -1,3 +1,4 @@
+import { catalogPresentation } from "@/lib/catalog-presentation";
 import { CouponTicket } from "@/components/CouponTicket";
 import { CatalogSpotlight } from "@/components/CatalogSpotlight";
 import { InterfaceMotion } from "@/components/motion/provider";
@@ -8,7 +9,7 @@ import { ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCir
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { CatalogHero } from "@/components/CatalogHero";
-import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
+import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type CatalogData, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
 import { enquiryText, proofText } from "@/lib/order-messages";
 import { inr } from "@/lib/modules";
@@ -47,7 +48,10 @@ function LangChip() {
 }
 
 function Catalog() {
-  const data = Route.useLoaderData();
+  return <CatalogView data={Route.useLoaderData()} />;
+}
+
+export function CatalogView({ data }: { data: CatalogData }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [brand, setBrand] = useState("All");
@@ -87,6 +91,7 @@ function Catalog() {
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
+  const presentation = catalogPresentation(data.presentation);
 
   const copy = CATALOG_COPY[lang];
   const resetFilters = () => { setQ(""); setFilter("All"); setPtype("All"); setBrand("All"); setFsize("All"); };
@@ -122,7 +127,7 @@ function Catalog() {
   </section>;
 
   return (
-    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-tone={ptype !== "All" ? ptype : filter}>
+    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-tone={presentation.category_accents ? (ptype !== "All" ? ptype : filter) : "All"} data-motion={presentation.motion_enabled}>
       <header className={styles["header"]}>
         <div className={styles["headerInner"]}>
           <a href="#catalog-collection" className={styles["identity"]} aria-label={shop.name}>
@@ -141,7 +146,7 @@ function Catalog() {
         {data.offer.code && <Copy aria-hidden="true" />}
       </button>}
 
-      {data.hero ? <CatalogHero key={data.hero.image} hero={data.hero} onAction={heroAction} fallback={introduction} /> : <BlurReveal>{introduction}</BlurReveal>}
+      {data.hero ? <CatalogHero key={data.hero.image} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
 
       <div className={styles["discovery"]}>
         <div className={styles["discoveryInner"]}>
@@ -175,7 +180,7 @@ function Catalog() {
             {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className={styles["clear"]}>Clear</button>}
           </div>
         </div>
-        {list.length > 1 && <CatalogSpotlight key={`${filter}-${brand}-${ptype}-${fsize}-${q}`} products={list} onOpen={product => { setOpen(product); setViews(v => v + 1); }} />}
+        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${brand}-${ptype}-${fsize}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={product => { setOpen(product); setViews(v => v + 1); }} />}
         <div className={styles["productGrid"]}>
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;

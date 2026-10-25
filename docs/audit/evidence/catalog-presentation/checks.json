@@ -1,0 +1,14 @@
+{
+  "ownerControls": true,
+  "allFalseSaved": true,
+  "reloadPreservesOff": true,
+  "publicGalleryHidden": true,
+  "neutralPalette": true,
+  "heroMasterMotionOff": true,
+  "staffEditorDenied": true,
+  "missingStorageBlocksSave": true,
+  "missingStorageCatalogFallback": true,
+  "mockedWrites": 1,
+  "realWrites": 0,
+  "errors": []
+}

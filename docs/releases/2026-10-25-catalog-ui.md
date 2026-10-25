@@ -26,7 +26,8 @@
 Earlier PDF, language, pagination, search, image signing and responsiveness fixes
 are included in the same local release. See the dated audit documents for their
 scope and known remaining issues. The latest upstream hero migrations/types were
-fast-forwarded intact; this release does not author/apply any SQL or RPC changes.
+fast-forwarded intact. The initial UI release did not author/apply SQL or RPC
+changes. The separately approved settings follow-up below adds one table only.
 
 ## Checks
 
@@ -46,20 +47,42 @@ These tests do not verify production DB/RLS state, native phone share/printing,
 real inventory hardware or live-device performance. Synthetic preview imagery
 is used only by test fixtures; storefront code uses actual catalog product data.
 
-## One requested settings extension still needs permission
+## Approved persistent owner controls
 
-Persistent owner On/Off controls for spotlight gallery, category accents and
-catalog-wide motion need shared storage. Existing hero.motion controls the hero
-only and is not silently reused for unrelated global flags. Proposed scope:
-one singleton presentation-settings table with3 boolean flags, owner-only writes
-and public reads of those non-sensitive flags. No stock, billing, GST or existing
-RPC modification. The user's instruction requires confirmation before migrations.
-No migration or dummy Save control has been added while that permission is pending.
+After explicit user approval, migration 0021 and the owner editor now implement
+three persistent switches: spotlight gallery, category colour accents and
+catalog animations. All default to ON, preserving the prior release. Explicit
+OFF values survive save/reload. Category accents OFF uses the neutral palette;
+motion OFF disables the intro/gallery/hero/category transitions, including an
+otherwise-enabled hero. Device reduced-motion preferences remain authoritative.
+
+The singleton table contains only its fixed ID and those three booleans.
+Anonymous visitors and staff can read these public-safe flags; only owners can
+update them. Browser roles cannot insert/delete rows or change the ID. There is
+no new RPC, image storage, stock, GST, billing, coupon or ledger change. The owner
+editor has English, Hindi and Hinglish copy, error/retry handling and discard.
+Missing storage uses existing public defaults and prevents a false successful
+owner save.
+
+Local PostgreSQL 17 tests execute the actual migration and exercise anonymous,
+staff and owner permissions, explicit false, NOT NULL, fixed-ID protection and
+idempotent reapplication without resetting saved choices. A dummy business row
+is unchanged. Browser tests use intercepted responses and the actual public
+CatalogView; they verify owner save/reload, public gallery/colour/motion OFF,
+staff denial and missing-storage fallback. No production writes occur.
+Evidence: docs/audit/evidence/catalog-presentation/.
+
+Live anonymous read returned HTTP 404 / PGRST205: the table is not yet present
+in the exposed production schema. No database migration URL or admin connection
+is available in this workspace, so migration 0021 has NOT been applied live.
+Local permission tests are not a production RLS verification.
 
 ## Lovable handoff
 
 The repository is linked to Lovable on main. Source/lockfiles must reach main
-before Publish can include them. Do not deploy .output separately or apply SQL
-from this UI release. No new environment variables or storage buckets are needed
-for the implemented presentation features. New global owner toggles are a
-separate pending database permission, not a completed feature.
+before Publish can include them. Apply only the approved migration
+`drizzle/migrations/0021_catalog_presentation_settings.sql` using Lovable's
+migration workflow, verify the owner controls in preview, then Publish/Update.
+No new environment variables or storage buckets are needed. Do not rewrite
+existing tables or RPCs. The source is implemented; production activation is
+pending that migration and publication. See docs/release-ready.md for the prompt.

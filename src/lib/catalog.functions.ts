@@ -1,3 +1,4 @@
+import { catalogPresentation, PRESENTATION_DEFAULTS, type CatalogPresentation } from "./catalog-presentation";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { HERO_BUCKET, type PublicHero } from "./catalog-hero";
@@ -7,7 +8,7 @@ export type CatalogSize = { id: string; size: string; available: boolean };
 export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; mrp: number; price: number; image: string | null; few_left?: boolean; sizes: CatalogSize[] };
 export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
-export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null };
+export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null; presentation?: CatalogPresentation };
 export type BookingResult = { booking_no: string; advance: number; price: number; delivery_charge: number; fulfillment: Fulfillment; upi_id: string; shop: string; phone: string | null; product: string; size: string; hold_hours: number; coupon_code?: string | null; coupon_discount?: number };
 export type TrackResult = { booking_no: string; product: string; size: string; status: string; fulfillment: Fulfillment; price: number; advance: number; delivery_charge: number; created_at: string; expires_at: string; history: { status: string; at: string }[] } | null;
 
@@ -34,6 +35,9 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
   if (error) throw new Error("Catalog is not available right now");
   const d = data as unknown as CatalogData;
   if (!d.enabled || !d.products) return { enabled: false };
+  // Only public-safe boolean flags; missing storage preserves the working catalog.
+  const presentationRequest = Promise.resolve(sb.from("catalog_presentation_settings").select("gallery_enabled,category_accents,motion_enabled").eq("id", 1).maybeSingle())
+    .then(({ data }) => catalogPresentation(data), () => ({ ...PRESENTATION_DEFAULTS }));
   const paths = d.products.map((p) => p.image).filter((x): x is string => !!x);
   const urls = new Map<string, string>();
   if (paths.length) {
@@ -60,7 +64,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
       if (signed?.signedUrl) hero = { ...settings, image: signed.signedUrl };
     }
   } catch { /* Existing catalog remains available. */ }
-  return { enabled: true, hero, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image: p.image ? urls.get(p.image) ?? null : null })) };
+  return { enabled: true, presentation: await presentationRequest, hero, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image: p.image ? urls.get(p.image) ?? null : null })) };
 });
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;

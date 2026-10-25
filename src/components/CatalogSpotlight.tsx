@@ -10,9 +10,11 @@ import styles from "./catalog-spotlight.module.css";
 export function CatalogSpotlight({
   products,
   onOpen,
+  motionEnabled = true,
 }: {
   products: CatalogProduct[];
   onOpen: (product: CatalogProduct) => void;
+  motionEnabled?: boolean;
 }) {
   const [active, setActive] = useState(0),
     [direction, setDirection] = useState(1);
@@ -92,7 +94,7 @@ export function CatalogSpotlight({
           key={current.id}
           className={styles["featured"]}
           initial={false}
-          animate={reduce ? { x: 0, opacity: 1 } : { x: [direction * 14, 0], opacity: [0.7, 1] }}
+          animate={!motionEnabled || reduce ? { x: 0, opacity: 1 } : { x: [direction * 14, 0], opacity: [0.7, 1] }}
           transition={{ duration: 0.2 }}
         >
           <button

@@ -188,3 +188,4 @@
 .store[data-theme="dark"][data-tone="Formal"] { --catalog-accent:#d0c1a8; --catalog-tint:#37332b; }
 .store[data-theme="dark"][data-tone="Sports"] { --catalog-accent:#a8cfcc; --catalog-tint:#233a3a; }
 @media(prefers-reduced-motion:reduce) { .store { transition:none; } }
+.store[data-motion="false"], .store[data-motion="false"] * { animation:none !important; transition:none !important; }

@@ -1,35 +1,57 @@
 # Lovable release handoff
 
-This release adds owner-controlled catalog hero presentation, image compression/storage reporting and cleanup, softer POS/catalog colours, responsive workspace layouts, dashboard theme fixes and localized image guidance. No existing sale/stock/payment/coupon RPC was modified.
+The latest follow-up adds owner controls for the public catalog's spotlight
+gallery, category colour accents and animations. It includes the explicitly
+approved migration 0021, which creates one singleton table with three booleans.
+Existing sales, stock, payments, GST, coupons, customers and RPCs are unchanged.
+Earlier UI/PDF/performance fixes remain included.
 
-## In Lovable
+## Required live step
 
-1. Wait for the connected GitHub main branch to sync and check the preview.
-2. Apply the existing `drizzle/migrations/0019_catalog_hero.sql` using the normal migration workflow. It is an additive migration; do not generate replacement migrations or rerun it as an ad-hoc SQL script after it is recorded as applied.
-3. Confirm the owner can open Settings → Online catalog → Hero banner, see hero storage usage and save. The initial hero is OFF; enabling it requires a validated transparent image. Staff cannot edit it.
-4. Publish → Update, then check the published app. Refresh old browser tabs after the release.
+The new table is not yet available in the live REST schema: an anonymous read
+returned HTTP 404 / PGRST205. This workspace has only the publishable connection,
+with no migration URL or database admin access, so it has not applied live DDL.
+The catalog continues using its previous defaults; the owner editor explains
+that storage is unavailable instead of reporting a false successful save.
 
-Suggested Lovable instruction:
+After the connected GitHub main branch syncs, give Lovable this instruction:
 
-> Sync the latest GitHub main. Apply and verify the pending existing migration 0019_catalog_hero.sql through the migration workflow, without changing sales, stock, payment or coupon functions. Verify owner-only hero settings and bucket policies, then check the preview build. Keep hero OFF until the owner selects a transparent image. Do not claim the migration is applied unless it actually succeeds.
+> Apply only the existing approved migration
+> `drizzle/migrations/0021_catalog_presentation_settings.sql` through the normal
+> migration workflow. Do not modify existing business tables, functions or RPCs,
+> and do not generate a replacement migration. Verify the singleton row, public
+> read of the three appearance flags and owner-only updates. Confirm that an
+> owner can save and reload all three switches in Settings → Online catalog →
+> Catalog appearance, and that staff cannot edit them. Check the public catalog
+> with the switches both ON and OFF. Report the actual migration result.
 
-## Verification performed before push
+Then use Publish → Update. Existing open catalog tabs need refreshing to pick
+up saved settings. No new secrets, image uploads or storage buckets are needed.
+Do not replay older recorded migrations solely for this follow-up.
 
-- TypeScript and production build pass.
-- Migration executed in local PostgreSQL-compatible PGlite with owner/staff/anon role and storage-policy tests, including protection of the current saved image and stale-save rejection.
-- Browser tests use mocked database/storage responses: hero upload alpha validation/compression, existing-photo reuse, save/reload/replace/OFF, multilingual guidance and public fallback/actions pass.
-- Responsive review: 18 populated workspace screens at 320/390/768px; six mobile forms fit/scroll. Dashboard additionally checked in light/dark at 320/390/1440px. Premium hero font loading and layout checked at 320/390/768/1440px.
-- POS regression tests preserve the original create_sale payload; barcode/label tests validate supported software paths without creating a live sale.
-- Repo-wide lint has preexisting formatting failures; no mass formatting changes were made.
+## Verification
 
-## Known limits, unchanged scanner behaviour
+- TypeScript and production build.
+- Six data/billing/default-normalization tests.
+- Actual migration executed in isolated PostgreSQL 17 with owner, staff and
+  anonymous roles. Anonymous/staff updates denied; owner updates succeed;
+  explicit false is readable; null, ID changes and deletes are denied;
+  reapplying the migration preserves choices and an unrelated dummy row.
+- Mocked mobile browser tests: owner save/reload, gallery OFF, neutral colours,
+  master motion overriding hero, staff editor denial, missing-storage error and
+  public fallback. These exercise the actual CatalogView and owner components.
+- Existing gallery, coupon, receipt and reduced-motion browser regression.
 
-- This workspace did not apply the migration to the live database or publish the Lovable site. Local/mocked tests do not establish live deployment or hardware scan success rates.
-- Before billing scans, press F2/focus the product search box. Scanning while the customer/payment field has focus can type there instead of adding a product; this is a confirmed existing gap.
-- Scan lookup still uses loaded products; a valid code for an unloaded product may be missed. Direct database fallback and conflicting-code detection remain recommendations.
-- Printed-label margins/density and camera behaviour need actual printer/scanner checks. Existing barcode values have not been regenerated.
-- Hero text does not apply a checkout discount; prices/coupons must match advertised terms. Existing open catalog tabs need refreshing after changes.
+Evidence and reproducible commands are in
+`docs/audit/evidence/catalog-presentation/README.md`. These tests do not verify
+production permissions, real orders or native printer/scanner behaviour.
 
 ## Rollback
 
-Use Turn off public hero to restore the original catalog intro on new visits. The current hero image is retained for reuse. If an app rollback is required, use a new revert commit or Lovable history restoration; never force-push or rewrite published history. Keep the additive hero schema in place when reverting UI.
+Use the new switches to turn presentation effects OFF. Hero OFF still restores
+the original catalog intro and keeps the saved hero image. If reverting code,
+create a new revert commit; never rewrite published git history. Keep the small
+additive presentation table in place when reverting the UI.
+
+Existing scanner gaps remain outside this change: focus the product search
+before scanning; codes for products outside the loaded list may be missed.

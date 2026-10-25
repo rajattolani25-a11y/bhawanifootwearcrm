@@ -1298,6 +1298,20 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Catalog appearance": {"english": "Catalog appearance", "hindi": "कैटलॉग का रूप", "hinglish": "Catalog ka look"},
+  "Show spotlight gallery": {"english": "Show spotlight gallery", "hindi": "स्पॉटलाइट गैलरी दिखाएँ", "hinglish": "Spotlight gallery dikhao"},
+  "Feature products from the customer's current filters.": {"english": "Feature products from the customer's current filters.", "hindi": "ग्राहक के चुने फ़िल्टर के प्रोडक्ट दिखाएँ।", "hinglish": "Customer ke current filters ke products dikhao."},
+  "Category colour accents": {"english": "Category colour accents", "hindi": "कैटेगरी के रंग", "hinglish": "Category ke colours"},
+  "Use coordinated colours when customers change category or type.": {"english": "Use coordinated colours when customers change category or type.", "hindi": "कैटेगरी या प्रकार बदलने पर संबंधित रंग दिखाएँ।", "hinglish": "Category ya type badalne par matching colours dikhao."},
+  "Catalog animations": {"english": "Catalog animations", "hindi": "कैटलॉग एनिमेशन", "hinglish": "Catalog animations"},
+  "Allow gallery transitions, hero motion and category colour transitions. Reduced-motion preferences still take priority.": {"english": "Allow gallery transitions, hero motion and category colour transitions. Reduced-motion preferences still take priority.", "hindi": "गैलरी ट्रांज़िशन, हीरो मोशन और रंग बदलने का एनिमेशन चालू करें। कम मोशन की डिवाइस सेटिंग को प्राथमिकता मिलेगी।", "hinglish": "Gallery transitions, hero motion aur colour transitions chalao. Device ki reduced-motion setting pehle rahegi."},
+  "Saved for all customers on their next catalog load. No product, price or stock changes.": {"english": "Saved for all customers on their next catalog load. No product, price or stock changes.", "hindi": "अगली बार कैटलॉग खुलने पर सभी ग्राहकों को लागू होगा। प्रोडक्ट, दाम या स्टॉक नहीं बदलेंगे।", "hinglish": "Agli catalog load par sab customers ko apply hoga. Product, price ya stock nahi badlega."},
+  "Catalog appearance saved": {"english": "Catalog appearance saved", "hindi": "कैटलॉग का रूप सहेजा गया", "hinglish": "Catalog ka look save ho gaya"},
+  "Loading appearance settings…": {"english": "Loading appearance settings…", "hindi": "रूप की सेटिंग्स लोड हो रही हैं…", "hinglish": "Look settings load ho rahi hain…"},
+  "Save appearance": {"english": "Save appearance", "hindi": "रूप सहेजें", "hinglish": "Look save karo"},
+  "Discard changes": {"english": "Discard changes", "hindi": "बदलाव हटाएँ", "hinglish": "Changes hatao"},
+  "Appearance settings storage is unavailable. Apply migration 0021 in Lovable, then retry. The catalog still works.": {"english": "Appearance settings storage is unavailable. Apply migration 0021 in Lovable, then retry. The catalog still works.", "hindi": "रूप की सेटिंग्स के लिए स्टोरेज उपलब्ध नहीं है। Lovable में माइग्रेशन 0021 लागू करके फिर कोशिश करें। कैटलॉग चलता रहेगा।", "hinglish": "Look settings ka storage available nahi hai. Lovable mein migration 0021 apply karke retry karo. Catalog chalta rahega."},
+  "Appearance settings could not be loaded. Retry or check database permissions.": {"english": "Appearance settings could not be loaded. Retry or check database permissions.", "hindi": "रूप की सेटिंग्स लोड नहीं हुईं। फिर कोशिश करें या डेटाबेस अनुमतियाँ जाँचें।", "hinglish": "Look settings load nahi hui. Retry karo ya database permissions check karo."},
   "Product spotlight": {"english": "Product spotlight", "hindi": "प्रोडक्ट स्पॉटलाइट", "hinglish": "Product spotlight"},
   "Discover your next pair": {"english": "Discover your next pair", "hindi": "अपनी अगली जोड़ी चुनें", "hinglish": "Apni agli jodi chuno"},
   "In the spotlight": {"english": "In the spotlight", "hindi": "खास आपके लिए", "hinglish": "Khaas aapke liye"},

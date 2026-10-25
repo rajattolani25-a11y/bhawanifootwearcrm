@@ -25,3 +25,10 @@ test('billing audit: inclusive/exclusive GST and discount cap',()=>{
  assert.equal(computeBill(items,100,0,{billType:'gst',taxMode:'exclusive',rate:5}).total,945);
  assert.equal(computeBill(items,2000,0,{billType:'simple',taxMode:'exclusive',rate:5}).total,0);
 });
+
+import {catalogPresentation} from '../src/lib/catalog-presentation.ts';
+test('presentation defaults preserve explicit false and ignore unknown fields',()=>{
+ assert.deepEqual(catalogPresentation(null),{gallery_enabled:true,category_accents:true,motion_enabled:true});
+ assert.deepEqual(catalogPresentation({gallery_enabled:false,category_accents:false,motion_enabled:false,secret:'ignored'}),{gallery_enabled:false,category_accents:false,motion_enabled:false});
+ assert.equal(catalogPresentation({motion_enabled:'false'}).motion_enabled,true);
+});
