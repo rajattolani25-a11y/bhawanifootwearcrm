@@ -179,3 +179,12 @@
   .productInfo { padding: 9px; }
 }
 @media (prefers-reduced-motion: reduce) { .productCard, .productImage img { transition: none; } .productCard:hover .productImage img { transform: none; } }
+/* Existing catalog type/category filters drive the palette; prices and products stay untouched. */
+.store { transition:background-color 220ms ease,color 180ms ease; }
+.store[data-tone="Formal"][data-theme="light"] { --catalog-accent:#655b4c; --catalog-bg:#f4f1ec; --catalog-tint:#ede7dd; }
+.store[data-tone="Sports"][data-theme="light"] { --catalog-accent:#35666b; --catalog-bg:#eff4f3; --catalog-tint:#deecea; }
+.store[data-tone="Sandals"][data-theme="light"], .store[data-tone="Kids"][data-theme="light"] { --catalog-accent:#63683f; --catalog-bg:#f4f4ee; --catalog-tint:#e9ebdc; }
+.store[data-tone="Ladies"][data-theme="light"], .store[data-tone="Girls"][data-theme="light"] { --catalog-accent:#675b6b; --catalog-bg:#f5f2f4; --catalog-tint:#ebe4ed; }
+.store[data-theme="dark"][data-tone="Formal"] { --catalog-accent:#d0c1a8; --catalog-tint:#37332b; }
+.store[data-theme="dark"][data-tone="Sports"] { --catalog-accent:#a8cfcc; --catalog-tint:#233a3a; }
+@media(prefers-reduced-motion:reduce) { .store { transition:none; } }

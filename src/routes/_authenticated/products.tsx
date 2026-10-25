@@ -1,6 +1,7 @@
+import { fetchAll } from "@/lib/fetch-all";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Download, ImagePlus, Plus, Search, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,9 @@ function Products() {
   const qc = useQueryClient();
   const { isOwner } = useAuth();
   const [q, setQ] = useState(article);
+  const deferredSearch = useDeferredValue(q);
+  const [visibleCount, setVisibleCount] = useState(60);
+  useEffect(() => setVisibleCount(60), [q]);
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const { data: cost } = useQuery({ queryKey: ["product-profile-cost",selected], enabled: isOwner && !!selected, queryFn: async () => { const { data,error } = await supabase.from("product_costs").select("purchase_price").eq("product_id",selected ?? "").maybeSingle(); if(error) throw error; return data; } });
@@ -34,13 +38,9 @@ function Products() {
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
+    staleTime: 15_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,brand,article,category,color,mrp,selling_price,image_url,catalog_visible,product_variants(id,size,stock,rack,barcode)")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
+      const data = await fetchAll((a, b) => supabase.from("products").select("id,brand,article,category,color,mrp,selling_price,image_url,catalog_visible,product_variants(id,size,stock,rack,barcode)").order("id").range(a, b));
       return addSignedImages(data);
     },
   });
@@ -55,13 +55,13 @@ function Products() {
   }, [qc]);
 
   const filtered = useMemo(() => {
-    const s = q.toLowerCase().trim();
+    const s = deferredSearch.toLowerCase().trim();
     if (!s) return products;
     return products.filter((p) =>
       [p.brand, p.article, p.category, p.color].some((f) => f?.toLowerCase().includes(s)) ||
       p.product_variants.some((v) => v.barcode === s),
     );
-  }, [products, q]);
+  }, [products, deferredSearch]);
 
   return (
     <div>
@@ -79,13 +79,13 @@ function Products() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((p) => {
+        {filtered.slice(0, visibleCount).map((p) => {
           const total = p.product_variants.reduce((s, v) => s + v.stock, 0);
           const sizes = [...p.product_variants].sort((a, b) => sizeSort(a.size, b.size));
           return (
             <div key={p.id} className="overflow-hidden rounded-lg border bg-card">
               <div className="relative h-32 bg-muted">
-                {p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain p-2" /> : <div className="flex h-full items-center justify-center font-display text-3xl text-muted-foreground/30">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}
+                {p.image_src ? <img src={p.image_src} loading="lazy" decoding="async" alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain p-2" /> : <div className="flex h-full items-center justify-center font-display text-3xl text-muted-foreground/30">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}
                 {isOwner && <label className="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-md bg-card/95 px-2 py-1 text-xs font-semibold shadow-sm"><ImagePlus className="h-3.5 w-3.5" /> Photo<input type="file" accept="image/*" hidden onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const up = await uploadProductImage(p.id, file); toast.success(`Product photo saved (${Math.round(up.size / 1024)} KB)`); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["stock-all"] }); qc.invalidateQueries({ queryKey: ["pos-products"] }); } catch (err) { toast.error((err as Error).message); } e.target.value = ""; }} /></label>}
               </div>
               <div className="p-4">
@@ -121,6 +121,7 @@ function Products() {
             </div>
           );
         })}
+        {filtered.length > visibleCount && <Button variant="outline" onClick={() => setVisibleCount(n => n + 60)}>Show more products</Button>}
         {filtered.length === 0 && <p className="text-sm text-muted-foreground">No products yet. Add one, or import your old data from Settings.</p>}
       </div>
 

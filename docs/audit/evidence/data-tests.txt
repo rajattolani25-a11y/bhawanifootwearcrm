@@ -1,0 +1,22 @@
+
+> test:audit
+> node --experimental-strip-types --test tests/data-audit.test.mjs
+
+✔ reads all 2501 rows beyond the database 1000-row cap (2.359211ms)
+✔ first partial page and empty result do not lose rows (0.452534ms)
+✔ database errors reject instead of producing partial totals (0.587701ms)
+✔ safety cap rejects incomplete totals (705.406372ms)
+✔ billing audit: inclusive/exclusive GST and discount cap (0.467223ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 850.163731
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice

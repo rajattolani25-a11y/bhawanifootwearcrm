@@ -20,7 +20,7 @@ export function StorageMeter() {
       return data as { photo_bytes: number; photos: number } | null;
     },
   });
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["store-usage"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("store_usage");
@@ -28,6 +28,10 @@ export function StorageMeter() {
       return data as unknown as Usage;
     },
   });
+  if (error) return <section role="alert" className="rounded-xl border bg-card p-5 text-sm">
+    <p>Storage usage could not be loaded.</p>
+    <button type="button" className="mt-2 underline" onClick={() => void refetch()}>Retry</button>
+  </section>;
   if (isLoading || !data) return <section className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">Checking storage…</section>;
 
   const dbPct = Math.min(100, (data.db_bytes / DB_LIMIT) * 100);

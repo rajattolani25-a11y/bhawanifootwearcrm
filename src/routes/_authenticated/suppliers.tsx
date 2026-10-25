@@ -1,3 +1,4 @@
+import { fetchAll } from "@/lib/fetch-all";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -28,9 +29,9 @@ function Suppliers() {
   const [ob, setOb] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [payment, setPayment] = useState({ amount: "", mode: "Cash", note: "" });
-  const { data = [] } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
-  const { data: purchases = [] } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => (await supabase.from("purchases").select("id,supplier_id,purchase_date,invoice_no,quantity,purchase_price,total,paid_amount").order("purchase_date",{ascending:false})).data ?? [] });
-  const { data: payments = [] } = useQuery({ queryKey: ["supplier-payments"], queryFn: async () => (await supabase.from("supplier_payments").select("id,supplier_id,amount,payment_mode,paid_at,note").order("paid_at",{ascending:false})).data ?? [] });
+  const { data = [], error: supplierError, isPending: supplierPending } = useQuery({ queryKey: ["suppliers"], queryFn: async () => fetchAll((a, b) => supabase.from("suppliers").select("*").order("name", { ascending: true }).order("id").range(a, b)) });
+  const { data: purchases = [], error: purchasesError, isPending: purchasesPending } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => fetchAll((a, b) => supabase.from("purchases").select("id,supplier_id,purchase_date,invoice_no,quantity,purchase_price,total,paid_amount").order("purchase_date", { ascending: false }).order("id").range(a, b)) });
+  const { data: payments = [], error: paymentsError, isPending: paymentsPending } = useQuery({ queryKey: ["supplier-payments"], queryFn: async () => fetchAll((a, b) => supabase.from("supplier_payments").select("id,supplier_id,amount,payment_mode,paid_at,note").order("paid_at", { ascending: false }).order("id").range(a, b)) });
   const openingOf = (id: string) => Number(data.find((s) => s.id === id)?.opening_balance ?? 0);
   const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [openingOf(id), 0]);
 
@@ -72,7 +73,8 @@ function Suppliers() {
   }
   return (
     <div>
-      <PageHeader title="Suppliers" subtitle="Who you buy from, how much is pending." actions={<Button variant="outline" className="h-11" onClick={exportPdf}><FileText className="h-4 w-4" /> Export PDF</Button>} />
+      <PageHeader title="Suppliers" subtitle="Who you buy from, how much is pending." actions={<Button variant="outline" className="h-11" onClick={exportPdf} disabled={supplierPending || purchasesPending || paymentsPending || !!(supplierError || purchasesError || paymentsError)}><FileText className="h-4 w-4" /> Export PDF</Button>} />
+      {(supplierError || purchasesError || paymentsError) && <p role="alert" className="mb-3 text-destructive">Supplier balances could not be loaded. Please retry.</p>}
       <div className="mb-4 grid gap-2 rounded-xl border bg-card p-3 sm:grid-cols-6">
         <Input placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         <Input placeholder="Phone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />

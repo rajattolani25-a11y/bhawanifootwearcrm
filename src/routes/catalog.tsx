@@ -1,5 +1,9 @@
+import { CouponTicket } from "@/components/CouponTicket";
+import { CatalogSpotlight } from "@/components/CatalogSpotlight";
+import { InterfaceMotion } from "@/components/motion/provider";
+import { BlurReveal } from "@/components/motion/blur-reveal";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
@@ -23,7 +27,7 @@ export const Route = createFileRoute("/catalog")({
   },
   errorComponent: () => <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>,
   notFoundComponent: () => <div className="p-6">Not found</div>,
-  component: () => <LanguageProvider><Catalog /></LanguageProvider>,
+  component: () => <InterfaceMotion><LanguageProvider><Catalog /></LanguageProvider></InterfaceMotion>,
 });
 
 const FILTERS = ["All", "Gents", "Ladies", "Boys", "Girls", "Kids"] as const;
@@ -118,7 +122,7 @@ function Catalog() {
   </section>;
 
   return (
-    <div className={styles["store"]} data-theme={dark ? "dark" : "light"}>
+    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-tone={ptype !== "All" ? ptype : filter}>
       <header className={styles["header"]}>
         <div className={styles["headerInner"]}>
           <a href="#catalog-collection" className={styles["identity"]} aria-label={shop.name}>
@@ -137,7 +141,7 @@ function Catalog() {
         {data.offer.code && <Copy aria-hidden="true" />}
       </button>}
 
-      {data.hero ? <CatalogHero key={data.hero.image} hero={data.hero} onAction={heroAction} fallback={introduction} /> : introduction}
+      {data.hero ? <CatalogHero key={data.hero.image} hero={data.hero} onAction={heroAction} fallback={introduction} /> : <BlurReveal>{introduction}</BlurReveal>}
 
       <div className={styles["discovery"]}>
         <div className={styles["discoveryInner"]}>
@@ -171,6 +175,7 @@ function Catalog() {
             {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className={styles["clear"]}>Clear</button>}
           </div>
         </div>
+        {list.length > 1 && <CatalogSpotlight key={`${filter}-${brand}-${ptype}-${fsize}-${q}`} products={list} onOpen={product => { setOpen(product); setViews(v => v + 1); }} />}
         <div className={styles["productGrid"]}>
           {list.map((p) => {
             const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
@@ -278,7 +283,7 @@ function similarTo(p: CatalogProduct, all: CatalogProduct[]) {
     .sort((a, b) => b.score - a.score).slice(0, 4).map((r) => r.x);
 }
 
-function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode }: { product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
+export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode }: { product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
   const { lang } = useLang();
   const [size, setSize] = useState<string | null>(null);
   const [step, setStep] = useState<"view" | "method" | "form" | "done">("view");
@@ -293,6 +298,9 @@ function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode
   const [code, setCode] = useState(offerCode);
   const [disc, setDisc] = useState<{ code: string; amount: number } | null>(null);
   const [cErr, setCErr] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
+  const couponRequest = useRef(0);
+  useEffect(() => { couponRequest.current++; setDisc(null); setCErr(""); setCouponBusy(false); }, [product?.id, size, mobile]);
   if (!product) return null;
   const chosen = product.sizes.find((s) => s.id === size);
   const label = `${product.brand} ${product.article}`;
@@ -303,9 +311,13 @@ function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode
   const payNow = method === "pickup" ? Math.ceil(net * shop.advance_percent / 100) : net + (method === "local" && shop.free_delivery_above != null && net >= shop.free_delivery_above ? 0 : charge(method));
   async function applyCoupon() {
     if (!chosen || !code.trim()) return;
-    setCErr(""); setDisc(null);
-    try { setDisc(await checkCoupon({ data: { variantId: chosen.id, code: code.trim(), mobile: mobile.replace(/[\s-]/g, "") } })); }
-    catch (e) { setCErr((e as Error).message.replace(/^.*?:\s*/, "")); }
+    const request = ++couponRequest.current;
+    setCErr(""); setDisc(null); setCouponBusy(true);
+    try {
+      const result = await checkCoupon({ data: { variantId: chosen.id, code: code.trim(), mobile: mobile.replace(/[\s-]/g, "") } });
+      if (request === couponRequest.current) setDisc(result);
+    } catch (e) { if (request === couponRequest.current) setCErr((e as Error).message.replace(/^.*?:\s*/, "")); }
+    finally { if (request === couponRequest.current) setCouponBusy(false); }
   }
   const delivery = method !== "pickup";
   const valid = name.trim().length >= 2 && /^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, "")) && (!delivery || address.trim().length >= 10);
@@ -380,10 +392,10 @@ function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode
             <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="City / Pincode" maxLength={80} className="h-11" />
           </>}
           <div className="flex gap-2">
-            <Input value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setDisc(null); }} placeholder="Coupon code (optional)" maxLength={30} className="h-11 font-mono uppercase" />
-            <Button type="button" variant="outline" className="h-11" disabled={!code.trim() || !/^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, ""))} onClick={applyCoupon}>Apply</Button>
+            <Input value={code} onChange={(e) => { couponRequest.current++; setCouponBusy(false); setCode(e.target.value.toUpperCase()); setDisc(null); }} placeholder="Coupon code (optional)" maxLength={30} className="h-11 min-w-0 flex-1 font-mono uppercase" />
+            <Button type="button" variant="outline" className="h-11 min-w-20 shrink-0 whitespace-nowrap" disabled={couponBusy || !code.trim() || !/^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, ""))} onClick={applyCoupon}>{couponBusy ? "Checking…" : "Apply"}</Button>
           </div>
-          {disc && <p className="flex items-center gap-1 text-xs font-semibold text-primary"><Check className="h-3.5 w-3.5" /> <span>You save</span> {inr(disc.amount)}</p>}
+          {disc && <CouponTicket code={disc.code} amount={disc.amount} onRemove={() => { couponRequest.current++; setDisc(null); setCode(""); }} />}
           {cErr && <p className="text-xs text-destructive">{cErr}</p>}
           {err && <p className="text-sm text-destructive">{err}</p>}
           <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("method")} className="h-11 flex-1">Back</Button><Button disabled={busy || !valid} onClick={order} className="h-11 flex-1">{busy ? "Please wait…" : "Place order"}</Button></div>

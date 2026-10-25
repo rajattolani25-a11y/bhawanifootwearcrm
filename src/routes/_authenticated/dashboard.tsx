@@ -1,3 +1,4 @@
+import { fetchAll } from "@/lib/fetch-all";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -18,27 +19,25 @@ const dayKey = (d: Date) => d.toLocaleDateString("en-CA");
 function Dashboard() {
   const qc = useQueryClient();
   const { isOwner, user } = useAuth();
-  const [clock, setClock] = useState(new Date());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setClock(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const { data } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ["dashboard", isOwner],
+    staleTime: 15_000,
     queryFn: async () => {
       const since = new Date();
       since.setDate(since.getDate() - 90);
-      const [sales, variants, moves, costs, pcosts, settings] = await Promise.all([
-        supabase.from("sales").select("id,sale_date,total,paid_amount,due_amount,gst_amount,payment_mode,split_cash,customer_id,sale_items(qty,price,variant_id)").gte("sale_date", since.toISOString()).order("sale_date", { ascending: false }),
-        supabase.from("product_variants").select("id,size,stock,min_stock,created_at,product_id,products(brand,article,category)"),
+      const [sales, variants, moves, costs, pcosts, settings, dues, openingBalances] = await Promise.all([
+        fetchAll((a, b) => supabase.from("sales").select("id,sale_date,total,paid_amount,due_amount,gst_amount,payment_mode,split_cash,customer_id,sale_items(qty,price,variant_id)").gte("sale_date", since.toISOString()).order("sale_date", { ascending: false }).order("id").range(a, b)),
+        fetchAll((a, b) => supabase.from("product_variants").select("id,size,stock,min_stock,created_at,product_id,products(brand,article,category)").order("id").range(a, b)),
         supabase.from("stock_movements").select("id,moved_at,type,product_name,qty_in,qty_out,product_variants(size)").order("moved_at", { ascending: false }).limit(8),
-        isOwner ? supabase.from("sale_costs").select("sale_id,profit") : Promise.resolve({ data: [] as { sale_id: string; profit: number }[] }),
-        isOwner ? supabase.from("product_costs").select("product_id,purchase_price") : Promise.resolve({ data: [] as { product_id: string; purchase_price: number }[] }),
+        isOwner ? fetchAll((a, b) => supabase.from("sale_costs").select("sale_id,profit").order("sale_id").range(a, b)) : Promise.resolve([]),
+        isOwner ? fetchAll((a, b) => supabase.from("product_costs").select("product_id,purchase_price").order("product_id").range(a, b)) : Promise.resolve([]),
         supabase.from("store_settings").select("business_name,daily_target").eq("id", 1).single(),
+        fetchAll((a, b) => supabase.from("sales").select("id,due_amount").gt("due_amount", 0).order("id").range(a, b)),
+        fetchAll((a, b) => supabase.from("customers").select("id,opening_balance").gt("opening_balance", 0).order("id").range(a, b)),
       ]);
-      return { sales: sales.data ?? [], variants: variants.data ?? [], moves: moves.data ?? [], costs: costs.data ?? [], pcosts: pcosts.data ?? [], settings: settings.data };
+      if (moves.error) throw moves.error;
+      if (settings.error) throw settings.error;
+      return { sales, variants, moves: moves.data ?? [], costs, pcosts, settings: settings.data, dues, openingBalances };
     },
   });
 
@@ -71,7 +70,7 @@ function Dashboard() {
     const cat: Record<string, number> = {};
     const sold = new Map<string, number>();
     for (const s of sales) {
-      pay[s.payment_mode] = (pay[s.payment_mode] ?? 0) + Number(s.paid_amount || s.total);
+      pay[s.payment_mode] = (pay[s.payment_mode] ?? 0) + Number(s.paid_amount ?? s.total);
       for (const it of s.sale_items) {
         const v = it.variant_id ? variantInfo.get(it.variant_id) : undefined;
         const c = v?.products?.category || "Other";
@@ -93,14 +92,14 @@ function Dashboard() {
     const reorder = variants.filter((v) => v.stock < Math.max(3, v.min_stock)).sort((a, b) => a.stock - b.stock);
 
     const todaySales = todays.reduce((a, s) => a + Number(s.total), 0);
-    const cashIn = todays.reduce((a, s) => a + (s.payment_mode === "Cash" ? Number(s.paid_amount || s.total) : s.payment_mode === "Split" ? Number(s.split_cash) : 0), 0);
+    const cashIn = todays.reduce((a, s) => a + (s.payment_mode === "Cash" ? Number(s.paid_amount ?? s.total) : s.payment_mode === "Split" ? Number(s.split_cash) : 0), 0);
     const target = Number(data?.settings?.daily_target ?? 0);
     return {
       todaySales,
       bills: todays.length,
       profit: todays.reduce((a, s) => a + (profitBySale.get(s.id) ?? 0), 0),
       stockValue: variants.reduce((a, v) => a + v.stock * (costByProduct.get(v.product_id) ?? 0), 0),
-      credit: sales.reduce((a, s) => a + Number(s.due_amount), 0),
+      credit: (data?.dues ?? []).reduce((a, s) => a + Number(s.due_amount), 0) + (data?.openingBalances ?? []).reduce((a, c) => a + Number(c.opening_balance), 0),
       gst: todays.reduce((a, s) => a + Number(s.gst_amount), 0),
       cashIn,
       pairs: variants.reduce((a, v) => a + v.stock, 0),
@@ -130,6 +129,7 @@ function Dashboard() {
 
   return (
     <div className="space-y-5">
+      {error && <p role="alert" className="text-destructive">Unable to load dashboard: {error.message}</p>}
       <div className="max-w-xl"><UniversalSearch /></div>
       {/* Header */}
       <section className="relative overflow-hidden rounded-lg border bg-card p-4 text-card-foreground sm:p-6 md:p-8">
@@ -140,7 +140,7 @@ function Dashboard() {
             <p className="mt-1 text-sm text-muted-foreground">Today’s sales, stock movement and urgent actions—updated as they happen.</p>
           </div>
            <div className="flex min-w-0 w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-             <div className="border-border text-left sm:border-r sm:pr-4 sm:text-right"><p className="font-display text-xl font-bold text-foreground">{clock.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">{clock.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · IST</p></div>
+             <DashboardClock />
            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Button asChild className="col-span-2 h-11 sm:col-span-1"><Link to="/pos">New Bill</Link></Button>
             {isOwner && <Button asChild variant="secondary" className="h-11"><Link to="/purchase">Receive Stock</Link></Button>}
@@ -312,4 +312,15 @@ function AlertList({ items, empty }: { items: { id: string; text: string; tag: s
       ))}
     </ul>
   );
+}
+
+function DashboardClock() {
+  const [clock, setClock] = useState(new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (<div className="border-border text-left sm:border-r sm:pr-4 sm:text-right"><p className="font-display text-xl font-bold text-foreground">{clock.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</p><p className="text-[10px] uppercase tracking-wide text-muted-foreground">{clock.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" })} · IST</p></div>);
 }

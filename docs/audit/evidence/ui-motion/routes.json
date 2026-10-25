@@ -1,0 +1,158 @@
+{
+  "scope": "390px Chromium, empty mocked shop and mocked owner/staff; no real backend requests from browser",
+  "routes": [
+    {
+      "path": "/dashboard",
+      "title": "Good afternoon. The counter is live.",
+      "overflow": false,
+      "body": "SoleStack POS\nSearch article, barcode, customer, bill…\n\nRETAIL CONTROL ROOM · DEMO STORE\n\nGood afternoon. The counter is live.\n\nToday’s sales, stock movement and urgent actions—updated as they happen.\n\n01:40:30 pm\n\nSUN, 25 OCT · IST\n\nNew Bill\nReceive Stock\nCustomers\nLIVE\n\nToday ₹0 from 0 bills · 0 p",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/pos",
+      "title": "POS Billing",
+      "overflow": false,
+      "body": "SoleStack POS\nProducts\nCart\n0\n\nDEMO STORE\n\nPOS Billing\n\nScan, choose size and complete the bill\n\nReady\nAll\nAll\n\nNo products found.\n\nCart · 0 pairs\n₹0 →",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/products",
+      "title": "Products",
+      "overflow": false,
+      "body": "SoleStack POS\nProducts\n\nSize-wise stock for every article. Green = in stock, amber = low, red = out. Tap an article for its full profile.\n\nQuick add\n\nNo products yet. Add one, or import your old data from Settings.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/purchase",
+      "title": "Purchase",
+      "overflow": false,
+      "body": "SoleStack POS\nPurchase\n\nReceive stock — adds pairs, updates cost price, logs ledger. New sizes: add in Products first.\n\nSelect supplier\nGST 0%\nGST 5%\nGST 12%\nGST 18%\nNew article\n\nReceiving\n\n₹0\n\nReceive Stock\nRecent purchases\nDATE\tSUPPLIER\tINVOICE\tQTY\tCOST\tTOTAL",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/sales",
+      "title": "Sales History",
+      "overflow": false,
+      "body": "SoleStack POS\nSales History\n\nRe-print bill, WhatsApp bill, return or exchange.\n\nBILL\tDATE\tCUSTOMER\tITEMS\tMODE\tTOTAL\t\nNo bills.\nPage 1 · 0 bills\nPrevious\nNext",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/suppliers",
+      "title": "Suppliers",
+      "overflow": false,
+      "body": "SoleStack POS\nSuppliers\n\nWho you buy from, how much is pending.\n\nExport PDF\nAdd supplier",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/customers",
+      "title": "Customers",
+      "overflow": false,
+      "body": "SoleStack POS\nCustomers\n\nOne mobile number = one profile.\n\nExport PDF\nAdd customer\nNAME\tMOBILE\tSTAMPS\tLAST VISIT\tDUE\tTOTAL SPEND\nNo customers yet.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/khata",
+      "title": "Khatabook",
+      "overflow": false,
+      "body": "SoleStack POS\nKhatabook\n\nEvery entry with running balance for customers and suppliers.\n\nCustomer Ledger\nSupplier Ledger\n\nTotal to receive (from customers)\n\n₹0\n\nAccounts with balance\n\n0\n\nTotal accounts\n\n0\n\nOnly with balance\nNo accounts\n\nSelect an account from the list.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/inventory-control",
+      "title": "Inventory Control",
+      "overflow": false,
+      "body": "SoleStack POS\nInventory Control\n\nReorder, damaged bucket, dead stock and manual correction.\n\nLow stock (0)\nDamaged (0)\nDead 60d (0)\nAdjust stock\n\nNothing here",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/reports",
+      "title": "Reports",
+      "overflow": false,
+      "body": "SoleStack POS\nReports\n\nPick dates — everything updates.\n\nCSV\n\nSales\n\n₹0\n\nBills\n\n0\n\nPairs\n\n0\n\nAverage bill\n\n₹0\n\nGross profit after returns\n\n₹0\n\nExpenses\n\n₹0\n\nNet profit\n\n₹0\n\nGST net of returns\n\n₹0\n\nRefunds\n\n₹0\n\nDiscount given\n\n₹0\n\nUdhar still pending\n\n₹0\n\nMargin\n\n0%\n\nDaily sales\n\nBest day: ₹0\n\n26\n27\n",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/accounting",
+      "title": "Accounting",
+      "overflow": false,
+      "body": "SoleStack POS\nAccounting\n\nProfit, cash movements and tax are separate views.\n\nCSV\nPDF\nSummary\nProfit & Loss\nCash Book\nTax & Payables\nSummary · 2026-10\n\nSales\n\n₹0\n\nNet profit\n\n₹0\n\nMargin\n\n0.0%\n\nTo receive\n\n₹0\n\nTo pay\n\n₹0\n\nCash movement\n\n₹0\n\nBills\n0\nAverage bill\n₹0\nDiscount given\n₹0\nNew udhar this mon",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/barcodes",
+      "title": "Barcodes & QR",
+      "overflow": false,
+      "body": "SoleStack POS\nBarcodes & QR\n\nBrand-style box labels — each size has its own permanent scan code. Billing using either Barcode or QR.\n\nPreview labels (0)\nA4 sheet · 3 across\nLabel roll · 50×38mm",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/settings",
+      "title": "Settings",
+      "overflow": false,
+      "body": "SoleStack POS\nSettings\n\nStore details, team and data.\n\nKaam ki guide\nAppearance\n\nChoose the workspace appearance on this device.\n\nLight\nDark\nSystem\nLanguage / भाषा\n\nMenu and screen titles will appear in this language (on this device).\n\nEnglish\nहिंदी\nHinglish\nStore details\nShop name\nPhone\nAddress\nGST",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/coupons",
+      "title": "Rewards & Coupons",
+      "overflow": false,
+      "body": "SoleStack POS\nRewards & Coupons\n\nCreate your own coupons — for everyone or for a single customer. Discount will be applied as soon as the code is entered during billing.\n\nNew coupon\nCoupons (0)\nLoyalty rewards\n\nNo coupons yet. Create your first code using \"New coupon\".",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/community",
+      "title": "WhatsApp Community & Posters",
+      "overflow": false,
+      "body": "SoleStack POS\nWhatsApp Community & Posters\n\nNew stock message for your community group + 9:16 status posters. Free, no API.\n\nNew stock of last\n3 days\n7 days\n15 days\n30 days\nNEW ARRIVAL\nBACK IN STOCK\nIN STORE NOW\nLight\nDark\n\n0 new articles found\n\nPoster for any stock\n\nCommunity message\n\nCopy\nWhatsApp",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/stock-ledger",
+      "title": "Stock Ledger",
+      "overflow": false,
+      "body": "SoleStack POS\nStock Ledger\n\nLatest 300 movements.\n\nDATE\tTYPE\tPRODUCT\tSIZE\tIN\tOUT\tNOTE\nNo movements yet.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/bookings",
+      "title": "Online Orders",
+      "overflow": false,
+      "body": "SoleStack POS\nOnline Orders\n\nPickup bookings and delivery orders from your catalog. These pairs are already taken out of stock, so nobody else can buy them.\n\nCopy catalog link\nPending payment (0)\nTo fulfil (0)\nCompleted (0)\nCancelled (0)\n\nNo bookings here.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/guide",
+      "title": "Guide",
+      "overflow": false,
+      "body": "SoleStack POS\nGuide\nKaam ki guide\n\nChoose any section; you will get a step-by-step guide on that screen.\n\nHinglish\nEnglish\nहिन्दी\nDashboard\nPOS Billing\nProducts\nPurchase\nSales History\nSuppliers\nCustomers\nKhatabook\nOnline Orders\nRewards & Coupons\nInventory Control\nReports\nAccounting\nBarcodes\nSettings",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "staffRequested": "reports",
+      "redirect": "/pos"
+    },
+    {
+      "staffRequested": "accounting",
+      "redirect": "/pos"
+    }
+  ],
+  "failures": []
+}

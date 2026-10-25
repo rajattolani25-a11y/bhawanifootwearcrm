@@ -25,10 +25,10 @@ function Reports() {
     queryKey: ["report", from, to],
     queryFn: async () => {
       const a = new Date(from + "T00:00:00+05:30").toISOString();
-      const b = new Date(to + "T23:59:59+05:30").toISOString();
+      const b = new Date(new Date(to + "T00:00:00+05:30").getTime() + 864e5).toISOString();
       const [sales, returns, expenses] = await Promise.all([
-        fetchAll((x, y) => supabase.from("sales").select("id,sale_date,payment_mode,total,taxable,gst_amount,gst_rate,discount,due_amount,sale_items(product_name,size,qty,price,discount),sale_costs(total_cost)").gte("sale_date", a).lte("sale_date", b).order("sale_date").range(x, y)),
-        fetchAll((x, y) => supabase.from("sale_returns").select("refund,kind,gst_reversal,cost_reversal,created_at").gte("created_at", a).lte("created_at", b).range(x, y)),
+        fetchAll((x, y) => supabase.from("sales").select("id,sale_date,payment_mode,total,taxable,gst_amount,gst_rate,discount,due_amount,sale_items(product_name,size,qty,price,discount),sale_costs(total_cost)").gte("sale_date", a).lt("sale_date", b).order("sale_date").order("id").range(x, y)),
+        fetchAll((x, y) => supabase.from("sale_returns").select("refund,kind,gst_reversal,cost_reversal,created_at").gte("created_at", a).lt("created_at", b).order("id").range(x, y)),
         fetchAll((x, y) => supabase.from("expenses").select("amount").gte("spent_on", from).lte("spent_on", to).range(x, y)),
       ]);
       const costs = new Map(sales.map((s) => [s.id, { total_cost: Number(one(s.sale_costs as { total_cost: number } | { total_cost: number }[] | null)?.total_cost ?? 0) }]));

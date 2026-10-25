@@ -1,0 +1,12 @@
+.pageHeader { padding:20px; border:1px solid var(--border); border-radius:16px; background:var(--card); box-shadow:0 3px 14px #152d2005; }
+.pageHeader h1 { letter-spacing:-.035em; line-height:1.2; }
+.pageHeader p { max-width:65ch; line-height:1.6; }
+.workspace :where(table) { font-variant-numeric:tabular-nums; }
+.workspace :where(thead th) { font-size:11px; letter-spacing:.035em; font-weight:600; color:var(--muted-foreground); }
+.workspace :where(tbody tr) { transition:background-color 120ms ease; }
+.workspace :where(tbody tr:hover) { background:color-mix(in srgb,var(--primary) 4%,transparent); }
+.workspace :where(input,select) { transition:border-color 120ms ease,box-shadow 120ms ease; }
+@media(max-width:640px) { .pageHeader { padding:16px; border-radius:12px; } }
+@media(prefers-reduced-motion:reduce) { .workspace :where(tbody tr,input,select) { transition:none; } }
+.workspace { --primary:#4d625c; --primary-foreground:#fff; --ring:#4d625c; --accent:#e7eeea; --accent-foreground:#254438; }
+:global(.dark) .workspace { --primary:#b6c9c0; --primary-foreground:#1d2923; --ring:#b6c9c0; --accent:#293b33; --accent-foreground:#d8e6df; }

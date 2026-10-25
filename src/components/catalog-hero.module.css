@@ -153,3 +153,9 @@
     animation: none;
   }
 }
+/* Quiet spotlight accent: static gradient, one compositor-only entrance. */
+.spotlight { position:absolute; z-index:-1; pointer-events:none; width:min(75%,760px); height:85%; inset:0 0 auto auto; border-radius:50%; background:radial-gradient(ellipse,#b6c9c040 0%,transparent 68%); }
+.hero[data-motion="true"] .spotlight { animation:spotlight-enter 650ms ease-out both; }
+.hero[data-paused="true"] .spotlight { animation-play-state:paused; }
+@keyframes spotlight-enter { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+@media(prefers-reduced-motion:reduce) { .hero[data-motion="true"] .spotlight { animation:none; } }

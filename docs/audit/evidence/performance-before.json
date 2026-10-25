@@ -1,0 +1,28 @@
+{
+  "scope": "390px Chromium, empty mocked shop and mocked owner/staff; no real backend requests from browser",
+  "routes": [
+    {
+      "path": "/pos",
+      "title": "POS Billing",
+      "nodes": 21934,
+      "sizeButtons": 3000,
+      "overflow": false,
+      "body": "SoleStack POS\nProducts\nCart\n0\n\nDEMO STORE\n\nPOS Billing\n\nScan, choose size and complete the bill\n\nReady\nAll\nGents\nAll\nDemo\nDemo\n\nDEMO\n\nArticle0000\n₹799\n6\n8 left\n7\n8 left\n8\n8 left\n9\n8 left\n10\n8 left\nDemo\n\nDEMO\n\nArticle0001\n₹799\n6\n8 left\n7\n8 left\n8\n8 left\n9\n8 left\n10\n8 left\nDemo\n\nDEMO\n\nArticle0002\n₹799",
+      "alert": [],
+      "elapsedMs": 2562,
+      "errors": []
+    },
+    {
+      "path": "/products",
+      "title": "Products",
+      "nodes": 19397,
+      "sizeButtons": 0,
+      "overflow": false,
+      "body": "SoleStack POS\nProducts\n\nSize-wise stock for every article. Green = in stock, amber = low, red = out. Tap an article for its full profile.\n\nCSV\nBulk CSV\nShow all with photo\nHide all\nQuick add\nDA\nPhoto\n\nDEMO\n\nArticle0000\n\nGents · Black\n\n₹799\n\n₹999\n\n6 · 8\n7 · 8\n8 · 8\n9 · 8\n10 · 8\n\n40 pairs total\n\nIn ca",
+      "alert": [],
+      "elapsedMs": 4133,
+      "errors": []
+    }
+  ],
+  "failures": []
+}

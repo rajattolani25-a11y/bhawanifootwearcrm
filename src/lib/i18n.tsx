@@ -64,21 +64,28 @@ const DICT: Record<string, { english?: string; hindi: string; hinglish: string }
 
 const Ctx = createContext<{ lang: AppLanguage; setLang: (l: AppLanguage) => void }>({ lang: "english", setLang: () => {} });
 const KEY = "solestack-language";
+// Some older screens use Hinglish as the source key. Also recognise their
+// explicit English copy, so a React-rendered translation can switch back.
+const BY_ENGLISH = Object.fromEntries(Object.values(DICT).filter(v => v.english).map(v => [v.english!, v]));
+function phrase(text: string, lang: AppLanguage) {
+  return (DICT[text] ?? BY_ENGLISH[text])?.[lang] ?? text;
+}
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<AppLanguage>("english");
   useEffect(() => {
-    const v = localStorage.getItem(KEY);
+    let v: string | null = null;
+    try { v = localStorage.getItem(KEY); } catch { /* restricted device storage */ }
     if (v === "hindi" || v === "hinglish" || v === "english") setLangState(v);
   }, []);
-  const setLang = (l: AppLanguage) => { localStorage.setItem(KEY, l); setLangState(l); };
+  const setLang = (l: AppLanguage) => { try { localStorage.setItem(KEY, l); } catch { /* session-only selection */ } setLangState(l); };
   useEffect(() => translateDom(lang), [lang]);
   return <Ctx.Provider value={{ lang, setLang }}>{children}</Ctx.Provider>;
 }
 
 export function useLang() {
   const { lang, setLang } = useContext(Ctx);
-  const t = (text: string) => DICT[text]?.[lang] ?? text;
+  const t = (text: string) => phrase(text, lang);
   return { lang, setLang, t };
 }
 
@@ -100,7 +107,7 @@ const shownText = new WeakMap<Node, string>();
 const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE"]);
 function lookup(text: string, lang: AppLanguage) {
   const k = text.trim();
-  const v = k ? DICT[k]?.[lang] : undefined;
+  const v = k ? phrase(k, lang) : undefined;
   return v ? text.replace(k, v) : null;
 }
 function translateText(node: Text, lang: AppLanguage) {
@@ -114,6 +121,7 @@ function translateText(node: Text, lang: AppLanguage) {
   shownText.set(node, next);
 }
 function translateAttrs(el: Element, lang: AppLanguage) {
+  if (el.closest("[data-no-translate]")) return;
   for (const a of ["placeholder", "title", "aria-label"]) {
     const v = el.getAttribute(a); if (v === null) continue;
     const key = `data-i18n-${a}`;
@@ -130,7 +138,10 @@ function walk(root: Node, lang: AppLanguage) {
   if (root.nodeType !== 1) return;
   translateAttrs(root as Element, lang);
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
-  for (let n = w.nextNode(); n; n = w.nextNode()) n.nodeType === 3 ? translateText(n as Text, lang) : translateAttrs(n as Element, lang);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    if (n.nodeType === 3) translateText(n as Text, lang);
+    else translateAttrs(n as Element, lang);
+  }
 }
 let observer: MutationObserver | null = null;
 function translateDom(lang: AppLanguage) {

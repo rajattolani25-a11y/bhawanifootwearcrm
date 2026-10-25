@@ -1,3 +1,4 @@
+import { previewDocument } from "@/lib/print-preview";
 import { supabase } from "@/integrations/supabase/client";
 
 export type PrintDesign = "Thermal" | "A4" | "Premium";
@@ -95,51 +96,6 @@ export async function printBill(billNo: string, designArg?: PrintDesign, duplica
 
 export function printHtml(title: string, body: string, css = "") {
   previewDocument(title, `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{margin:0;font-family:Arial,sans-serif}${css}</style></head><body>${body}</body></html>`);
-}
-
-function previewDocument(title: string, html: string) {
-  document.getElementById("print-preview")?.remove();
-  const wrapper = document.createElement("div");
-  wrapper.id = "print-preview";
-  wrapper.setAttribute("role", "dialog");
-  wrapper.setAttribute("aria-label", `${title} print preview`);
-  wrapper.style.cssText = "position:fixed;inset:0;z-index:9999;background:var(--background);color:var(--foreground);display:flex;flex-direction:column";
-  const toolbar = document.createElement("div");
-  toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border)";
-  const heading = document.createElement("strong"); heading.textContent = title; heading.style.cssText = "margin-right:auto";
-  const frame = document.createElement("iframe"); frame.title = title; frame.srcdoc = html.replace(/<script>window\.onload=function\(\)\{window\.focus\(\);window\.print\(\);\}<\/script>/, ""); frame.style.cssText = "flex:1;width:100%;border:0;background:white";
-  const fileName = title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "document";
-  const makePdf = async () => {
-    const doc = frame.contentDocument;
-    if (!doc?.body) throw new Error("Preview not ready");
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas-pro"), import("jspdf")]);
-    await doc.fonts?.ready;
-    const node = doc.body;
-    const w = Math.max(node.scrollWidth, 200), h = Math.max(node.scrollHeight, 200);
-    const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true, width: w, height: h, windowWidth: w, windowHeight: h, logging: false });
-    const pdf = new jsPDF({ orientation: w > h ? "landscape" : "portrait", unit: "px", format: [w, h], hotfixes: ["px_scaling"] });
-    pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, w, h);
-    return pdf.output("blob");
-  };
-  const saveBlob = (blob: Blob, name: string) => {
-    const url = URL.createObjectURL(blob); const a = document.createElement("a");
-    a.href = url; a.download = name; a.rel = "noopener"; document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  };
-  const busy = async (b: HTMLButtonElement, label: string, fn: () => Promise<void>) => {
-    b.disabled = true; b.textContent = "Preparing…";
-    try { await fn(); } catch (e) { if ((e as Error)?.name !== "AbortError") alert("PDF nahi ban paya: " + ((e as Error)?.message ?? e)); }
-    finally { b.disabled = false; b.textContent = label; }
-  };
-  const button = (label: string, action: (b: HTMLButtonElement) => void | Promise<void>) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.style.cssText = "border:1px solid var(--border);border-radius:6px;padding:8px 12px;background:var(--card);color:var(--foreground);cursor:pointer"; b.onclick = () => { void action(b); }; return b; };
-  toolbar.append(heading,
-    button("Print", () => frame.contentWindow?.print()),
-    button("Share PDF", (b) => busy(b, "Share PDF", async () => { const blob = await makePdf(); const file = new File([blob], `${fileName}.pdf`, { type: "application/pdf" }); if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title }); else saveBlob(blob, `${fileName}.pdf`); })),
-    button("Download PDF", (b) => busy(b, "Download PDF", async () => saveBlob(await makePdf(), `${fileName}.pdf`))),
-    button("Close", () => wrapper.remove()));
-  wrapper.append(toolbar, frame);
-  document.body.append(wrapper);
-  frame.focus();
 }
 
 export const PDF_CSS = `.w{padding:20px;width:760px;color:#111}h1{margin:0;font-size:22px}h2{font-size:15px;margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px;color:#555}.m{color:#666;font-size:12px;margin:2px 0}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:10px}th,td{border-bottom:1px solid #ddd;padding:5px;text-align:left;vertical-align:top}th{background:#f3f3f3}.r{text-align:right}.t td{font-weight:bold;border-top:2px solid #111}.b{font-size:14px;font-weight:bold;margin-top:12px;text-align:right}`;

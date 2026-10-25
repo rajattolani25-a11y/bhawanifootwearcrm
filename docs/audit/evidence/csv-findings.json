@@ -1,0 +1,17 @@
+{
+  "quotedName": [
+    {
+      "article": "A1",
+      "brand": "ACME Pro"
+    }
+  ],
+  "multiline": [
+    {
+      "article": "A1",
+      "brand": "ACME"
+    },
+    {
+      "article": "Pro"
+    }
+  ]
+}

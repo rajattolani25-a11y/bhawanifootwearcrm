@@ -169,3 +169,9 @@
   .workspace[data-mobile-pane="cart"] .mobileCartBar { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .workspace * { scroll-behavior: auto; } }
+.productCard { transition:border-color 140ms ease,box-shadow 140ms ease; }
+@media(hover:hover) { .productCard:hover { border-color:color-mix(in srgb,var(--primary) 45%,var(--border)); box-shadow:0 3px 12px #152d2008; } }
+.quickSizes button:active { transform:scale(.96); }
+@media(prefers-reduced-motion:reduce) { .productCard { transition:none; } .quickSizes button:active { transform:none; } }
+.savedBill { --primary:#4d625c; --primary-foreground:#fff; --ring:#4d625c; }
+:global(.dark) .savedBill { --primary:#b6c9c0; --primary-foreground:#1d2923; --ring:#b6c9c0; }

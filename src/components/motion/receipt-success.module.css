@@ -1,0 +1,43 @@
+.receipt {
+  --receipt-accent:#4d625c;
+  --receipt-contrast:#fff;
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 8px;
+  height: 112px;
+  width: 112px;
+  color: var(--primary);
+}
+.fallback {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.fallback svg {
+  width: 36px;
+  height: 36px;
+}
+.art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.art :global(svg) {
+  width: 100%;
+  height: 100%;
+}
+.art :global(path[stroke="rgb(77,98,92)"]) {
+  stroke: var(--receipt-accent);
+}
+.art :global(path[fill="rgb(77,98,92)"]) {
+  fill: var(--receipt-accent);
+}
+.art :global(path[stroke="rgb(255,255,255)"]) {
+  stroke: var(--receipt-contrast);
+}
+
+:global(.dark) .receipt { --receipt-accent:#b6c9c0; --receipt-contrast:#1d2923; }

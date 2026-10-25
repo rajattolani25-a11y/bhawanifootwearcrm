@@ -1,3 +1,5 @@
+import { InterfaceMotion } from "@/components/motion/provider";
+import premium from "@/components/premium.module.css";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -21,7 +23,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => (
     <AuthProvider>
-      <LanguageProvider><AppShell /></LanguageProvider>
+      <InterfaceMotion><LanguageProvider><AppShell /></LanguageProvider></InterfaceMotion>
     </AuthProvider>
   ),
 });
@@ -114,7 +116,7 @@ function AppShell() {
           <button onClick={() => setOpen(true)} aria-label="Menu" className="grid h-11 min-w-11 place-items-center"><Menu className="h-6 w-6" /></button>
           <span className="font-display font-semibold">SoleStack POS</span>
         </header>
-        <main className={cn(styles["content"], "min-h-0 flex-1 p-3 md:p-5")}>
+        <main className={cn(styles["content"], premium["workspace"], "min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />
         </main>
         <GuidedTour />

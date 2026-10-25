@@ -1,0 +1,108 @@
+.ticket {
+  --ticket-accent: var(--catalog-accent, var(--primary));
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 14px;
+  border: 1px dashed color-mix(in srgb, var(--ticket-accent) 45%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ticket-accent) 7%, var(--card));
+  color: var(--foreground);
+  animation: ticket-enter 180ms ease-out;
+}
+.icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--ticket-accent);
+}
+.copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+.eyebrow {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.copy strong {
+  font-family: var(--font-mono, monospace);
+  font-size: 17px;
+  letter-spacing: 0.07em;
+  overflow-wrap: anywhere;
+}
+.title {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.saving {
+  font-size: 12px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 5px;
+  font-size: 11px;
+  padding: 7px 9px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--ticket-accent) 12%, var(--card));
+  color: var(--ticket-accent);
+  font-weight: 600;
+}
+.badge svg {
+  width: 14px;
+  height: 14px;
+}
+.remove {
+  width: 32px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+.remove svg {
+  width: 15px;
+  height: 15px;
+}
+.remove:focus-visible {
+  outline: 2px solid var(--ticket-accent);
+  outline-offset: 2px;
+}
+@keyframes ticket-enter {
+  from {
+    opacity: 0.7;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 390px) {
+  .ticket {
+    --ticket-accent: var(--catalog-accent, var(--primary));
+    gap: 8px;
+    padding: 13px 10px;
+    flex-wrap: wrap;
+  }
+  .copy {
+    flex-basis: 45%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticket {
+    --ticket-accent: var(--catalog-accent, var(--primary));
+    animation: none;
+  }
+}

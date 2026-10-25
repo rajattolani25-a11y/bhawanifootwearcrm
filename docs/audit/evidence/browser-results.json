@@ -1,0 +1,14 @@
+{
+  "languageSwitches": "English → Hindi → Hinglish → English passed",
+  "mobileWidth": 390,
+  "ledgerPages": 4,
+  "downloadBytes": 477901,
+  "share": {
+    "active": true,
+    "name": "Ledger-test.pdf",
+    "bytes": 477901
+  },
+  "shareFailureFallback": "download received",
+  "thermal": "download received",
+  "pageErrors": []
+}

@@ -1,0 +1,10 @@
+<!doctype html><html><body><div id="root"></div><script type="module">
+import RefreshRuntime from '/@react-refresh';RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;window.__vite_plugin_react_preamble_installed__=true;
+import React from '/node_modules/.vite/deps/react.js';
+import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';const {createRoot}=ReactDOM;
+import {previewDocument} from '/src/lib/print-preview.ts';
+import {LanguageProvider,LanguageSelect} from '/src/lib/i18n.tsx';
+window.previewDocument=previewDocument;
+createRoot(document.getElementById('root')).render(React.createElement(LanguageProvider,null,React.createElement(LanguageSelect),React.createElement('p',{id:'phrase'},'Baaki wale khate'),React.createElement('p',{id:'coupon'},'Abhi koi coupon nahi.'),React.createElement('input',{placeholder:'Purana udhar, agar hai'})));
+window.testReady=true;
+</script></body></html>

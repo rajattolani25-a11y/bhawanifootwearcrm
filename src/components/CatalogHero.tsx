@@ -1,3 +1,4 @@
+import { BlurReveal } from "@/components/motion/blur-reveal";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { heroOfferText, type PublicHero } from "@/lib/catalog-hero";
 import styles from "./catalog-hero.module.css";
@@ -47,6 +48,7 @@ export function CatalogHero({
       data-no-translate
     >
       <div className={styles["inner"]}>
+        <span className={styles["spotlight"]} aria-hidden="true" />
         <p className={styles["offer"]}>{heroOfferText(hero)}</p>
         <div className={styles["stage"]}>
           <img
@@ -61,7 +63,7 @@ export function CatalogHero({
             onError={() => setFailedImage(hero.image)}
           />
         </div>
-        <h1>{hero.heading}</h1>
+        <BlurReveal enabled={hero.motion}><h1>{hero.heading}</h1></BlurReveal>
         {hero.subtitle && <p className={styles["message"]}>{hero.subtitle}</p>}
         {onAction ? (
           <button type="button" onClick={onAction} className={styles["cta"]}>

@@ -1,0 +1,24 @@
+// Optional browser checks: install Playwright separately; start npm run dev on port8080.
+// PLAYWRIGHT_MODULE may point to its index.mjs. All shop data in route checks is mocked.
+const {chromium} = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+import fs from 'node:fs/promises';
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',headless:true,args:['--no-sandbox']});
+const page=await browser.newPage({viewport:{width:390,height:844},acceptDownloads:true});page.setDefaultTimeout(20000);const errors=[];page.on('console',m=>{if(m.type()==='error')console.log('console',m.text())});page.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR',e.message)});await page.addInitScript(()=>{window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type});
+await page.route('**/audit-harness.html',async r=>r.fulfill({contentType:'text/html',body:await fs.readFile(new URL('./fixtures/audit-harness.html', import.meta.url),'utf8')}));console.log('navigate');await page.goto('http://localhost:8080/audit-harness.html');console.log('loaded');await page.waitForFunction(()=>window.testReady);await page.waitForSelector('#phrase');
+const check=(v,msg)=>{if(!v)throw new Error(msg)};
+check(await page.locator('#phrase').textContent()==='Accounts with outstanding balances','English legacy phrase');
+check(await page.locator('#coupon').textContent()==='No coupons yet.','English coupon phrase');
+await page.getByRole('button',{name:'हिंदी',exact:true}).click();await page.waitForFunction(()=>document.getElementById('phrase').textContent==='बकाया वाले खाते');
+await page.getByRole('button',{name:'Hinglish',exact:true}).click();await page.waitForFunction(()=>document.getElementById('phrase').textContent==='Baaki wale khate');
+await page.getByRole('button',{name:'English',exact:true}).click();await page.waitForFunction(()=>document.getElementById('phrase').textContent==='Accounts with outstanding balances');
+console.log('language passed; ledger');await page.evaluate(()=>window.previewDocument('Ledger test',`<style>body{margin:0;font-family:Arial}.w{width:760px}td{height:30px;border-bottom:1px solid black}</style><div class="w"><h1>Ledger</h1><table>${Array.from({length:100},(_,i)=>'<tr><td>Row '+i+'</td><td>799</td></tr>').join('')}</table><p>END OF LEDGER</p></div>`));
+await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('PDF ready'),{timeout:90000});
+console.log('pdf ready');let download=page.waitForEvent('download');await page.getByRole('button',{name:'Download PDF',exact:true}).click();const d=await download;await d.saveAs('/tmp/solestack-audit/ledger.pdf');const buf=await fs.readFile('/tmp/solestack-audit/ledger.pdf');check(buf.subarray(0,5).toString()==='%PDF-','PDF header');const pages=(buf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length;check(pages>=3,'Multipage ledger export');
+await page.evaluate(()=>{Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,writable:true,value:async data=>{window.shareProof={active:navigator.userActivation.isActive,name:data.files[0].name,bytes:data.files[0].size};}});});
+await page.getByRole('button',{name:'Share PDF',exact:true}).click();check((await page.evaluate(()=>window.shareProof)).active,'Share must retain user activation');
+await page.evaluate(()=>{navigator.share=async()=>{throw new DOMException('blocked','NotAllowedError')}});download=page.waitForEvent('download');await page.getByRole('button',{name:'Share PDF',exact:true}).click();await download;
+await page.screenshot({path:'/tmp/solestack-audit/pdf-mobile.png'});
+await page.getByRole('button',{name:'Close',exact:true}).click();
+await page.evaluate(()=>window.previewDocument('Thermal test','<style>body{margin:0}.thermal{width:76mm}</style><section class="thermal"><h1>Test bill</h1><p>Total Rs 799</p></section>'));
+await page.waitForFunction(()=>document.querySelector('[role=status]').textContent.includes('PDF ready'),{timeout:90000});download=page.waitForEvent('download');await page.getByRole('button',{name:'Download PDF',exact:true}).click();await (await download).saveAs('/tmp/solestack-audit/thermal.pdf');
+await fs.writeFile('/tmp/solestack-audit/browser-results.json',JSON.stringify({languageSwitches:'English → Hindi → Hinglish → English passed',mobileWidth:390,ledgerPages:pages,downloadBytes:buf.length,share:await page.evaluate(()=>window.shareProof),shareFailureFallback:'download received',thermal:'download received',pageErrors:errors},null,2));check(errors.length===0,errors.join('\n'));console.log(await fs.readFile('/tmp/solestack-audit/browser-results.json','utf8'));await browser.close();

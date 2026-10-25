@@ -1,3 +1,4 @@
+import { LabelSelectionDock } from "@/components/LabelSelectionDock";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -49,10 +50,12 @@ function Barcodes() {
   const [busy, setBusy] = useState(false);
   const s = q.toLowerCase();
   const list = data.filter((p) => !s || `${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s) || p.product_variants.some((v) => v.barcode?.toLowerCase() === s || v.sku?.toLowerCase() === s)).slice(0, 60);
-  const count = Object.values(pick).reduce((a, b) => a + b, 0);
+  const normalize = (value:number) => Math.min(500, Math.max(0, Math.floor(Number.isFinite(value) ? value : 0)));
+  const selected = data.flatMap(p => p.product_variants.filter(v => normalize(pick[v.id] ?? 0) > 0).map(v => ({ p, v, n:normalize(pick[v.id] ?? 0) })));
+  const count = selected.reduce((total, row) => total + row.n, 0);
+  const selectedArticles = new Set(selected.map(row => row.p.id)).size;
 
   async function print() {
-    const selected = data.flatMap((p) => p.product_variants.filter((v) => (pick[v.id] ?? 0) > 0).map((v) => ({ p, v, n: Math.min(500, Math.max(0, Math.floor(pick[v.id] ?? 0))) })));
     if (!selected.length) { toast.error("Pehle label count chuno"); return; }
     setBusy(true);
     try {
@@ -72,7 +75,7 @@ function Barcodes() {
   }
 
   return (
-    <div>
+    <div className={count ? "pb-5" : undefined}>
       <PageHeader title="Barcodes & QR" subtitle="Brand-style box labels — har size ka apna permanent scan code. Barcode ya QR, dono se billing." actions={<Button onClick={print} disabled={busy}>{busy ? "Preparing…" : `Preview labels (${count})`}</Button>} />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Article or scan code" className="h-10 max-w-sm" />
@@ -83,21 +86,23 @@ function Barcodes() {
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {list.map((p) => (
-          <div key={p.id} className="rounded-lg border bg-card p-3">
+          <div key={p.id} className={`rounded-lg border bg-card p-3 ${p.product_variants.some(v => normalize(pick[v.id] ?? 0) > 0) ? "ring-1 ring-primary bg-primary/5" : ""}`}>
+            <label className="mb-2 inline-flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={p.product_variants.length > 0 && p.product_variants.every(v => normalize(pick[v.id] ?? 0) > 0)} aria-label={`Select ${p.brand} ${p.article} labels`} onChange={e => { const checked = e.target.checked; setPick(prev => ({ ...prev, ...Object.fromEntries(p.product_variants.map(v => [v.id, checked ? Math.max(1, normalize(prev[v.id] ?? 0)) : 0])) })); }} />Select article</label>
             <div className="flex justify-between gap-2">
               <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-widest text-primary">{p.brand}</p><p className="truncate font-semibold">{p.article}</p><p className="text-xs text-muted-foreground">{inr(p.selling_price)}{p.color ? ` · ${p.color}` : ""}</p></div>
-              <Button variant="link" size="sm" onClick={() => setPick((x) => ({ ...x, ...Object.fromEntries(p.product_variants.map((v) => [v.id, Math.max(0, v.stock)])) }))}>Use stock qty</Button>
+              <Button variant="link" size="sm" onClick={() => setPick((x) => ({ ...x, ...Object.fromEntries(p.product_variants.map((v) => [v.id, normalize(v.stock)])) }))}>Use stock qty</Button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => (
                 <label key={v.id} className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs">Size {v.size}
-                  <input type="number" min="0" max="500" value={pick[v.id] ?? 0} onChange={(e) => setPick({ ...pick, [v.id]: Math.max(0, Number(e.target.value) || 0) })} className="w-12 rounded border bg-background px-1" aria-label={`Labels for size ${v.size}`} />
+                  <input type="number" min="0" max="500" value={pick[v.id] ?? 0} onChange={(e) => setPick({ ...pick, [v.id]: normalize(Number(e.target.value)) })} className="w-12 rounded border bg-background px-1" aria-label={`Labels for size ${v.size}`} />
                 </label>
               ))}
             </div>
           </div>
         ))}
       </div>
+      <LabelSelectionDock articles={selectedArticles} sizes={selected.length} labels={count} busy={busy} onPrint={() => void print()} onClear={() => setPick({})} />
     </div>
   );
 }

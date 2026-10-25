@@ -17,6 +17,7 @@ export function useStock() {
   return useQuery({
     queryKey: ["stock-all"],
     refetchInterval: 30000,
+    staleTime: 15_000,
     queryFn: async () => {
       const data = await fetchAll((a, b) => supabase
         .from("products")

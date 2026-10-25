@@ -41,6 +41,7 @@ export function beep(ok = true) {
     o.connect(g);
     g.connect(ctx.destination);
     o.start();
+    o.onended = () => { void ctx.close(); };
     o.stop(ctx.currentTime + (ok ? 0.08 : 0.25));
   } catch {
     /* ignore */

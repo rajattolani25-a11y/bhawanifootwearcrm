@@ -1,3 +1,4 @@
+import { fetchAll } from "@/lib/fetch-all";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,9 +67,9 @@ function Sales() {
       return { rows: data as unknown as SaleRow[], count: count ?? 0 };
     },
   });
-  const { data: returns = [] } = useQuery({
+  const { data: returns = [], error: returnsError, isPending: returnsPending } = useQuery({
     queryKey: ["returns"],
-    queryFn: async () => (await supabase.from("sale_returns").select("sale_item_id,qty")).data ?? [],
+    queryFn: async () => fetchAll((a, b) => supabase.from("sale_returns").select("sale_item_id,qty").order("id").range(a, b)),
   });
   const returned = (id: string) => returns.filter((r) => r.sale_item_id === id).reduce((a, r) => a + r.qty, 0);
   const list = data?.rows ?? [];
@@ -85,6 +86,7 @@ function Sales() {
   return (
     <div>
       <PageHeader title="Sales History" subtitle="Re-print bill, WhatsApp bill, return or exchange." actions={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Bill no, name or mobile" className="h-10 w-64" />} />
+      {returnsError && <p role="alert" className="mb-3 text-destructive">Return history could not be loaded. Please retry.</p>}
       {error && <p role="alert" className="mb-3 text-destructive">Unable to load sales: {error.message}</p>}
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
@@ -108,7 +110,7 @@ function Sales() {
                        <Button size="sm" variant="outline" asChild><a target="_blank" rel="noreferrer" href={waLink(x.customers.mobile, x.due_amount > 0 ? dueMessage(shop.name, x.customer_name ?? "", x.bill_no, x.due_amount) : billMessage({ shop: shop.name, name: x.customer_name ?? "", billNo: x.bill_no, total: x.total }))}><MessageCircle className="h-3.5 w-3.5" /></a></Button>
                     )}
                      {x.due_amount > 0 && <Button size="sm" onClick={() => { setCollect(x); setAmount(String(x.due_amount)); }} title="Collect due"><IndianRupee className="h-3.5 w-3.5" /></Button>}
-                    <Button size="sm" variant="outline" onClick={() => setRet(x)} title="Return / exchange"><Undo2 className="h-3.5 w-3.5" /></Button>
+                    <Button size="sm" variant="outline" disabled={returnsPending || !!returnsError} onClick={() => setRet(x)} title="Return / exchange"><Undo2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 </td>
               </tr>

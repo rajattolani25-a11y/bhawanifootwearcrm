@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -15,8 +16,9 @@ const EMPTY = { business_phone: "", catalog_enabled: true, booking_enabled: fals
 /** Owner controls for the public catalog, store pickup booking and delivery orders. */
 export function CatalogSettings() {
   const qc = useQueryClient();
-  const { data } = useQuery({ queryKey: ["catalog-settings"], queryFn: async () => (await supabase.from("store_settings").select(COLS).eq("id", 1).single()).data });
+  const { data, error, isPending, refetch } = useQuery({ queryKey: ["catalog-settings"], queryFn: async () => { const result = await supabase.from("store_settings").select(COLS).eq("id", 1).single(); if (result.error) throw result.error; return result.data; } });
   const [f, setF] = useState(EMPTY);
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (data) setF({ business_phone: data.business_phone ?? "", catalog_enabled: data.catalog_enabled, booking_enabled: data.booking_enabled, pickup_enabled: data.pickup_enabled, delivery_enabled: data.delivery_enabled, outside_enabled: data.outside_enabled,
       local_charge: String(data.local_charge), outside_charge: String(data.outside_charge), free_delivery_above: data.free_delivery_above == null ? "" : String(data.free_delivery_above), delivery_note: data.delivery_note ?? "", show_few_left: data.show_few_left,
@@ -25,13 +27,15 @@ export function CatalogSettings() {
   const link = typeof window !== "undefined" ? `${window.location.origin}/catalog` : "/catalog";
   const set = (k: keyof typeof EMPTY, v: string | boolean) => setF((p) => ({ ...p, [k]: v }));
   const anyOrder = f.booking_enabled || f.delivery_enabled || f.outside_enabled;
-  const num = (v: string, d: number, max = 100000) => Math.min(max, Math.max(0, Number(v) || d));
+  const num = (v: string, d: number, max = 100000) => Math.min(max, Math.max(0, v.trim() && Number.isFinite(Number(v)) ? Number(v) : d));
 
   async function save() {
     const upi = f.upi_id.trim();
     const phone = f.business_phone.replace(/\D/g, "");
     if (anyOrder && !/^[\w.-]{2,}@[\w.-]{2,}$/.test(upi)) { toast.error("Enter a valid UPI ID to take orders"); return; }
     if (phone && phone.length < 10) { toast.error("Enter a valid 10-digit mobile number"); return; }
+    setSaving(true);
+    try {
     const { error } = await supabase.from("store_settings").update({
       business_phone: phone || null, catalog_enabled: f.catalog_enabled, booking_enabled: f.booking_enabled, pickup_enabled: true, delivery_enabled: f.delivery_enabled, outside_enabled: f.outside_enabled,
       local_charge: num(f.local_charge, 30, 1000), outside_charge: num(f.outside_charge, 80, 2000), free_delivery_above: f.free_delivery_above.trim() ? num(f.free_delivery_above, 0) : null,
@@ -40,15 +44,24 @@ export function CatalogSettings() {
     }).eq("id", 1);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["catalog-settings"] }); qc.invalidateQueries({ queryKey: ["shop"] }); toast.success("Catalog settings saved");
+    } catch (error) { toast.error((error as Error).message); } finally { setSaving(false); }
   }
   const Row = ({ k, title, sub }: { k: keyof typeof EMPTY; title: string; sub?: string }) => (
     <label className="flex items-center justify-between gap-3 py-2"><span><span className="block text-sm font-medium">{title}</span>{sub && <span className="block text-xs text-muted-foreground">{sub}</span>}</span><Switch checked={f[k] as boolean} onCheckedChange={(v) => set(k, v)} /></label>
   );
 
+  if (isPending) return <section className="rounded-xl border bg-card p-5" role="status">Loading catalog settings…</section>;
+  if (error) return <section className="rounded-xl border bg-card p-5" role="alert"><p>Catalog settings could not be loaded.</p><Button variant="outline" onClick={() => void refetch()}>Retry</Button></section>;
   return (
-    <section className="rounded-xl border bg-card p-5">
+    <section id="catalog-owner-controls" className="rounded-xl border bg-card p-5">
       <h2 className="mb-1 font-semibold">Online catalog</h2>
       <p className="mb-4 text-sm text-muted-foreground">A public page with your products, prices and in-stock sizes. Cost, profit and stock counts are never shown.</p>
+      <nav aria-label="Catalog settings sections" className="mb-4 flex flex-wrap gap-2 text-xs">
+        <a className="rounded-lg border px-3 py-2" href="#catalog-order-controls">Orders & delivery</a>
+        <a className="rounded-lg border px-3 py-2" href="#catalog-offer-controls">Offers & coupons</a>
+        <a className="rounded-lg border px-3 py-2" href="#catalog-hero-controls">Hero & animation</a>
+        <Link className="rounded-lg border px-3 py-2" to="/products" search={{ article: "" }}>Products in catalog</Link>
+      </nav>
       <Row k="catalog_enabled" title="Show catalog to customers" />
       <Row k="show_few_left" title={"Show \"Few sizes left\" tag"} sub="Shown when only 1–2 sizes are in stock." />
       <div className="my-3 flex flex-wrap gap-2">
@@ -64,7 +77,7 @@ export function CatalogSettings() {
       </div>
       <p className="mt-1 text-xs text-muted-foreground">Customers message this number. Payments go straight to this UPI ID — no fee.</p>
 
-      <div className="mt-4 border-t pt-2">
+      <div id="catalog-order-controls" className="mt-4 scroll-mt-20 border-t pt-2">
         <Row k="booking_enabled" title="Store pickup (advance booking)" sub="Customer pays an advance, picks up at the store." />
         {f.booking_enabled && <div className="grid gap-3 pb-2 sm:grid-cols-2">
           <div className="space-y-1"><Label>Advance %</Label><Input value={f.advance_percent} inputMode="numeric" onChange={(e) => set("advance_percent", e.target.value)} /></div>
@@ -81,9 +94,9 @@ export function CatalogSettings() {
           <div className="space-y-1"><Label>Outside delivery charge (₹)</Label><Input value={f.outside_charge} inputMode="numeric" onChange={(e) => set("outside_charge", e.target.value)} /></div>
         </div>}
       </div>
-      <Button onClick={save} className="mt-4">Save</Button>
-      <OfferSettings />
-      <CatalogHeroPreview />
+      <Button onClick={save} disabled={saving} className="mt-4">{saving ? "Saving…" : "Save catalog settings"}</Button>
+      <div id="catalog-offer-controls" className="scroll-mt-20"><OfferSettings /></div>
+      <div id="catalog-hero-controls" className="scroll-mt-20"><CatalogHeroPreview /></div>
     </section>
   );
 }

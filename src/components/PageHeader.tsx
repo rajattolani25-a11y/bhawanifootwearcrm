@@ -1,10 +1,11 @@
+import styles from "./premium.module.css";
 import type { ReactNode } from "react";
 import { useLang } from "@/lib/i18n";
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   const { t } = useLang();
   return (
-    <div className="mb-5 flex min-w-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-end md:mb-6">
+    <div className={`${styles["pageHeader"]} mb-5 flex min-w-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-end md:mb-6`}>
       <div className="min-w-0 flex-1">
         <h1 className="break-words text-2xl font-bold md:text-3xl">{t(title)}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{t(subtitle)}</p>}

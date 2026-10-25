@@ -1,0 +1,13 @@
+{
+  "selectionSurvivesSearch": true,
+  "mobileDockVisible": true,
+  "clearSelection": true,
+  "countClampedTo500": true,
+  "twoLabelPreview": true,
+  "ownerFreeDeliverySave": true,
+  "longListDockVisible": true,
+  "staffSettingsBlocked": true,
+  "mockedWrites": 1,
+  "realWrites": 0,
+  "errors": []
+}

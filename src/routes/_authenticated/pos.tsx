@@ -1,7 +1,11 @@
+import { CouponTicket } from "@/components/CouponTicket";
+import { m } from "motion/react";
+import { SuccessMark } from "@/components/motion/success-mark";
+import { fetchAll } from "@/lib/fetch-all";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Banknote, CreditCard, ReceiptText as ReceiptTextIcon, Minus, Plus, Trash2, Pause, Play, X, UserPlus, Gift, Crown, Search, MessageCircle, Printer, Share2, Smartphone, ScanLine, PackagePlus, Ticket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,15 +36,18 @@ const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/
 
 function POS() {
   const shop = useShop();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
   const copy = POS_COPY[lang];
   const qc = useQueryClient();
   const searchRef = useRef<HTMLInputElement>(null);
   const mobileRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
+  const deferredSearch = useDeferredValue(q);
+  const [visibleCount, setVisibleCount] = useState(60);
   const [cat, setCat] = useState("All");
   const [brand, setBrand] = useState("All");
+  useEffect(() => setVisibleCount(60), [q, cat, brand]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [mobile, setMobile] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -66,11 +73,15 @@ function POS() {
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<null | { id: string; code: string; title: string; amount: number }>(null);
   const couponRequestRef = useRef(0);
+  const [couponBusy, setCouponBusy] = useState(false);
   const { data: storeCfg } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
   useEffect(() => { const d = storeCfg?.bill_design; if (d) setDesign(d as PrintDesign); }, [storeCfg?.bill_design]);
 
   useEffect(() => {
-    setHeld(JSON.parse(localStorage.getItem(HOLD_KEY) ?? "[]"));
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(HOLD_KEY) ?? "[]");
+      setHeld(Array.isArray(saved) ? saved.filter((h): h is Held => !!h && typeof h === "object" && typeof h.id === "string" && Array.isArray(h.cart)) : []);
+    } catch { setHeld([]); }
   }, []);
   const saveHeld = (h: Held[]) => {
     setHeld(h);
@@ -79,13 +90,9 @@ function POS() {
 
   const { data: products = [], error: productsError, isPending: productsPending } = useQuery({
     queryKey: ["pos-products"],
+    staleTime: 15_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,brand,article,category,color,selling_price,mrp,status,image_url,product_variants(id,size,stock,sku,barcode)")
-        .eq("status", "Active")
-        .limit(2000);
-      if (error) throw error;
+      const data = await fetchAll((a, b) => supabase.from("products").select("id,brand,article,category,color,selling_price,mrp,status,image_url,product_variants(id,size,stock,sku,barcode)").eq("status", "Active").order("id").range(a, b));
       return addSignedImages(data);
     },
   });
@@ -101,14 +108,14 @@ function POS() {
   const cats = useMemo(() => ["All", ...new Set(products.map((p) => p.category).filter(Boolean))], [products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand).filter(Boolean))], [products]);
   const list = useMemo(() => {
-    const s = q.toLowerCase().trim();
+    const s = deferredSearch.toLowerCase().trim();
     return products.filter(
       (p) =>
         (cat === "All" || p.category === cat) &&
         (brand === "All" || p.brand === brand) &&
         (!s || [p.brand, p.article, p.color, p.category].some((f) => f?.toLowerCase().includes(s)) || p.product_variants.some((v) => v.sku?.toLowerCase() === s || v.barcode === s)),
     );
-  }, [products, q, cat, brand]);
+  }, [products, deferredSearch, cat, brand]);
 
   const addVariant = useCallback((p: (typeof products)[number], v: (typeof products)[number]["product_variants"][number]) => {
     if (v.stock <= 0) {
@@ -205,17 +212,22 @@ function POS() {
     const c = code.trim().toUpperCase();
     if (!c) return;
     const request = ++couponRequestRef.current;
-    const { data, error } = await supabase.rpc("coupon_discount", { _code: c, _customer: customer?.id ?? (null as unknown as string), _subtotal: cartSubtotal });
-    if (request !== couponRequestRef.current) return;
-    if (error) { setCoupon(null); if (!silent) { beep(false); toast.error(error.message); } else toast.error(`Coupon ${c} removed: ${error.message}`); return; }
-    const r = data as { id: string; code: string; title: string; amount: number };
-    setCoupon(r);
-    if (!silent) { beep(true); toast.success(`${r.code} applied · −${inr(r.amount)}`); }
+    setCouponBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("coupon_discount", { _code: c, _customer: customer?.id ?? (null as unknown as string), _subtotal: cartSubtotal });
+      if (request !== couponRequestRef.current) return;
+      if (error) { setCoupon(null); if (!silent) { beep(false); toast.error(error.message); } else toast.error(`Coupon ${c} removed: ${error.message}`); return; }
+      const result = data as { id: string; code: string; title: string; amount: number };
+      setCoupon(result);
+      if (!silent) { beep(true); toast.success(`${result.code} applied · −${inr(result.amount)}`); }
+    } catch (error) {
+      if (request === couponRequestRef.current) { setCoupon(null); toast.error((error as Error).message); }
+    } finally { if (request === couponRequestRef.current) setCouponBusy(false); }
   }
   // Re-check the coupon whenever the cart value or customer changes (percent / min-bill / customer-only rules).
   useEffect(() => {
     if (!coupon) return;
-    if (!cart.length) { couponRequestRef.current++; setCoupon(null); return; }
+    if (!cart.length) { couponRequestRef.current++; setCouponBusy(false); setCoupon(null); return; }
     void checkCoupon(coupon.code, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartSubtotal, customer?.id]);
@@ -228,6 +240,7 @@ function POS() {
 
   function reset() {
     couponRequestRef.current++;
+    setCouponBusy(false);
     setCart([]);
     setBillDiscount("");
     setSplitCash("");
@@ -248,7 +261,7 @@ function POS() {
     const found = await supabase.from("customers").select(cols).eq("mobile", clean).maybeSingle();
     if (found.data) { setCustomer(found.data); return found.data; }
     const { data, error } = await supabase.from("customers").insert({ mobile: clean, name: newName.trim() || "Walk-in Customer" }).select(cols).single();
-    if (error) { toast.error("Customer save nahi hua: " + error.message); return null; }
+    if (error) { toast.error(t("Customer save nahi hua:") + " " + error.message); return null; }
     setCustomer(data); setNewName(""); toast.success(`Customer ${clean} saved`);
     return data;
   }
@@ -363,7 +376,7 @@ function POS() {
           {held.map((h) => <button key={h.id} onClick={() => resume(h)}><Play aria-hidden="true" /><span>{h.label} · {h.cart.reduce((a, i) => a + i.qty, 0)} pairs</span></button>)}
         </div>}
         <div className={styles["productGrid"]}>
-          {list.map((p) => <article key={p.id} className={styles["productCard"]}>
+          {list.slice(0, visibleCount).map((p) => <article key={p.id} className={styles["productCard"]}>
             <div className={styles["productPhoto"]}>{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} loading="lazy" /> : <div className={styles["photoFallback"]}><PackagePlus aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}</div>
             <div className={styles["productInfo"]}><p className={styles["productBrand"]} data-no-translate>{p.brand}</p><h2 data-no-translate>{p.article}</h2><strong>{inr(p.selling_price)}</strong></div>
             <div className={styles["quickSizes"]} role="group" aria-label={`${p.brand} ${p.article} sizes`}>
@@ -372,6 +385,7 @@ function POS() {
               </button>)}
             </div>
           </article>)}
+          {list.length > visibleCount && <Button variant="outline" onClick={() => setVisibleCount(n => n + 60)}>Show more products</Button>}
           {!list.length && <div className={styles["emptyProducts"]}><Search aria-hidden="true" /><p>{productsPending ? "Loading products…" : productsError ? "Unable to load products." : "No products found."}</p>{productsError && <button onClick={() => qc.refetchQueries({ queryKey: ["pos-products"] })}>Try again</button>}</div>}
         </div>
         <div className={styles["shortcuts"]}><span>F2 · Search</span><span>F4 · Customer</span><span>F8 · Complete Sale</span></div>
@@ -405,7 +419,7 @@ function POS() {
 
         </div>
         <div className={styles["cartItems"]}>
-          {cart.map((i) => <div key={i.variant_id} className={styles["cartItem"]}>
+          {cart.map((i) => <m.div key={i.variant_id} className={styles["cartItem"]} initial={false} animate={{ opacity: [.8, 1], x: [8, 0] }} transition={{ duration: .16 }}>
             <div className={styles["cartItemText"]}><p data-no-translate>{i.brand} {i.product_name}</p><span>Size <b>{i.size}</b> · {inr(i.price)}</span></div>
             <div className={styles["quantity"]}>
               <button aria-label={`Decrease ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))}><Minus aria-hidden="true" /></button>
@@ -414,7 +428,7 @@ function POS() {
             </div>
             <strong className={styles["itemAmount"]}>{inr(i.price * i.qty)}</strong>
             <button className={styles["removeItem"]} aria-label={`Remove ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.filter((x) => x.variant_id !== i.variant_id))}><Trash2 aria-hidden="true" /></button>
-          </div>)}
+          </m.div>)}
           {!cart.length && <div className={styles["emptyCart"]}><ReceiptTextIcon /><p>Scan or tap a size to add.</p></div>}
         </div>
         <section className={styles["checkout"]} aria-label={copy.payment}>
@@ -429,14 +443,12 @@ function POS() {
             <summary>{copy.options}<span>{copy.optionHint}</span></summary>
             <div className={styles["optionFields"]}>
             {coupon ? (
-              <div className="flex items-center justify-between rounded-lg bg-accent p-2 text-sm text-accent-foreground">
-                <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4" /> {coupon.code}{coupon.title ? ` · ${coupon.title}` : ""} −{inr(coupon.amount)}</span>
-                <Button variant="ghost" size="sm" className="h-7 text-xs font-semibold underline" onClick={() => { couponRequestRef.current++; setCoupon(null); setCouponInput(""); }}>Remove</Button>
-              </div>
+              <CouponTicket code={coupon.code} amount={coupon.amount} title={coupon.title} pending={couponBusy}
+                onRemove={() => { couponRequestRef.current++; setCouponBusy(false); setCoupon(null); setCouponInput(""); }} />
             ) : (
               <div className="flex gap-1.5">
-                <Input value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === "Enter") void checkCoupon(couponInput); }} placeholder="Coupon code" className="h-9 text-sm uppercase" aria-label="Coupon code" />
-                <Button type="button" variant="secondary" className="h-9 px-3 text-xs" disabled={!couponInput.trim() || !cart.length} onClick={() => checkCoupon(couponInput)}><Ticket className="h-3.5 w-3.5" /> Apply</Button>
+                <Input value={couponInput} onChange={(e) => { couponRequestRef.current++; setCouponBusy(false); setCouponInput(e.target.value.toUpperCase()); }} onKeyDown={(e) => { if (e.key === "Enter") void checkCoupon(couponInput); }} placeholder="Coupon code" className="h-9 text-sm uppercase" aria-label="Coupon code" />
+                <Button type="button" variant="secondary" className="h-9 px-3 text-xs" disabled={couponBusy || !couponInput.trim() || !cart.length} onClick={() => checkCoupon(couponInput)}><Ticket className="h-3.5 w-3.5" /> {couponBusy ? "Checking…" : "Apply"}</Button>
               </div>
             )}
             {customer && (
@@ -495,7 +507,7 @@ function POS() {
           </div>
         </section>
         <footer className={styles["paymentFooter"]}>
-          <div className={styles["grandTotal"]}><span>Total</span><strong>{inr(bill.total)}</strong></div>
+          <div className={styles["grandTotal"]}><span>Total</span><m.strong key={bill.total} initial={{ opacity: .6 }} animate={{ opacity: 1 }} transition={{ duration: .14 }}>{inr(bill.total)}</m.strong></div>
           <div className={styles["saleActions"]}>
             <Button variant="outline" onClick={hold} disabled={!cart.length}><Pause className="h-4 w-4" /> Hold</Button>
             <Button onClick={complete} disabled={!cart.length || busy}>{busy ? "Saving…" : `F8 · Complete Sale ${inr(bill.total)}`}</Button>
@@ -505,10 +517,11 @@ function POS() {
       <button className={styles["mobileCartBar"]} onClick={() => setMobilePane("cart")}><span>{copy.cart} · {cart.reduce((a, i) => a + i.qty, 0)} pairs</span><strong>{inr(bill.total)} →</strong></button>
 
       <Dialog open={!!done} onOpenChange={(o) => !o && setDone(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className={`${styles["savedBill"]} sm:max-w-sm`}>
           <DialogHeader><DialogTitle>Bill saved</DialogTitle></DialogHeader>
           {done && (
             <div className="space-y-3 text-center">
+              <SuccessMark />
               <p className="font-mono text-sm">{done.bill_no}</p>
               <p className="font-display text-4xl font-bold">{inr(done.total)}</p>
               {done.stamp && <p className="text-sm text-success">Loyalty stamp added</p>}

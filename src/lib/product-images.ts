@@ -12,7 +12,14 @@ export async function signedProductImage(path?: string | null) {
 }
 
 export async function addSignedImages<T extends { image_url?: string | null }>(rows: T[]) {
-  return Promise.all(rows.map(async (row) => ({ ...row, image_src: await signedProductImage(row.image_url) })));
+  const paths = [...new Set(rows.map(row => row.image_url).filter((path): path is string => !!path))];
+  const urls = new Map<string, string>();
+  // Avoid one HTTP request per photograph when a large inventory loads.
+  for (let i = 0; i < paths.length; i += 100) {
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), 3600);
+    for (const image of data ?? []) if (image.path && image.signedUrl) urls.set(image.path, image.signedUrl);
+  }
+  return rows.map(row => ({ ...row, image_src: row.image_url ? urls.get(row.image_url) ?? null : null }));
 }
 
 /** Resize to max 1080px; preserve transparent cutouts for product/hero reuse. */

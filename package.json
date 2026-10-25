@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:audit": "node --experimental-strip-types --test tests/data-audit.test.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -59,7 +60,9 @@
     "input-otp": "^1.4.2",
     "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
+    "lottie-web": "^5.13.0",
     "lucide-react": "^0.575.0",
+    "motion": "^14.6.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",

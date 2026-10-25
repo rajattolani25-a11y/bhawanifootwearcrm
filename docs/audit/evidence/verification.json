@@ -1,0 +1,18 @@
+{
+  "production_build": "passed",
+  "typescript": "passed",
+  "data_regression_tests": {
+    "passed": 5,
+    "failed": 0
+  },
+  "targeted_eslint": {
+    "errors": 0,
+    "warnings": 1,
+    "note": "Prettier rule disabled; existing Fast Refresh export warning"
+  },
+  "git_diff_check": "passed",
+  "browser": "Chromium 390x844, mocked shop/native share stub",
+  "live_database_writes": false,
+  "backend_rpc_or_migrations_modified": false,
+  "pushed_or_deployed": false
+}

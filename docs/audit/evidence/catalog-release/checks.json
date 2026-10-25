@@ -1,0 +1,14 @@
+{
+  "categoryPalette": true,
+  "galleryNextPrevious": true,
+  "maxPhotoElements": 3,
+  "invalidCouponRejected": true,
+  "validCouponTotal": 729,
+  "changedMobileClearsCoupon": true,
+  "staleResponseIgnored": true,
+  "receiptSvgRendered": true,
+  "reducedMotionFallback": true,
+  "mobileOverflow": false,
+  "realOrdersSubmitted": 0,
+  "errors": []
+}

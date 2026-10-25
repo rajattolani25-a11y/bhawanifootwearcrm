@@ -6,14 +6,15 @@ export async function fetchAll<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
   size = 1000,
 ): Promise<T[]> {
+  if (!Number.isInteger(size) || size <= 0) throw new Error("Page size must be a positive integer");
   const out: T[] = [];
   for (let from = 0; from < 500_000; from += size) {
     const { data, error } = await page(from, from + size - 1);
     if (error) throw new Error(error.message);
     out.push(...(data ?? []));
-    if (!data || data.length < size) break;
+    if (!data || data.length < size) return out;
   }
-  return out;
+  throw new Error("Too many rows to load safely. Narrow the date range and try again.");
 }
 
 /** Embedded one-to-one rows may come back as an object or a one-item list. */

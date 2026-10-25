@@ -23,6 +23,7 @@ export function UniversalSearch() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     const term = q.trim().replace(/[,()%]/g, "");
     if (term.length < 2) { setRes({ p: [], c: [], b: [] }); return; }
     const t = setTimeout(async () => {
@@ -40,9 +41,9 @@ export function UniversalSearch() {
         const extra = await supabase.from("products").select(sel).in("id", ids);
         prods = [...((extra.data ?? []) as unknown as Prod[]), ...prods];
       }
-      setRes({ p: prods, c: (c.data ?? []) as Cust[], b: (b.data ?? []) as Bill[] });
+      if (active) setRes({ p: prods, c: (c.data ?? []) as Cust[], b: (b.data ?? []) as Bill[] });
     }, 250);
-    return () => clearTimeout(t);
+    return () => { active = false; clearTimeout(t); };
   }, [q]);
 
   function go(fn: () => void) { setOpen(false); setQ(""); fn(); }
