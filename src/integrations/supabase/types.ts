@@ -168,25 +168,25 @@ export type Database = {
       }
       catalog_presentation_settings: {
         Row: {
-          theme?: string // Optional until the shared-theme column is approved and applied.
           category_accents: boolean
           gallery_enabled: boolean
           id: number
           motion_enabled: boolean
+          theme: string
         }
         Insert: {
-          theme?: string
           category_accents?: boolean
           gallery_enabled?: boolean
           id?: number
           motion_enabled?: boolean
+          theme?: string
         }
         Update: {
-          theme?: string
           category_accents?: boolean
           gallery_enabled?: boolean
           id?: number
           motion_enabled?: boolean
+          theme?: string
         }
         Relationships: []
       }
