@@ -150,6 +150,7 @@ await p.waitForFunction(
 );
 await p.getByRole("button", { name: "Close", exact: true }).click();
 await p.goto("http://localhost:8080/settings");
+await p.getByRole("tab", { name: "Orders & delivery", exact: true }).click();
 await p.getByRole("button", { name: "Save catalog settings", exact: true }).waitFor();
 await p
   .getByText("Local delivery charge (₹)", { exact: true })

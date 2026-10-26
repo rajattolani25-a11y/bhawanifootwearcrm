@@ -1,6 +1,7 @@
 import { BlurReveal } from "@/components/motion/blur-reveal";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { heroOfferText, type PublicHero } from "@/lib/catalog-hero";
+import { catalogTheme, type CatalogThemeId } from "@/lib/catalog-themes";
 import styles from "./catalog-hero.module.css";
 
 /** One image and CSS transforms only; animation pauses off-screen and in background tabs. */
@@ -8,10 +9,12 @@ export function CatalogHero({
   hero,
   onAction,
   fallback,
+  theme = "studio",
 }: {
   hero: PublicHero;
   onAction?: () => void;
   fallback?: ReactNode;
+  theme?: CatalogThemeId;
 }) {
   const root = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -46,6 +49,8 @@ export function CatalogHero({
       data-motion={hero.motion}
       data-paused={!visible || !activeTab}
       data-no-translate
+      data-palette={catalogTheme(theme).id}
+      style={catalogTheme(theme).style}
     >
       <div className={styles["inner"]}>
         <span className={styles["spotlight"]} aria-hidden="true" />
@@ -63,7 +68,7 @@ export function CatalogHero({
             onError={() => setFailedImage(hero.image)}
           />
         </div>
-        <BlurReveal enabled={hero.motion}><h1>{hero.heading}</h1></BlurReveal>
+        <div className={styles["heading"]}><BlurReveal enabled={hero.motion}><h1>{hero.heading}</h1></BlurReveal></div>
         {hero.subtitle && <p className={styles["message"]}>{hero.subtitle}</p>}
         {onAction ? (
           <button type="button" onClick={onAction} className={styles["cta"]}>

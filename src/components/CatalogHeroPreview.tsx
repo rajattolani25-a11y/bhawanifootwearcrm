@@ -10,6 +10,8 @@ import {
   type HeroSettings,
 } from "@/lib/catalog-hero";
 import { CatalogHero } from "./CatalogHero";
+import { CatalogThemeSettings } from "./CatalogThemeSettings";
+import type { CatalogThemeId } from "@/lib/catalog-themes";
 import { useLang } from "@/lib/i18n";
 import { HERO_IMAGE_COPY, heroImageError } from "@/lib/hero-image-copy";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,7 @@ export function CatalogHeroPreview() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<CatalogThemeId>("studio");
   const [existing, setExisting] = useState("");
   const [cleanup, setCleanup] = useState<string | null>(null);
   const usage = useQuery({
@@ -270,6 +273,62 @@ export function CatalogHeroPreview() {
         Owner controls only. Preview your changes, then save to update the customer catalog. Turn
         the hero off to restore the original introduction.
       </p>
+      <CatalogThemeSettings value={previewTheme} onChange={setPreviewTheme} />
+      <fieldset disabled={saving} className="min-w-0">
+        <div className={styles["toolbar"]}>
+          <label>
+            <input
+              type="checkbox"
+              checked={draft.enabled}
+              onChange={(e) => set("enabled", e.target.checked)}
+            />{" "}
+            Show hero on catalog
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={draft.motion}
+              onChange={(e) => set("motion", e.target.checked)}
+            />{" "}
+            Motion
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={mobile}
+            onClick={() => setMobile(!mobile)}
+          >
+            {mobile ? "Show desktop preview" : "Show mobile preview"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void reset()}>
+            Reload saved settings
+          </Button>
+        </div>
+        <div className={styles["previewFrame"]} data-mobile={mobile}>
+          {draft.enabled && image ? (
+            <CatalogHero
+              theme={previewTheme}
+              key={`${image}-${mobile}`}
+              hero={{ ...draft, image }}
+              fallback={
+                <p className="p-5 text-sm">
+                  Could not load this image. Reload saved settings or choose a transparent
+                  replacement.
+                </p>
+              }
+            />
+          ) : (
+            <div className={styles["fallback"]}>
+              <h4>Find your everyday pair.</h4>
+              <p>
+                {draft.enabled
+                  ? "Choose a transparent product image to preview the hero."
+                  : "Hero hidden. The original catalog introduction stays in place."}
+              </p>
+            </div>
+          )}
+        </div>
+      </fieldset>
       <div
         className="my-4 grid gap-2 rounded-lg border bg-muted/30 p-3 text-sm sm:grid-cols-3"
         aria-label="Hero image storage"
@@ -323,7 +382,7 @@ export function CatalogHeroPreview() {
           </Button>
         </div>
       )}
-      <details className={styles["guidance"]} open data-no-translate>
+      <details className={styles["guidance"]} data-no-translate>
         <summary>{copy.title}</summary>
         <ol>
           {copy.steps.map((step, index) => (
@@ -521,58 +580,6 @@ export function CatalogHeroPreview() {
             {heroImageError(error, lang)}
           </p>
         )}
-        <div className={styles["toolbar"]}>
-          <label>
-            <input
-              type="checkbox"
-              checked={draft.enabled}
-              onChange={(e) => set("enabled", e.target.checked)}
-            />{" "}
-            Show hero on catalog
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={draft.motion}
-              onChange={(e) => set("motion", e.target.checked)}
-            />{" "}
-            Motion
-          </label>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-pressed={mobile}
-            onClick={() => setMobile(!mobile)}
-          >
-            {mobile ? "Show desktop preview" : "Show mobile preview"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => void reset()}>
-            Reload saved settings
-          </Button>
-        </div>
-        <div className={styles["previewFrame"]} data-mobile={mobile}>
-          {draft.enabled && image ? (
-            <CatalogHero
-              key={`${image}-${mobile}`}
-              hero={{ ...draft, image }}
-              fallback={
-                <p className="p-5 text-sm">
-                  Could not load this image. Reload saved settings or choose a transparent
-                  replacement.
-                </p>
-              }
-            />
-          ) : (
-            <div className={styles["fallback"]}>
-              <h4>Find your everyday pair.</h4>
-              <p>
-                {draft.enabled
-                  ? "Choose a transparent product image to preview the hero."
-                  : "Hero hidden. The original catalog introduction stays in place."}
-              </p>
-            </div>
-          )}
-        </div>
         <p className="text-xs text-muted-foreground">
           Offer text advertises your offer; it does not apply a checkout discount. Set matching
           prices/coupons separately. Images are compressed to at most 1200px with transparency

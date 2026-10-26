@@ -36,7 +36,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
   const d = data as unknown as CatalogData;
   if (!d.enabled || !d.products) return { enabled: false };
   // Only public-safe boolean flags; missing storage preserves the working catalog.
-  const presentationRequest = Promise.resolve(sb.from("catalog_presentation_settings").select("gallery_enabled,category_accents,motion_enabled").eq("id", 1).maybeSingle())
+  const presentationRequest = Promise.resolve(sb.from("catalog_presentation_settings").select("*").eq("id", 1).maybeSingle())
     .then(({ data }) => catalogPresentation(data), () => ({ ...PRESENTATION_DEFAULTS }));
   const paths = d.products.map((p) => p.image).filter((x): x is string => !!x);
   const urls = new Map<string, string>();

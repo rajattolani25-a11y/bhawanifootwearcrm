@@ -1,5 +1,30 @@
 # Lovable release handoff
 
+## October 26 catalog and Settings follow-up
+
+The catalog now has a compact studio banner, soft CSS backgrounds and seven
+owner theme previews. Settings opens to Catalog and separates Store, Billing,
+Appearance, Team and Data/backup. Catalog has Design, Orders, Offers and
+Visibility sections; drafts survive section switches. Guide navigation, the
+floating tour and the guide content have been removed. Old /guide links
+redirect to Dashboard.
+
+These frontend changes can sync and publish without a new migration. The
+default public banner uses Charcoal Studio. Owner theme previews work now;
+shared theme saving is explicitly disabled while the existing presentation
+row has no theme field. No successful save is simulated. Once the field is
+approved and applied, the already-wired owner Save catalog theme action and
+public loader can use it.
+
+The user previously prohibited migration changes without confirmation. The
+remaining proposed database scope is one text field named theme on
+catalog_presentation_settings, default studio, constrained to the seven known
+IDs. Grant public read of that field and authenticated updates protected by
+the existing owner-only row policy. No business table, RPC or image-storage
+change. No migration for this theme field has been authored or applied.
+
+Details/previews: docs/audit/2026-10-26-catalog-settings.md.
+
 The latest correction restores gallery and POS row entry animations and warms
 the receipt animation during billing preparation. Saving feedback starts at
 the first click; success still requires the real create_sale response. It does

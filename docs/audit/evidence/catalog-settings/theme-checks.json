@@ -1,0 +1,39 @@
+{
+  "palettes": 7,
+  "previewOnly": true,
+  "heroSizes": [
+    {
+      "width": 320,
+      "heroHeight": 268.9375
+    },
+    {
+      "width": 390,
+      "heroHeight": 218.171875
+    },
+    {
+      "width": 768,
+      "heroHeight": 294
+    },
+    {
+      "width": 1440,
+      "heroHeight": 294
+    }
+  ],
+  "viewportBottomNavigation": [
+    {
+      "scrollY": 0,
+      "bottom": 844
+    },
+    {
+      "scrollY": 400,
+      "bottom": 844
+    },
+    {
+      "scrollY": 1012,
+      "bottom": 844
+    }
+  ],
+  "allWidthsFit": true,
+  "noLiveWrites": true,
+  "errors": []
+}

@@ -146,7 +146,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
         {data.offer.code && <Copy aria-hidden="true" />}
       </button>}
 
-      {data.hero ? <CatalogHero key={data.hero.image} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
+      {data.hero ? <CatalogHero key={data.hero.image} theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
 
       <div className={styles["discovery"]}>
         <div className={styles["discoveryInner"]}>

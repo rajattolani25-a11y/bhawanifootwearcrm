@@ -1,5 +1,5 @@
 .store {
-  --catalog-bg: #f5f4f1;
+  --catalog-bg: #edf0e8;
   --catalog-paper: #fff;
   --catalog-ink: #292b29;
   --catalog-muted: #696c67;
@@ -9,7 +9,9 @@
   --catalog-image: #efefeb;
   min-height: 100vh;
   padding-bottom: calc(76px + env(safe-area-inset-bottom));
-  background: var(--catalog-bg);
+  background:
+    radial-gradient(ellipse at 8% 45%, color-mix(in srgb, var(--catalog-accent) 9%, transparent), transparent 60%),
+    var(--catalog-bg);
   color: var(--catalog-ink);
   font-family: var(--font-sans);
 }

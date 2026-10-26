@@ -3,7 +3,9 @@
   margin-bottom: 28px;
   border: 1px solid var(--catalog-line);
   border-radius: 20px;
-  background: linear-gradient(125deg, var(--catalog-tint), var(--catalog-paper));
+  background:
+    radial-gradient(ellipse at 75% 0%, color-mix(in srgb, var(--catalog-accent) 14%, transparent), transparent 65%),
+    linear-gradient(125deg, var(--catalog-tint), color-mix(in srgb, var(--catalog-tint) 70%, var(--catalog-paper)));
   color: var(--catalog-ink);
   overflow: hidden;
 }

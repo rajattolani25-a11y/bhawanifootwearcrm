@@ -9,7 +9,6 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { MODULES } from "@/lib/modules";
 import { cn } from "@/lib/utils";
 import { ThemeControl } from "@/components/ThemeControl";
-import { GuidedTour } from "@/components/GuidedTour";
 import { MessageLanguage } from "@/components/MessageLanguage";
 import { LanguageProvider, useLang } from "@/lib/i18n";
 import styles from "./workspace.module.css";
@@ -119,7 +118,6 @@ function AppShell() {
         <main className={cn(styles["content"], premium["workspace"], "min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />
         </main>
-        <GuidedTour />
         <MessageLanguage />
       </div>
     </div>

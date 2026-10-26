@@ -15,7 +15,7 @@
 - Cost/profit are in separate owner-only tables (`product_costs`, `sale_costs`, `sale_item_costs`) because RLS can't hide columns from staff; `sale_items` SELECT is column-restricted.
 - Roles stay in `user_roles`: first signup owner, later signups get no role (pending, no data access) until an owner approves via `set_team_role`; `remove_team_access` revokes. Both keep a last owner, so browser writes stay denied.
 - Old JSON data imports via `legacy_id` upserts so re-imports never duplicate.
-- Signed-in screens use `_authenticated`; `modules.ts` defines navigation. Inventory groups article sizes; the optional three-language tour lives in the shared shell and changes no shop data.
+- Signed-in screens use `_authenticated`; `modules.ts` defines navigation. Inventory groups article sizes. The owner removed Guide/tours; `/guide` is only a legacy redirect to Dashboard. Settings use six owner-only sections, with Catalog first.
 - Stock-in and returns go only through `receive_stock` / `process_return` DB functions so stock + ledger stay in sync; bills and labels use the in-page print preview in `src/lib/print.ts` (Thermal/A4/Premium), avoiding mobile popup blocking.
 - Supplier repayments go through `record_supplier_payment` to allocate against open purchases; QR and Code 128 encode the same variant scan code so both resolve to one size at checkout.
 - Credit repayments go only through `collect_credit_payment`; product photos stay in the private `product-images` bucket and are rendered with short-lived signed URLs.

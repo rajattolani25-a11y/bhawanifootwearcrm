@@ -65,7 +65,11 @@ export function CatalogPresentationSettings() {
     try {
       const { data, error } = await supabase
         .from("catalog_presentation_settings")
-        .update(draft)
+        .update({
+          gallery_enabled: draft.gallery_enabled,
+          category_accents: draft.category_accents,
+          motion_enabled: draft.motion_enabled,
+        })
         .eq("id", 1)
         .select("gallery_enabled,category_accents,motion_enabled")
         .single();

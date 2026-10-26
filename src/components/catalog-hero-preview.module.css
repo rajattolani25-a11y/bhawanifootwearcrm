@@ -75,8 +75,59 @@
   margin-top: 8px;
   font-size: 13px;
 }
+.themes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.theme {
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+  font-size: 11px;
+}
+.theme > span:last-child {
+  display: block;
+  padding: 6px 3px;
+  overflow-wrap: anywhere;
+}
+.theme[aria-pressed="true"] {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.themeSwatch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 12px 9px;
+  min-height: 54px;
+  border-radius: 6px;
+  background:
+    radial-gradient(ellipse at 70% 35%, var(--hero-glow), transparent 70%),
+    linear-gradient(120deg, var(--hero-start), var(--hero-end));
+}
+.themeSwatch i {
+  width: 40%;
+  height: 5px;
+  background: var(--hero-accent);
+  border-radius: 3px;
+}
+.themeSwatch b {
+  width: 35%;
+  height: 20px;
+  background: var(--hero-ink);
+  border-radius: 40% 50% 20% 20%;
+  transform: rotate(-10deg);
+}
 @media (max-width: 639px) {
   .controls {
     grid-template-columns: 1fr;
+  }
+  .themes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

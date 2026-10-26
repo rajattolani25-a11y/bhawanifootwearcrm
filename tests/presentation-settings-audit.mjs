@@ -13,6 +13,8 @@ let role = "owner",
   missing = false;
 let flags = { gallery_enabled: true, category_accents: true, motion_enabled: true };
 let writes = 0;
+let sharedTheme,
+  themeWrites = 0;
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "demo@example.invalid",
@@ -77,7 +79,7 @@ await p.route("**/*", async (r) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return r.fulfill({
       contentType: "application/javascript",
-      body: `export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: missing ? undefined : flags })});export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('No orders in this fixture')};export const trackOrder=async()=>null;`,
+      body: `export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: missing ? undefined : { ...flags, theme: sharedTheme } })});export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('No orders in this fixture')};export const trackOrder=async()=>null;`,
     });
   if (u.pathname === "/presentation-catalog.html")
     return r.fulfill({
@@ -88,6 +90,14 @@ await p.route("**/*", async (r) => {
       ),
     });
   if (["localhost", "127.0.0.1"].includes(u.hostname)) return r.continue();
+  if (u.pathname.startsWith("/storage/v1/object/sign/")) {
+    if (r.request().method() === "POST")
+      return r.fulfill({ json: { signedURL: "/object/sign/catalog-hero-images/fixture.webp" } });
+    return r.fulfill({
+      contentType: "image/svg+xml",
+      body: decodeURIComponent(image.split(",").slice(1).join(",")),
+    });
+  }
   if (u.pathname.startsWith("/auth/v1")) return r.fulfill({ json: user });
   if (u.pathname.startsWith("/rest/v1/")) {
     if (u.pathname.endsWith("/catalog_presentation_settings")) {
@@ -99,12 +109,27 @@ await p.route("**/*", async (r) => {
       if (r.request().method() === "PATCH") {
         if (role !== "owner")
           return r.fulfill({ status: 403, json: { code: "42501", message: "Denied" } });
-        flags = { ...flags, ...r.request().postDataJSON() };
-        writes++;
+        const body = r.request().postDataJSON();
+        if (body.theme) {
+          sharedTheme = body.theme;
+          themeWrites++;
+        } else {
+          flags = { ...flags, ...body };
+          writes++;
+        }
       }
-      return r.fulfill({ json: { id: 1, ...flags } });
+      return r.fulfill({ json: { id: 1, ...flags, theme: sharedTheme } });
     }
     let data = [];
+    if (u.pathname.endsWith("/catalog_hero_settings")) {
+      const { image: _image, ...settings } = hero;
+      data = {
+        id: 1,
+        ...settings,
+        enabled: true,
+        image_path: "hero/00000000-0000-4000-8000-000000000001.webp",
+      };
+    }
     if (u.pathname.endsWith("/user_roles"))
       data = u.searchParams.get("role") === "eq.owner" && role === "staff" ? [] : [{ role }];
     if (u.pathname.endsWith("/store_settings"))
@@ -144,6 +169,49 @@ await p.evaluate(async (token) => {
 }, token);
 await p.goto("http://localhost:8080/settings");
 await p.getByRole("heading", { name: "Catalog appearance", exact: true }).waitFor();
+if (!(await p.getByRole("button", { name: "Save catalog theme", exact: true }).isDisabled()))
+  throw Error("Theme save enabled without a supported shared field");
+if (
+  (await p
+    .getByRole("tablist", { name: "Settings sections", exact: true })
+    .getByRole("tab")
+    .count()) !== 6
+)
+  throw Error(
+    "Settings sections missing: " +
+      JSON.stringify(
+        await p
+          .getByRole("tablist", { name: "Settings sections", exact: true })
+          .getByRole("tab")
+          .allTextContents(),
+      ),
+  );
+if (await p.getByRole("link", { name: "Guide", exact: true }).count())
+  throw Error("Guide navigation remains");
+await p.getByRole("region", { name: "Featured collection" }).waitFor();
+await p.getByRole("button", { name: "Midnight Blue", exact: true }).click();
+if (
+  (await p.getByRole("region", { name: "Featured collection" }).getAttribute("data-palette")) !==
+  "midnight"
+)
+  throw Error("Owner theme preview did not change");
+await p.getByRole("tab", { name: "Store", exact: true }).click();
+const shopName = p.getByText("Shop name", { exact: true }).locator("..").locator("input");
+await shopName.fill("Draft shop name");
+await p.getByRole("tab", { name: "Billing", exact: true }).click();
+await p.getByRole("heading", { name: "Bill printing", exact: true }).waitFor();
+await p.getByRole("button", { name: "Catalog controls", exact: true }).click();
+await p.getByRole("heading", { name: "Hero banner", exact: true }).waitFor();
+if (
+  (await p.getByRole("region", { name: "Featured collection" }).getAttribute("data-palette")) !==
+  "midnight"
+)
+  throw Error("Tab change lost preview draft");
+await p.getByRole("tab", { name: "Store", exact: true }).click();
+if ((await shopName.inputValue()) !== "Draft shop name") throw Error("Tab change lost form draft");
+await p.getByRole("button", { name: "Catalog controls", exact: true }).click();
+await p.evaluate(() => window.scrollTo(0, 0));
+await p.screenshot({ path: out + "/organized-settings-mobile.png" });
 const gallery = p.getByRole("switch", { name: /Show spotlight gallery/ }),
   accents = p.getByRole("switch", { name: /Category colour accents/ }),
   motion = p.getByRole("switch", { name: /Catalog animations/ });
@@ -160,8 +228,22 @@ for (const control of [gallery, accents, motion])
   if (await control.isChecked()) throw Error("Owner reload lost saved off state");
 await p.locator("#catalog-appearance-controls").scrollIntoViewIfNeeded();
 await p.screenshot({ path: out + "/owner-mobile.png" });
+sharedTheme = "studio";
+await p.reload();
+await p.getByRole("button", { name: "Midnight Blue", exact: true }).click();
+await p.getByRole("button", { name: "Save catalog theme", exact: true }).click();
+await p.getByText("Catalog theme saved", { exact: true }).waitFor();
+await p.reload();
+await p.getByRole("region", { name: "Featured collection" }).waitFor();
+await p.waitForFunction(() => document.querySelector('[data-palette="midnight"]'));
+if (themeWrites !== 1) throw Error("Theme save request count incorrect");
 await p.goto("http://localhost:8080/presentation-catalog.html");
 await p.getByRole("heading", { name: "Shop the collection", exact: true }).waitFor();
+if (
+  (await p.getByRole("region", { name: "Featured collection" }).getAttribute("data-palette")) !==
+  "midnight"
+)
+  throw Error("Public catalog ignored the saved theme");
 if (await p.getByRole("region", { name: "Product spotlight" }).count())
   throw Error("Gallery off ignored");
 await p.getByRole("combobox", { name: "Type", exact: true }).selectOption("Formal");
@@ -193,9 +275,20 @@ if (await p.getByRole("button", { name: "Save appearance", exact: true }).count(
   throw Error("Missing storage allows false save");
 await p.goto("http://localhost:8080/presentation-catalog.html");
 await p.getByRole("heading", { name: "In the spotlight", exact: true }).waitFor();
+await p.goto("http://localhost:8080/guide");
+await p.waitForURL("**/dashboard");
 if (errors.length) throw Error(errors.join("\n"));
 const result = {
   ownerControls: true,
+  settingsSections: 6,
+  draftsSurviveSections: true,
+  catalogShortcut: true,
+  ownerThemePreview: true,
+  sharedThemeSaveGuarded: true,
+  supportedSharedThemeReload: true,
+  publicThemeApplied: true,
+  legacyGuideRedirect: true,
+  guideNavigationRemoved: true,
   allFalseSaved: true,
   reloadPreservesOff: true,
   publicGalleryHidden: true,
@@ -205,6 +298,7 @@ const result = {
   missingStorageBlocksSave: true,
   missingStorageCatalogFallback: true,
   mockedWrites: writes,
+  mockedThemeWrites: themeWrites,
   realWrites: 0,
   errors,
 };
