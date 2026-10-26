@@ -1,5 +1,6 @@
 # SoleStack POS roadmap
 
+- [ ] Apply only existing 0023 catalog theme SQL; verify live owner save/reload and public display without changing business tables or RPCs
 - [ ] Replace written-only guide with optional in-page walkthroughs for every module in Hinglish, English and Hindi
 - [ ] Verify navigation and walkthrough controls on desktop and mobile
 - [x] Expand guide beyond section summaries into feature-by-feature steps across the entire app
