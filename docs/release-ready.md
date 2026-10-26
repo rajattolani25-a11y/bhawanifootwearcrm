@@ -1,33 +1,28 @@
 # Lovable release handoff
 
-The latest follow-up adds owner controls for the public catalog's spotlight
-gallery, category colour accents and animations. It includes the explicitly
-approved migration 0021, which creates one singleton table with three booleans.
+The latest correction restores gallery and POS row entry animations and warms
+the receipt animation during billing preparation. Saving feedback starts at
+the first click; success still requires the real create_sale response. It does
+not wait for decoration downloads. Owner catalog controls remain available.
 Existing sales, stock, payments, GST, coupons, customers and RPCs are unchanged.
 Earlier UI/PDF/performance fixes remain included.
 
 ## Required live step
 
-The new table is not yet available in the live REST schema: an anonymous read
-returned HTTP 404 / PGRST205. This workspace has only the publishable connection,
-with no migration URL or database admin access, so it has not applied live DDL.
-The catalog continues using its previous defaults; the owner editor explains
-that storage is unavailable instead of reporting a false successful save.
+The previously missing table is now available: an anonymous read on October26
+returned all three appearance flags ON. The public hero also has motion ON.
+The user reports that Lovable applied the migration and verified owner saving.
+Upstream migrations 0021/0022 were preserved intact. This correction adds no SQL.
 
-After the connected GitHub main branch syncs, give Lovable this instruction:
+Wait for the connected GitHub main branch to sync, then use Publish → Update.
+Refresh existing app/catalog tabs. No new secrets, images or storage buckets
+are needed. Do not rerun migrations for this frontend correction.
 
-> Apply only the existing approved migration
-> `drizzle/migrations/0021_catalog_presentation_settings.sql` through the normal
-> migration workflow. Do not modify existing business tables, functions or RPCs,
-> and do not generate a replacement migration. Verify the singleton row, public
-> read of the three appearance flags and owner-only updates. Confirm that an
-> owner can save and reload all three switches in Settings → Online catalog →
-> Catalog appearance, and that staff cannot edit them. Check the public catalog
-> with the switches both ON and OFF. Report the actual migration result.
-
-Then use Publish → Update. Existing open catalog tabs need refreshing to pick
-up saved settings. No new secrets, image uploads or storage buckets are needed.
-Do not replay older recorded migrations solely for this follow-up.
+To see the effects, use the gallery's next/previous controls or swipe, add a size
+at POS, open the mobile Cart, or save a bill normally. Accounting tabs animate
+on selection, and the coupon ticket appears only for a validated coupon. These
+are interaction effects, not continuous page-wide animation. Device reduced
+motion deliberately keeps these effects static.
 
 ## Verification
 
@@ -41,6 +36,10 @@ Do not replay older recorded migrations solely for this follow-up.
   master motion overriding hero, staff editor denial, missing-storage error and
   public fallback. These exercise the actual CatalogView and owner components.
 - Existing gallery, coupon, receipt and reduced-motion browser regression.
+- Actual frame sampling verifies gallery/desktop/mobile cart movement. A mocked
+  sale with the animation download held pending confirms that success appears
+  without waiting for the decoration and repeated F8 submits only once. See
+  docs/audit/2026-10-26-animation-playback.md for timings and limitations.
 
 Evidence and reproducible commands are in
 `docs/audit/evidence/catalog-presentation/README.md`. These tests do not verify

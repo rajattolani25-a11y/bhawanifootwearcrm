@@ -1,6 +1,7 @@
 import { CouponTicket } from "@/components/CouponTicket";
-import { m } from "motion/react";
+import { m, useReducedMotion } from "motion/react";
 import { SuccessMark } from "@/components/motion/success-mark";
+import { loadReceiptResources } from "@/components/motion/receipt-resources";
 import { fetchAll } from "@/lib/fetch-all";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
@@ -36,6 +37,7 @@ const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/
 
 function POS() {
   const shop = useShop();
+  const reduceMotion = useReducedMotion();
   const { lang, t } = useLang();
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
   const copy = POS_COPY[lang];
@@ -49,6 +51,10 @@ function POS() {
   const [brand, setBrand] = useState("All");
   useEffect(() => setVisibleCount(60), [q, cat, brand]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  useEffect(() => {
+    // Warm the lazy decoration during preparation; confirmation never waits for it.
+    if (cart.length && !reduceMotion) void loadReceiptResources().catch(() => {});
+  }, [cart.length, reduceMotion]);
   const [mobile, setMobile] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [newName, setNewName] = useState("");
@@ -269,22 +275,20 @@ function POS() {
   async function complete() {
     if (!cart.length || submittingRef.current) return;
     submittingRef.current = true;
-    const customer = await ensureCustomer();
-    submittingRef.current = false;
-    if (pay === "Credit" && !customer) {
-      toast.error("Credit bill ke liye customer mobile zaroori hai");
-      mobileRef.current?.focus();
-      return;
-    }
-    if (due > 0 && !customer) {
-      toast.error("Baaki (due) amount ke liye customer mobile zaroori hai");
-      mobileRef.current?.focus();
-      return;
-    }
-    if (pay === "Split" && (Number(splitCash) < 0 || Number(splitCash) > paid)) { toast.error("Cash part must be between zero and amount received"); return; }
-    submittingRef.current = true;
     setBusy(true);
     try {
+      const customer = await ensureCustomer();
+      if (pay === "Credit" && !customer) {
+        toast.error("Credit bill ke liye customer mobile zaroori hai");
+        mobileRef.current?.focus();
+        return;
+      }
+      if (due > 0 && !customer) {
+        toast.error("Baaki (due) amount ke liye customer mobile zaroori hai");
+        mobileRef.current?.focus();
+        return;
+      }
+      if (pay === "Split" && (Number(splitCash) < 0 || Number(splitCash) > paid)) { toast.error("Cash part must be between zero and amount received"); return; }
       const { data, error } = await supabase.rpc("create_sale", {
         _sale: {
           customer_id: customer?.id ?? "",
@@ -419,7 +423,7 @@ function POS() {
 
         </div>
         <div className={styles["cartItems"]}>
-          {cart.map((i) => <m.div key={i.variant_id} className={styles["cartItem"]} initial={false} animate={{ opacity: [.8, 1], x: [8, 0] }} transition={{ duration: .16 }}>
+          {cart.map((i) => <m.div key={i.variant_id} className={styles["cartItem"]} initial={reduceMotion ? false : { opacity: 0.6, x: 16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: reduceMotion ? 0 : 0.28, ease: "easeOut" }}>
             <div className={styles["cartItemText"]}><p data-no-translate>{i.brand} {i.product_name}</p><span>Size <b>{i.size}</b> · {inr(i.price)}</span></div>
             <div className={styles["quantity"]}>
               <button aria-label={`Decrease ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))}><Minus aria-hidden="true" /></button>

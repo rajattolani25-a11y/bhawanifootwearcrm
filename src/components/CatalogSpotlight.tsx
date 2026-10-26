@@ -93,9 +93,9 @@ export function CatalogSpotlight({
         <m.div
           key={current.id}
           className={styles["featured"]}
-          initial={false}
-          animate={!motionEnabled || reduce ? { x: 0, opacity: 1 } : { x: [direction * 14, 0], opacity: [0.7, 1] }}
-          transition={{ duration: 0.2 }}
+          initial={motionEnabled && !reduce ? { x: direction * 32, opacity: 0.6, scale: 0.97 } : false}
+          animate={{ x: 0, opacity: 1, scale: 1 }}
+          transition={{ duration: !motionEnabled || reduce ? 0 : 0.36, ease: "easeOut" }}
         >
           <button
             type="button"

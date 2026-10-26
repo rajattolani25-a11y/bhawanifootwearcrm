@@ -1,0 +1,18 @@
+{
+  "gallerySlideFade": true,
+  "previousProductMotion": true,
+  "measuredGalleryTransformStates": 24,
+  "ownerMotionOffRespected": true,
+  "reducedMotionRespected": true,
+  "desktopCartEntry": true,
+  "mobileCartEntryAfterOpening": true,
+  "cartQuantityAmount": 1598,
+  "receiptPreloadedDuringPreparation": true,
+  "confirmationShownBeforeAnimationDownload": true,
+  "confirmationAfterResponseMs": 111,
+  "duplicateSubmitBlocked": true,
+  "unchangedMockedSaleTotal": 1677.9,
+  "mockedSales": 1,
+  "realBusinessWrites": 0,
+  "errors": []
+}

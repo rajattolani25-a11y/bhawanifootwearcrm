@@ -1,6 +1,7 @@
 import type { AnimationItem } from "lottie-web";
 import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
+import { loadReceiptResources } from "./receipt-resources";
 import styles from "./receipt-success.module.css";
 /** Decoration mounted only after create_sale returns a saved bill. */
 export function SuccessMark() {
@@ -27,10 +28,7 @@ export function SuccessMark() {
         destroy();
         return;
       }
-      const [{ default: lottie }, { default: animationData }] = await Promise.all([
-        import("lottie-web/build/player/lottie_light"),
-        import("@/assets/bill-success.json"),
-      ]);
+      const { lottie, animationData } = await loadReceiptResources();
       if (disposed || media.matches || player) return;
       try {
         player = lottie.loadAnimation({
