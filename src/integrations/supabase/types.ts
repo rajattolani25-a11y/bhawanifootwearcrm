@@ -172,18 +172,21 @@ export type Database = {
           gallery_enabled: boolean
           id: number
           motion_enabled: boolean
+          theme: string
         }
         Insert: {
           category_accents?: boolean
           gallery_enabled?: boolean
           id?: number
           motion_enabled?: boolean
+          theme?: string
         }
         Update: {
           category_accents?: boolean
           gallery_enabled?: boolean
           id?: number
           motion_enabled?: boolean
+          theme?: string
         }
         Relationships: []
       }

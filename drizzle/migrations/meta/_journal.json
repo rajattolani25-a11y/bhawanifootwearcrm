@@ -169,6 +169,13 @@
       "when": 1792995954153,
       "tag": "0023_catalog_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792996486114,
+      "tag": "0024_catalog_theme_apply",
+      "breakpoints": true
     }
   ]
 }
