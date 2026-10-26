@@ -22,17 +22,25 @@
   viewport. Full-page screenshots previously made it appear midway down the
   long captured image. New public previews use normal viewport screenshots.
 
-## Pending user confirmation: shared theme storage
+## Approved shared theme migration
 
-The live appearance table currently has only three booleans. The original user
-instruction prohibits migrations/backend RPC changes without confirmation.
-No theme migration has been written or executed. Proposed scope:
+The original user instruction prohibited migrations/backend RPC changes without
+confirmation. The user subsequently requested the migration explicitly.
+Migration `0023_catalog_theme.sql` is prepared with this narrow scope:
 
 1. Add only theme text NOT NULL DEFAULT 'studio' to the existing presentation
    singleton; constrain values to studio/midnight/plum/ivory/sage/copper/slate.
 2. Grant SELECT(theme) to anon/authenticated and UPDATE(theme) to authenticated.
    Existing owner-only update RLS remains authoritative; no new RPC is needed.
-3. Verify anon/staff cannot write and an owner can save/reload, then publish.
+3. Notify PostgREST to reload its schema cache after migration commit.
+
+The actual migration was executed in isolated PostgreSQL 17 after the existing
+0021/0022 migrations. Tests use the seven real frontend theme IDs, verify owner
+updates and public reads, reject staff/anonymous writes and invalid/null themes,
+and confirm that saved flags, RLS policy definitions and an unrelated dummy
+business row remain unchanged. Reapplying 0023 preserves the selected theme.
+No production writes occurred. No database admin/migration connection is
+available here, so live application remains a Lovable migration step.
 
 The frontend detects whether that field exists. Without it, the owner can
 preview palettes but Save catalog theme is disabled with an explicit preview-
@@ -40,6 +48,10 @@ only message. With supported storage it updates only theme, verifies the
 returned value, and the public loader uses the persisted palette. The three
 existing switches keep their separate explicit updates. Missing storage never
 breaks the public catalog.
+
+After Lovable applies 0023, select the palette in Settings → Catalog → Design &
+hero and use Save catalog theme. Refresh the public catalog to see the saved
+theme. Do not replay older migrations for this change.
 
 ## Checks
 

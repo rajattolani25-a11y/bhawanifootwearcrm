@@ -9,19 +9,17 @@ Visibility sections; drafts survive section switches. Guide navigation, the
 floating tour and the guide content have been removed. Old /guide links
 redirect to Dashboard.
 
-These frontend changes can sync and publish without a new migration. The
-default public banner uses Charcoal Studio. Owner theme previews work now;
-shared theme saving is explicitly disabled while the existing presentation
-row has no theme field. No successful save is simulated. Once the field is
-approved and applied, the already-wired owner Save catalog theme action and
-public loader can use it.
+The user explicitly approved the shared-theme migration by requesting it.
+`drizzle/migrations/0023_catalog_theme.sql` is now prepared and locally tested.
+It adds only theme text to catalog_presentation_settings, defaults to studio,
+limits values to the seven known palettes and grants public read/owner-policy
+protected updates. Existing switches, RLS policies, business tables and RPCs
+are untouched. Reapplying the migration preserves the saved theme.
 
-The user previously prohibited migration changes without confirmation. The
-remaining proposed database scope is one text field named theme on
-catalog_presentation_settings, default studio, constrained to the seven known
-IDs. Grant public read of that field and authenticated updates protected by
-the existing owner-only row policy. No business table, RPC or image-storage
-change. No migration for this theme field has been authored or applied.
+The frontend keeps shared theme saving disabled until this field is available.
+After migration 0023 is applied, the existing Save catalog theme action and
+public loader use it without further code changes. Live application has not
+been performed here: the workspace has no database migration/admin connection.
 
 Details/previews: docs/audit/2026-10-26-catalog-settings.md.
 
@@ -37,11 +35,22 @@ Earlier UI/PDF/performance fixes remain included.
 The previously missing table is now available: an anonymous read on October26
 returned all three appearance flags ON. The public hero also has motion ON.
 The user reports that Lovable applied the migration and verified owner saving.
-Upstream migrations 0021/0022 were preserved intact. This correction adds no SQL.
+Upstream migrations 0021/0022 were preserved intact. Theme saving additionally
+needs the approved new migration 0023 before publishing.
 
-Wait for the connected GitHub main branch to sync, then use Publish → Update.
-Refresh existing app/catalog tabs. No new secrets, images or storage buckets
-are needed. Do not rerun migrations for this frontend correction.
+Wait for GitHub main to sync, then give Lovable this instruction:
+
+> Apply only the pending existing migration
+> `drizzle/migrations/0023_catalog_theme.sql` through the normal migration
+> workflow. Do not create a replacement migration, replay earlier migrations,
+> or modify business tables/RPCs. Verify the default studio value, all seven
+> allowed theme IDs, public theme read and owner-only save. In the owner
+> preview, save a different theme and verify it survives reload and appears
+> on the public catalog. Report the actual migration result.
+
+Then Publish → Update and refresh existing tabs. Owner control:
+Settings → Catalog → Design & hero → Save catalog theme. No new environment
+variables, images or storage buckets are required.
 
 To see the effects, use the gallery's next/previous controls or swipe, add a size
 at POS, open the mobile Cart, or save a bill normally. Accounting tabs animate
@@ -57,6 +66,10 @@ motion deliberately keeps these effects static.
   anonymous roles. Anonymous/staff updates denied; owner updates succeed;
   explicit false is readable; null, ID changes and deletes are denied;
   reapplying the migration preserves choices and an unrelated dummy row.
+- Migration 0023 additionally tests all seven frontend palette IDs, rejected
+  unknown/null values, anonymous/staff theme write denial, public saved-theme
+  read, unchanged existing switches/RLS and saved theme preservation on rerun.
+  Results: docs/audit/evidence/catalog-settings/theme-migration-checks.json.
 - Mocked mobile browser tests: owner save/reload, gallery OFF, neutral colours,
   master motion overriding hero, staff editor denial, missing-storage error and
   public fallback. These exercise the actual CatalogView and owner components.

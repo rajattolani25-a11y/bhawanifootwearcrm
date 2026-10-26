@@ -2,10 +2,21 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { CATALOG_THEMES } from "../src/lib/catalog-themes.ts";
 const migration = readFileSync(
   new URL("../drizzle/migrations/0021_catalog_presentation_settings.sql", import.meta.url),
   "utf8",
 );
+const currentMigration = readFileSync(
+  new URL("../drizzle/migrations/0022_catalog_presentation_settings.sql", import.meta.url),
+  "utf8",
+);
+const themeMigration = readFileSync(
+  new URL("../drizzle/migrations/0023_catalog_theme.sql", import.meta.url),
+  "utf8",
+);
+const themeIds = CATALOG_THEMES.map((theme) => theme.id);
+const themeSql = themeIds.map((id) => "'" + id.replaceAll("'", "''") + "'").join(",");
 const name = "solestack-presentation-" + randomUUID().slice(0, 8);
 const docker = (args) =>
   execFileSync("docker", args, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
@@ -69,11 +80,65 @@ try {
  IF (SELECT count(*) FROM public.catalog_presentation_settings)<>1 THEN RAISE EXCEPTION 'not singleton'; END IF;
  IF (SELECT total FROM public.business_fixture WHERE id=1)<>799 THEN RAISE EXCEPTION 'business record changed'; END IF;
  END $$;`;
+  const themeBefore = `
+ CREATE TEMP TABLE flags_before_theme AS SELECT id,gallery_enabled,category_accents,motion_enabled FROM public.catalog_presentation_settings;
+ CREATE TEMP TABLE policies_before_theme AS SELECT jsonb_agg(to_jsonb(p) ORDER BY p.policyname) AS signature FROM pg_policies p WHERE schemaname='public' AND tablename='catalog_presentation_settings';
+ `;
+  const themeCheck = `
+ DO $$ BEGIN IF (SELECT theme FROM public.catalog_presentation_settings WHERE id=1)<>'studio' THEN RAISE EXCEPTION 'theme default incorrect'; END IF; END $$;
+ SET ROLE anon;
+ SELECT * FROM public.catalog_presentation_settings;
+ DO $$ BEGIN
+   BEGIN UPDATE public.catalog_presentation_settings SET theme='midnight' WHERE id=1; RAISE EXCEPTION 'anonymous theme write'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ END $$;
+ RESET ROLE; SET ROLE authenticated;
+ SET request.jwt.claim.sub='00000000-0000-4000-8000-000000000002';
+ DO $$ DECLARE affected int; BEGIN
+   UPDATE public.catalog_presentation_settings SET theme='midnight' WHERE id=1;
+   GET DIAGNOSTICS affected=ROW_COUNT;
+   IF affected<>0 THEN RAISE EXCEPTION 'staff theme write'; END IF;
+ END $$;
+ SET request.jwt.claim.sub='00000000-0000-4000-8000-000000000001';
+ DO $$ DECLARE candidate text; BEGIN
+   FOREACH candidate IN ARRAY ARRAY[${themeSql}] LOOP
+     UPDATE public.catalog_presentation_settings SET theme=candidate WHERE id=1;
+     IF (SELECT theme FROM public.catalog_presentation_settings WHERE id=1)<>candidate THEN RAISE EXCEPTION 'palette not retained: %',candidate; END IF;
+   END LOOP;
+   BEGIN UPDATE public.catalog_presentation_settings SET theme='unknown-palette' WHERE id=1; RAISE EXCEPTION 'invalid theme accepted'; EXCEPTION WHEN check_violation THEN NULL; END;
+   BEGIN UPDATE public.catalog_presentation_settings SET theme=NULL WHERE id=1; RAISE EXCEPTION 'null theme accepted'; EXCEPTION WHEN not_null_violation THEN NULL; END;
+   BEGIN UPDATE public.catalog_presentation_settings SET id=2 WHERE id=1; RAISE EXCEPTION 'id changed with theme permissions'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+   BEGIN DELETE FROM public.catalog_presentation_settings WHERE id=1; RAISE EXCEPTION 'deleted with theme permissions'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ END $$;
+ UPDATE public.catalog_presentation_settings SET theme='midnight' WHERE id=1;
+ RESET ROLE; SET ROLE anon;
+ DO $$ BEGIN IF (SELECT theme FROM public.catalog_presentation_settings WHERE id=1)<>'midnight' THEN RAISE EXCEPTION 'public cannot read saved theme'; END IF; END $$;
+ RESET ROLE;
+ `;
+  const themeAfter = `
+ DO $$ BEGIN
+   IF (SELECT theme FROM public.catalog_presentation_settings WHERE id=1)<>'midnight' THEN RAISE EXCEPTION 'migration reset saved theme'; END IF;
+   IF EXISTS (SELECT id,gallery_enabled,category_accents,motion_enabled FROM public.catalog_presentation_settings EXCEPT SELECT * FROM flags_before_theme) THEN RAISE EXCEPTION 'existing switches changed'; END IF;
+   IF (SELECT jsonb_agg(to_jsonb(p) ORDER BY p.policyname) FROM pg_policies p WHERE schemaname='public' AND tablename='catalog_presentation_settings') IS DISTINCT FROM (SELECT signature FROM policies_before_theme) THEN RAISE EXCEPTION 'existing RLS changed'; END IF;
+   IF (SELECT total FROM public.business_fixture WHERE id=1)<>799 THEN RAISE EXCEPTION 'business row changed by theme migration'; END IF;
+ END $$;
+ `;
   const run = spawnSync(
     "docker",
     ["exec", "-i", name, "psql", "-U", "postgres", "-v", "ON_ERROR_STOP=1"],
     {
-      input: before + "\n" + migration + "\n" + check + "\n" + migration + "\n" + after,
+      input: [
+        before,
+        migration,
+        check,
+        migration,
+        after,
+        currentMigration,
+        themeBefore,
+        themeMigration,
+        themeCheck,
+        themeMigration,
+        themeAfter,
+      ].join("\n"),
       encoding: "utf8",
     },
   );
@@ -91,6 +156,15 @@ try {
       deleteDenied: true,
       idempotentMigration: true,
       businessFixtureUnchanged: true,
+      allSevenThemesSaved: themeIds,
+      publicSavedThemeRead: true,
+      anonymousThemeWriteDenied: true,
+      staffThemeWriteDenied: true,
+      invalidThemeDenied: true,
+      nullThemeDenied: true,
+      existingSwitchesPreserved: true,
+      existingRlsPoliciesUnchanged: true,
+      savedThemePreservedOnReapply: true,
     }),
   );
 } finally {
