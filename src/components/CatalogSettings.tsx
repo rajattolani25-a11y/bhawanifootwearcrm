@@ -4,13 +4,14 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Copy, ExternalLink, MessageCircle } from "lucide-react";
+import { Copy, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CatalogHeroPreview } from "@/components/CatalogHeroPreview";
+import { CatalogProductControls } from "@/components/CatalogProductControls";
 
 const COLS =
   "business_name,business_phone,catalog_enabled,booking_enabled,pickup_enabled,delivery_enabled,outside_enabled,local_charge,outside_charge,free_delivery_above,delivery_note,show_few_left,upi_id,advance_percent,hold_hours";
@@ -150,11 +151,6 @@ export function CatalogSettings() {
     );
   return (
     <section id="catalog-owner-controls" className="scroll-mt-20 rounded-xl border bg-card p-5">
-      <h2 className="mb-1 font-semibold">Online catalog</h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        A public page with your products, prices and in-stock sizes. Cost, profit and stock counts
-        are never shown.
-      </p>
       <div className="my-3 flex flex-wrap gap-2">
         <Button
           variant="outline"
@@ -166,11 +162,7 @@ export function CatalogSettings() {
         >
           <Copy className="h-4 w-4" /> Copy catalog link
         </Button>
-        <Button variant="outline" size="sm" asChild>
-          <a href={link} target="_blank" rel="noreferrer">
-            <ExternalLink className="h-4 w-4" /> Open catalog
-          </a>
-        </Button>
+
         <Button variant="outline" size="sm" asChild>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`Explore the latest footwear collection at ${data?.business_name ?? "our store"}.\nSee live sizes and prices, order for delivery or visit us:\n${link}`)}`}
@@ -196,7 +188,7 @@ export function CatalogSettings() {
             Offers & coupons
           </TabsTrigger>
           <TabsTrigger value="products" className="min-h-11 whitespace-normal text-xs">
-            Visibility
+            Products & visibility
           </TabsTrigger>
         </TabsList>
         <TabsContent value="design" forceMount className="data-[state=inactive]:hidden">
@@ -318,6 +310,7 @@ export function CatalogSettings() {
           </div>
         </TabsContent>
         <TabsContent value="products" forceMount className="data-[state=inactive]:hidden">
+          <CatalogProductControls />
           <Row k="catalog_enabled" title="Show catalog to customers" />
           <Row
             k="show_few_left"

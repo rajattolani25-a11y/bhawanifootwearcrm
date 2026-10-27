@@ -149,7 +149,7 @@ await p.waitForFunction(
       .length === 2,
 );
 await p.getByRole("button", { name: "Close", exact: true }).click();
-await p.goto("http://localhost:8080/settings");
+await p.goto("http://localhost:8080/catalog-studio");
 await p.getByRole("tab", { name: "Orders & delivery", exact: true }).click();
 await p.getByRole("button", { name: "Save catalog settings", exact: true }).waitFor();
 await p

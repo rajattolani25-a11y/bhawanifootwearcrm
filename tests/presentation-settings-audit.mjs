@@ -15,6 +15,18 @@ let flags = { gallery_enabled: true, category_accents: true, motion_enabled: tru
 let writes = 0;
 let sharedTheme,
   themeWrites = 0;
+const productRow = {
+  id: "demo-product",
+  article: "Demo pair",
+  brand: "Demo",
+  category: "Gents",
+  color: "Cream",
+  mrp: 999,
+  selling_price: 799,
+  image_url: null,
+  catalog_visible: true,
+};
+const productWrites = [];
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "demo@example.invalid",
@@ -120,7 +132,14 @@ await p.route("**/*", async (r) => {
       }
       return r.fulfill({ json: { id: 1, ...flags, theme: sharedTheme } });
     }
+    if (u.pathname.endsWith("/products") && r.request().method() === "PATCH") {
+      const body = r.request().postDataJSON();
+      productWrites.push(body);
+      Object.assign(productRow, body);
+      return r.fulfill({ json: productRow });
+    }
     let data = [];
+    if (u.pathname.endsWith("/products")) data = [productRow];
     if (u.pathname.endsWith("/catalog_hero_settings")) {
       const { image: _image, ...settings } = hero;
       data = {
@@ -168,24 +187,25 @@ await p.evaluate(async (token) => {
   if (r.error) throw r.error;
 }, token);
 await p.goto("http://localhost:8080/settings");
-await p.getByRole("heading", { name: "Catalog appearance", exact: true }).waitFor();
-if (!(await p.getByRole("button", { name: "Save catalog theme", exact: true }).isDisabled()))
-  throw Error("Theme save enabled without a supported shared field");
+await p.getByRole("heading", { name: "Store details", exact: true }).waitFor();
 if (
   (await p
     .getByRole("tablist", { name: "Settings sections", exact: true })
     .getByRole("tab")
     .count()) !== 6
 )
-  throw Error(
-    "Settings sections missing: " +
-      JSON.stringify(
-        await p
-          .getByRole("tablist", { name: "Settings sections", exact: true })
-          .getByRole("tab")
-          .allTextContents(),
-      ),
-  );
+  throw Error("Settings sections missing");
+const shopName = p.getByText("Shop name", { exact: true }).locator("..").locator("input");
+await shopName.fill("Draft shop name");
+await p.getByRole("tab", { name: "Billing", exact: true }).click();
+await p.getByRole("heading", { name: "Bill printing", exact: true }).waitFor();
+await p.getByRole("tab", { name: "Store", exact: true }).click();
+if ((await shopName.inputValue()) !== "Draft shop name") throw Error("Settings draft lost");
+await p.locator("main").getByRole("link", { name: "Catalog Studio", exact: true }).click();
+await p.waitForURL("**/catalog-studio");
+await p.getByRole("heading", { name: "Catalog appearance", exact: true }).waitFor();
+if (!(await p.getByRole("button", { name: "Save catalog theme", exact: true }).isDisabled()))
+  throw Error("Unsupported theme save enabled");
 if (await p.getByRole("link", { name: "Guide", exact: true }).count())
   throw Error("Guide navigation remains");
 await p.getByRole("region", { name: "Featured collection" }).waitFor();
@@ -194,24 +214,46 @@ if (
   (await p.getByRole("region", { name: "Featured collection" }).getAttribute("data-palette")) !==
   "midnight"
 )
-  throw Error("Owner theme preview did not change");
-await p.getByRole("tab", { name: "Store", exact: true }).click();
-const shopName = p.getByText("Shop name", { exact: true }).locator("..").locator("input");
-await shopName.fill("Draft shop name");
-await p.getByRole("tab", { name: "Billing", exact: true }).click();
-await p.getByRole("heading", { name: "Bill printing", exact: true }).waitFor();
-await p.getByRole("button", { name: "Catalog controls", exact: true }).click();
-await p.getByRole("heading", { name: "Hero banner", exact: true }).waitFor();
+  throw Error("Theme preview failed");
+await p.getByRole("tab", { name: "Orders & delivery", exact: true }).click();
+await p.getByRole("tab", { name: "Design & hero", exact: true }).click();
 if (
   (await p.getByRole("region", { name: "Featured collection" }).getAttribute("data-palette")) !==
   "midnight"
 )
-  throw Error("Tab change lost preview draft");
-await p.getByRole("tab", { name: "Store", exact: true }).click();
-if ((await shopName.inputValue()) !== "Draft shop name") throw Error("Tab change lost form draft");
-await p.getByRole("button", { name: "Catalog controls", exact: true }).click();
-await p.evaluate(() => window.scrollTo(0, 0));
+  throw Error("Studio draft lost");
+await p.evaluate(() => scrollTo(0, 0));
 await p.screenshot({ path: out + "/organized-settings-mobile.png" });
+for (const width of [320, 390, 1440]) {
+  await p.setViewportSize({ width, height: 900 });
+  if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1))
+    throw Error("Studio overflow " + width);
+  if ((await p.getByRole("link", { name: "Catalog Studio", exact: true }).count()) !== 1)
+    throw Error("Owner direct entry missing");
+}
+await p.getByRole("tab", { name: "Products & visibility", exact: true }).click();
+await p.getByRole("region", { name: "Catalog product editor", exact: true }).waitFor();
+await p.getByRole("switch", { name: "Visible in catalog", exact: true }).click();
+await p.getByText("Product visibility saved", { exact: true }).waitFor();
+if (JSON.stringify(productWrites) !== JSON.stringify([{ catalog_visible: false }]))
+  throw Error("Product editor changed unexpected fields");
+await p.waitForTimeout(250);
+await p.screenshot({
+  path: out + "/studio-products-desktop.png",
+  style: "[data-sonner-toaster]{visibility:hidden}",
+});
+await p.setViewportSize({ width: 390, height: 844 });
+await p
+  .getByRole("tablist", { name: "Product editor views", exact: true })
+  .getByRole("tab", { name: "Edit product", exact: true })
+  .click();
+await p.getByRole("switch", { name: "Visible in catalog", exact: true }).waitFor();
+await p.waitForTimeout(250);
+await p.screenshot({
+  path: out + "/studio-products-mobile.png",
+  style: "[data-sonner-toaster]{visibility:hidden}",
+});
+await p.getByRole("tab", { name: "Design & hero", exact: true }).click();
 const gallery = p.getByRole("switch", { name: /Show spotlight gallery/ }),
   accents = p.getByRole("switch", { name: /Category colour accents/ }),
   motion = p.getByRole("switch", { name: /Catalog animations/ });
@@ -262,9 +304,13 @@ await p.goto("http://localhost:8080/settings");
 await p.getByText("Only the Owner can open Settings.", { exact: true }).waitFor();
 if (await p.getByRole("button", { name: "Save appearance", exact: true }).count())
   throw Error("Staff editor exposed");
+await p.goto("http://localhost:8080/catalog-studio");
+await p.waitForURL("**/pos");
+if (await p.getByRole("link", { name: "Catalog Studio", exact: true }).count())
+  throw Error("Staff studio link exposed");
 role = "owner";
 missing = true;
-await p.goto("http://localhost:8080/settings");
+await p.goto("http://localhost:8080/catalog-studio");
 await p
   .getByText(
     "Appearance settings storage is unavailable. Apply migration 0021 in Lovable, then retry. The catalog still works.",
@@ -280,6 +326,10 @@ await p.waitForURL("**/dashboard");
 if (errors.length) throw Error(errors.join("\n"));
 const result = {
   ownerControls: true,
+  studioWidths: [320, 390, 1440],
+  ownerDirectEntry: true,
+  staffStudioDenied: true,
+  productVisibilityOnlyWrite: productWrites,
   settingsSections: 6,
   draftsSurviveSections: true,
   catalogShortcut: true,

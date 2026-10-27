@@ -1,5 +1,25 @@
 # Lovable release handoff
 
+## October 27: direct owner Catalog Studio
+
+New owner-only /catalog-studio route with a mobile top-bar shortcut, desktop/
+menu entry directly after Products, and a direct link from Settings. The page
+reuses the existing banner/theme/offer/delivery controls; Settings now defaults
+to Store and links to Studio instead of mounting duplicate catalog forms.
+Products & visibility includes product search, listing preview, existing cover
+photo upload and immediate visibility saves. Price, stock, sizes and GST are
+read-only in this editor. Photos remain shared with Products/POS.
+
+This UI patch has no new migration/RPC changes. Latest upstream migration 0024
+was preserved. Sync GitHub main and Publish → Update. Do not replay migrations
+that Lovable already recorded as applied; the older theme handoff below is
+historical. Studio remains compatible with missing optional theme storage.
+
+The requested full product-content/gallery/collections/draft-publish editor is
+not yet implemented against live storage. Its interactive design preview and
+the exact proposed catalog-only backend are in docs/catalog-studio-editor-storage.md.
+That extra backend needs the user's migration/RPC confirmation before work.
+
 ## October 26 catalog and Settings follow-up
 
 The catalog now has a compact studio banner, soft CSS backgrounds and seven

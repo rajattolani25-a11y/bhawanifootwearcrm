@@ -1,0 +1,36 @@
+{
+  "ownerControls": true,
+  "studioWidths": [
+    320,
+    390,
+    1440
+  ],
+  "ownerDirectEntry": true,
+  "staffStudioDenied": true,
+  "productVisibilityOnlyWrite": [
+    {
+      "catalog_visible": false
+    }
+  ],
+  "settingsSections": 6,
+  "draftsSurviveSections": true,
+  "catalogShortcut": true,
+  "ownerThemePreview": true,
+  "sharedThemeSaveGuarded": true,
+  "supportedSharedThemeReload": true,
+  "publicThemeApplied": true,
+  "legacyGuideRedirect": true,
+  "guideNavigationRemoved": true,
+  "allFalseSaved": true,
+  "reloadPreservesOff": true,
+  "publicGalleryHidden": true,
+  "neutralPalette": true,
+  "heroMasterMotionOff": true,
+  "staffEditorDenied": true,
+  "missingStorageBlocksSave": true,
+  "missingStorageCatalogFallback": true,
+  "mockedWrites": 1,
+  "mockedThemeWrites": 1,
+  "realWrites": 0,
+  "errors": []
+}

@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, ScanBarcode, Package, Ticket, Truck, Receipt, Factory, Users,
+  LayoutDashboard, ScanBarcode, Package, Ticket, Truck, Receipt, Factory, Users, Paintbrush,
   ShieldAlert, Megaphone, BarChart3, Calculator, Barcode, Settings, ScrollText, BookText, CalendarCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -17,6 +17,7 @@ export const MODULES: ModuleDef[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/pos", label: "POS Billing", icon: ScanBarcode, },
   { to: "/products", label: "Products", icon: Package },
+  { to: "/catalog-studio", label: "Catalog Studio", icon: Paintbrush, ownerOnly: true },
   { to: "/purchase", label: "Purchase", icon: Truck, ownerOnly: true },
   { to: "/sales", label: "Sales History", icon: Receipt },
   { to: "/suppliers", label: "Suppliers", icon: Factory, ownerOnly: true },

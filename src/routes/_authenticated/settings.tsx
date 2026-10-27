@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { exportAll, importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
 import { LanguageSelect } from "@/lib/i18n";
-import { CatalogSettings } from "@/components/CatalogSettings";
 import { StorageMeter } from "@/components/StorageMeter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -32,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const { isOwner, loading, user } = useAuth();
   const qc = useQueryClient();
-  const [section, setSection] = useState("catalog");
+  const [section, setSection] = useState("store");
   const [f, setF] = useState<Record<string, string>>({});
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -205,7 +204,11 @@ function SettingsPage() {
       <PageHeader
         title="Settings"
         subtitle="Manage your catalog, store and team."
-        actions={<Button onClick={() => setSection("catalog")}>Catalog controls</Button>}
+        actions={
+          <Button asChild>
+            <Link to="/catalog-studio">Catalog Studio</Link>
+          </Button>
+        }
       />
       <Tabs value={section} onValueChange={setSection}>
         <TabsList
@@ -232,7 +235,15 @@ function SettingsPage() {
           ))}
         </TabsList>
         <TabsContent value="catalog" forceMount className="space-y-5 data-[state=inactive]:hidden">
-          <CatalogSettings />
+          <section className="rounded-xl border bg-card p-5">
+            <h2 className="font-semibold">Catalog Studio</h2>
+            <p className="my-3 text-sm text-muted-foreground">
+              Banner, themes, products, offers and delivery controls are together in Catalog Studio.
+            </p>
+            <Button asChild>
+              <Link to="/catalog-studio">Open Catalog Studio</Link>
+            </Button>
+          </section>
         </TabsContent>
         <TabsContent value="store" forceMount className="space-y-5 data-[state=inactive]:hidden">
           <section className="rounded-xl border bg-card p-5">

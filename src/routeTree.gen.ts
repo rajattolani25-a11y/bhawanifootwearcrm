@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAccountingRouteImport } from './routes/_authenticated/accounting'
 import { Route as AuthenticatedBarcodesRouteImport } from './routes/_authenticated/barcodes'
 import { Route as AuthenticatedBookingsRouteImport } from './routes/_authenticated/bookings'
+import { Route as AuthenticatedCatalogStudioRouteImport } from './routes/_authenticated/catalog-studio'
 import { Route as AuthenticatedCommunityRouteImport } from './routes/_authenticated/community'
 import { Route as AuthenticatedCouponsRouteImport } from './routes/_authenticated/coupons'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
@@ -72,6 +73,12 @@ const AuthenticatedBookingsRoute = AuthenticatedBookingsRouteImport.update({
   path: '/bookings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCatalogStudioRoute =
+  AuthenticatedCatalogStudioRouteImport.update({
+    id: '/catalog-studio',
+    path: '/catalog-studio',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCommunityRoute = AuthenticatedCommunityRouteImport.update({
   id: '/community',
   path: '/community',
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/accounting': typeof AuthenticatedAccountingRoute
   '/barcodes': typeof AuthenticatedBarcodesRoute
   '/bookings': typeof AuthenticatedBookingsRoute
+  '/catalog-studio': typeof AuthenticatedCatalogStudioRoute
   '/community': typeof AuthenticatedCommunityRoute
   '/coupons': typeof AuthenticatedCouponsRoute
   '/customers': typeof AuthenticatedCustomersRoute
@@ -182,6 +190,7 @@ export interface FileRoutesByTo {
   '/accounting': typeof AuthenticatedAccountingRoute
   '/barcodes': typeof AuthenticatedBarcodesRoute
   '/bookings': typeof AuthenticatedBookingsRoute
+  '/catalog-studio': typeof AuthenticatedCatalogStudioRoute
   '/community': typeof AuthenticatedCommunityRoute
   '/coupons': typeof AuthenticatedCouponsRoute
   '/customers': typeof AuthenticatedCustomersRoute
@@ -208,6 +217,7 @@ export interface FileRoutesById {
   '/_authenticated/accounting': typeof AuthenticatedAccountingRoute
   '/_authenticated/barcodes': typeof AuthenticatedBarcodesRoute
   '/_authenticated/bookings': typeof AuthenticatedBookingsRoute
+  '/_authenticated/catalog-studio': typeof AuthenticatedCatalogStudioRoute
   '/_authenticated/community': typeof AuthenticatedCommunityRoute
   '/_authenticated/coupons': typeof AuthenticatedCouponsRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/accounting'
     | '/barcodes'
     | '/bookings'
+    | '/catalog-studio'
     | '/community'
     | '/coupons'
     | '/customers'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/accounting'
     | '/barcodes'
     | '/bookings'
+    | '/catalog-studio'
     | '/community'
     | '/coupons'
     | '/customers'
@@ -283,6 +295,7 @@ export interface FileRouteTypes {
     | '/_authenticated/accounting'
     | '/_authenticated/barcodes'
     | '/_authenticated/bookings'
+    | '/_authenticated/catalog-studio'
     | '/_authenticated/community'
     | '/_authenticated/coupons'
     | '/_authenticated/customers'
@@ -364,6 +377,13 @@ declare module '@tanstack/react-router' {
       path: '/bookings'
       fullPath: '/bookings'
       preLoaderRoute: typeof AuthenticatedBookingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/catalog-studio': {
+      id: '/_authenticated/catalog-studio'
+      path: '/catalog-studio'
+      fullPath: '/catalog-studio'
+      preLoaderRoute: typeof AuthenticatedCatalogStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/community': {
@@ -478,6 +498,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountingRoute: typeof AuthenticatedAccountingRoute
   AuthenticatedBarcodesRoute: typeof AuthenticatedBarcodesRoute
   AuthenticatedBookingsRoute: typeof AuthenticatedBookingsRoute
+  AuthenticatedCatalogStudioRoute: typeof AuthenticatedCatalogStudioRoute
   AuthenticatedCommunityRoute: typeof AuthenticatedCommunityRoute
   AuthenticatedCouponsRoute: typeof AuthenticatedCouponsRoute
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
@@ -499,6 +520,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountingRoute: AuthenticatedAccountingRoute,
   AuthenticatedBarcodesRoute: AuthenticatedBarcodesRoute,
   AuthenticatedBookingsRoute: AuthenticatedBookingsRoute,
+  AuthenticatedCatalogStudioRoute: AuthenticatedCatalogStudioRoute,
   AuthenticatedCommunityRoute: AuthenticatedCommunityRoute,
   AuthenticatedCouponsRoute: AuthenticatedCouponsRoute,
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,

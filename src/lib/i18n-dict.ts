@@ -1298,6 +1298,23 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Edit product": {english:"Edit product",hindi:"प्रोडक्ट संपादित करें",hinglish:"Product edit karo"},
+  "Preview": {english:"Preview",hindi:"पूर्वावलोकन",hinglish:"Preview"},
+  "Loading products…": {english:"Loading products…",hindi:"प्रोडक्ट लोड हो रहे हैं…",hinglish:"Products load ho rahe hain…"},
+  "Catalog Studio": {english:"Catalog Studio",hindi:"कैटलॉग स्टूडियो",hinglish:"Catalog Studio"},
+  "Open Catalog Studio": {english:"Open Catalog Studio",hindi:"कैटलॉग स्टूडियो खोलें",hinglish:"Catalog Studio kholo"},
+  "Manage your banner, themes, product photos, visibility, offers and delivery.": {english:"Manage your banner, themes, product photos, visibility, offers and delivery.",hindi:"बैनर, थीम, प्रोडक्ट फोटो, दृश्यता, ऑफर और डिलीवरी प्रबंधित करें।",hinglish:"Banner, themes, product photos, visibility, offers aur delivery manage karo."},
+  "Banner, themes, products, offers and delivery controls are together in Catalog Studio.": {english:"Banner, themes, products, offers and delivery controls are together in Catalog Studio.",hindi:"बैनर, थीम, प्रोडक्ट, ऑफर और डिलीवरी के नियंत्रण कैटलॉग स्टूडियो में हैं।",hinglish:"Banner, themes, products, offers aur delivery controls Catalog Studio mein hain."},
+  "Catalog product editor": {english:"Catalog product editor",hindi:"कैटलॉग प्रोडक्ट संपादक",hinglish:"Catalog product editor"},
+  "Products & visibility": {english:"Products & visibility",hindi:"प्रोडक्ट और दृश्यता",hinglish:"Products aur visibility"},
+  "Product editor views": {english:"Product editor views",hindi:"प्रोडक्ट संपादक के भाग",hinglish:"Product editor views"},
+  "Search catalog products": {english:"Search catalog products",hindi:"कैटलॉग प्रोडक्ट खोजें",hinglish:"Catalog products khojo"},
+  "Catalog products": {english:"Catalog products",hindi:"कैटलॉग प्रोडक्ट",hinglish:"Catalog products"},
+  "Visible in catalog": {english:"Visible in catalog",hindi:"कैटलॉग में दिखाई दे रहा है",hinglish:"Catalog mein visible"},
+  "Hidden from catalog": {english:"Hidden from catalog",hindi:"कैटलॉग में छिपा है",hinglish:"Catalog se hidden"},
+  "Product visibility saved": {english:"Product visibility saved",hindi:"प्रोडक्ट दृश्यता सहेजी गई",hinglish:"Product visibility save ho gayi"},
+  "Cover photo": {english:"Cover photo",hindi:"कवर फोटो",hinglish:"Cover photo"},
+  "This cover photo is shared with Products and POS. Uploads use existing compression.": {english:"This cover photo is shared with Products and POS. Uploads use existing compression.",hindi:"यह कवर फोटो प्रोडक्ट और POS में भी दिखती है। अपलोड में मौजूदा संपीड़न लागू है।",hinglish:"Yeh cover photo Products aur POS mein bhi dikhti hai. Existing compression use hoti hai."},
   "Save catalog theme": {english: "Save catalog theme", hindi: "कैटलॉग थीम सहेजें", hinglish: "Catalog theme save karo"},
   "Catalog theme saved": {english: "Catalog theme saved", hindi: "कैटलॉग थीम सहेजी गई", hinglish: "Catalog theme save ho gayi"},
   "Theme save could not be confirmed.": {english: "Theme save could not be confirmed.", hindi: "थीम सहेजे जाने की पुष्टि नहीं हुई।", hinglish: "Theme save confirm nahi hui."},
