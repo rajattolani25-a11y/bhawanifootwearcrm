@@ -192,7 +192,7 @@ if (
   (await p
     .getByRole("tablist", { name: "Settings sections", exact: true })
     .getByRole("tab")
-    .count()) !== 6
+    .count()) !== 5
 )
   throw Error("Settings sections missing");
 const shopName = p.getByText("Shop name", { exact: true }).locator("..").locator("input");
@@ -201,15 +201,25 @@ await p.getByRole("tab", { name: "Billing", exact: true }).click();
 await p.getByRole("heading", { name: "Bill printing", exact: true }).waitFor();
 await p.getByRole("tab", { name: "Store", exact: true }).click();
 if ((await shopName.inputValue()) !== "Draft shop name") throw Error("Settings draft lost");
-await p.locator("main").getByRole("link", { name: "Catalog Studio", exact: true }).click();
+if (await p.locator("header").getByRole("link", { name: "Catalog Studio", exact: true }).count())
+  throw Error("Top-right shortcut remains");
+if (await p.locator("main").getByRole("link", { name: "Catalog Studio", exact: true }).count())
+  throw Error("Settings Studio shortcut remains");
+await p.getByRole("button", { name: "Menu", exact: true }).click();
+await p.getByRole("link", { name: "Catalog Studio", exact: true }).click();
 await p.waitForURL("**/catalog-studio");
 await p.getByRole("heading", { name: "Catalog appearance", exact: true }).waitFor();
+await p.evaluate(() => scrollTo(0, 0));
+await p.screenshot({
+  path: out + "/appearance-mobile.png",
+  style: "[data-sonner-toaster]{visibility:hidden}",
+});
 if (!(await p.getByRole("button", { name: "Save catalog theme", exact: true }).isDisabled()))
   throw Error("Unsupported theme save enabled");
 if (await p.getByRole("link", { name: "Guide", exact: true }).count())
   throw Error("Guide navigation remains");
-await p.getByRole("region", { name: "Featured collection" }).waitFor();
 await p.getByRole("button", { name: "Midnight Blue", exact: true }).click();
+await p.getByRole("button", { name: "Preview selected theme", exact: true }).click();
 if (
   (await p.getByRole("region", { name: "Featured collection" }).getAttribute("data-palette")) !==
   "midnight"
@@ -228,8 +238,15 @@ for (const width of [320, 390, 1440]) {
   await p.setViewportSize({ width, height: 900 });
   if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1))
     throw Error("Studio overflow " + width);
-  if ((await p.getByRole("link", { name: "Catalog Studio", exact: true }).count()) !== 1)
-    throw Error("Owner direct entry missing");
+  if (width < 1024) {
+    if (await p.getByRole("link", { name: "Catalog Studio", exact: true }).count())
+      throw Error("Non-menu Studio entry exposed");
+    await p.getByRole("button", { name: "Menu", exact: true }).click();
+  }
+  const links = await p.locator("aside:visible nav a").allTextContents();
+  if (!links.at(-1)?.includes("Catalog Studio") || !links.at(-2)?.includes("Stock Ledger"))
+    throw Error("Studio is not last in left menu");
+  if (width < 1024) await p.getByRole("button", { name: "Close menu", exact: true }).click();
 }
 await p.getByRole("tab", { name: "Products & visibility", exact: true }).click();
 await p.getByRole("region", { name: "Catalog product editor", exact: true }).waitFor();
@@ -253,7 +270,7 @@ await p.screenshot({
   path: out + "/studio-products-mobile.png",
   style: "[data-sonner-toaster]{visibility:hidden}",
 });
-await p.getByRole("tab", { name: "Design & hero", exact: true }).click();
+await p.getByRole("tab", { name: "Appearance", exact: true }).click();
 const gallery = p.getByRole("switch", { name: /Show spotlight gallery/ }),
   accents = p.getByRole("switch", { name: /Category colour accents/ }),
   motion = p.getByRole("switch", { name: /Catalog animations/ });
@@ -276,6 +293,7 @@ await p.getByRole("button", { name: "Midnight Blue", exact: true }).click();
 await p.getByRole("button", { name: "Save catalog theme", exact: true }).click();
 await p.getByText("Catalog theme saved", { exact: true }).waitFor();
 await p.reload();
+await p.getByRole("button", { name: "Preview selected theme", exact: true }).click();
 await p.getByRole("region", { name: "Featured collection" }).waitFor();
 await p.waitForFunction(() => document.querySelector('[data-palette="midnight"]'));
 if (themeWrites !== 1) throw Error("Theme save request count incorrect");
@@ -330,9 +348,12 @@ const result = {
   ownerDirectEntry: true,
   staffStudioDenied: true,
   productVisibilityOnlyWrite: productWrites,
-  settingsSections: 6,
+  settingsSections: 5,
+  sidebarOnlyStudio: true,
+  studioLastAfterStockLedger: true,
+  dedicatedAppearanceEditor: true,
   draftsSurviveSections: true,
-  catalogShortcut: true,
+  catalogSidebarEntry: true,
   ownerThemePreview: true,
   sharedThemeSaveGuarded: true,
   supportedSharedThemeReload: true,

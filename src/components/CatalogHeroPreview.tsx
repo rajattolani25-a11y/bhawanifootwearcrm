@@ -10,7 +10,6 @@ import {
   type HeroSettings,
 } from "@/lib/catalog-hero";
 import { CatalogHero } from "./CatalogHero";
-import { CatalogThemeSettings } from "./CatalogThemeSettings";
 import type { CatalogThemeId } from "@/lib/catalog-themes";
 import { useLang } from "@/lib/i18n";
 import { HERO_IMAGE_COPY, heroImageError } from "@/lib/hero-image-copy";
@@ -21,7 +20,7 @@ import styles from "./catalog-hero-preview.module.css";
 
 const CATEGORIES = ["All", "Gents", "Ladies", "Boys", "Girls", "Kids"];
 /** Mounted only inside owner Settings. Public visitors receive no editor code or settings query. */
-export function CatalogHeroPreview() {
+export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?: CatalogThemeId }) {
   const qc = useQueryClient();
   const { lang } = useLang();
   const copy = HERO_IMAGE_COPY[lang];
@@ -60,7 +59,6 @@ export function CatalogHeroPreview() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const [previewTheme, setPreviewTheme] = useState<CatalogThemeId>("studio");
   const [existing, setExisting] = useState("");
   const [cleanup, setCleanup] = useState<string | null>(null);
   const usage = useQuery({
@@ -273,7 +271,6 @@ export function CatalogHeroPreview() {
         Owner controls only. Preview your changes, then save to update the customer catalog. Turn
         the hero off to restore the original introduction.
       </p>
-      <CatalogThemeSettings value={previewTheme} onChange={setPreviewTheme} />
       <fieldset disabled={saving} className="min-w-0">
         <div className={styles["toolbar"]}>
           <label>

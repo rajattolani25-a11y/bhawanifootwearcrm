@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CatalogHeroPreview } from "@/components/CatalogHeroPreview";
+import { CatalogThemeSettings } from "@/components/CatalogThemeSettings";
+import type { CatalogThemeId } from "@/lib/catalog-themes";
 import { CatalogProductControls } from "@/components/CatalogProductControls";
 
 const COLS =
@@ -45,6 +47,8 @@ export function CatalogSettings() {
   });
   const [f, setF] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [previewTheme, setPreviewTheme] = useState<CatalogThemeId>("studio");
+  const [section, setSection] = useState("appearance");
   useEffect(() => {
     if (data)
       setF({
@@ -173,11 +177,14 @@ export function CatalogSettings() {
           </a>
         </Button>
       </div>
-      <Tabs defaultValue="design">
+      <Tabs value={section} onValueChange={setSection}>
         <TabsList
           aria-label="Catalog settings sections"
-          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4"
+          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-5"
         >
+          <TabsTrigger value="appearance" className="min-h-11 whitespace-normal text-xs">
+            Appearance
+          </TabsTrigger>
           <TabsTrigger value="design" className="min-h-11 whitespace-normal text-xs">
             Design & hero
           </TabsTrigger>
@@ -191,11 +198,17 @@ export function CatalogSettings() {
             Products & visibility
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="appearance" forceMount className="data-[state=inactive]:hidden">
+          <CatalogThemeSettings value={previewTheme} onChange={setPreviewTheme} />
+          <Button variant="outline" className="mt-3" onClick={() => setSection("design")}>
+            Preview selected theme
+          </Button>
+          <CatalogPresentationSettings />
+        </TabsContent>
         <TabsContent value="design" forceMount className="data-[state=inactive]:hidden">
           <div id="catalog-hero-controls" className="scroll-mt-20">
-            <CatalogHeroPreview />
+            <CatalogHeroPreview previewTheme={previewTheme} />
           </div>
-          <CatalogPresentationSettings />
         </TabsContent>
         <TabsContent value="orders" forceMount className="data-[state=inactive]:hidden">
           <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">

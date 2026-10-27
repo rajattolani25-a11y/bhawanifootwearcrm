@@ -16,7 +16,7 @@ export function CatalogThemePicker({
     <div className="my-5" role="group" aria-label={t("Catalog theme previews")}>
       <h4 className="font-semibold">{t("Catalog themes")}</h4>
       <p className="mt-1 text-xs text-muted-foreground">
-        {t("Choose a look for the banner preview below.")}
+        {t("Choose a look, then preview or save your theme.")}
       </p>
       <div className={styles["themes"]}>
         {CATALOG_THEMES.map((theme) => (

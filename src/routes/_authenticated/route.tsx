@@ -114,7 +114,6 @@ function AppShell() {
         <header className={`${styles["mobileHeader"]} sticky top-0 z-30 flex items-center gap-3 border-b bg-card/90 px-4 backdrop-blur lg:hidden`}>
           <button onClick={() => setOpen(true)} aria-label="Menu" className="grid h-11 min-w-11 place-items-center"><Menu className="h-6 w-6" /></button>
           <span className="min-w-0 flex-1 truncate font-display font-semibold">SoleStack POS</span>
-          {isOwner && <Link to="/catalog-studio" className="flex min-h-11 shrink-0 items-center rounded-lg border px-2 text-xs font-semibold">{t("Catalog Studio")}</Link>}
         </header>
         <main className={cn(styles["content"], premium["workspace"], "min-h-0 flex-1 p-3 md:p-5")}>
           <Outlet />

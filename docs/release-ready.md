@@ -1,5 +1,18 @@
 # Lovable release handoff
 
+## Latest: sidebar-only Studio and dedicated Appearance editing
+
+The owner's latest preference supersedes the shortcut placement below: Catalog
+Studio is now linked only from the left sidebar/mobile drawer, last below Stock
+Ledger. Top-right/mobile-header and Settings Studio links have been removed.
+Settings has five sections and defaults to Store.
+
+Studio opens directly to Appearance. It groups seven theme presets with their
+existing saved-theme action and the gallery/category-colour/motion switches.
+Preview selected theme opens Design & hero with the same draft palette; saved
+appearance values are applied on the next public catalog load. No schema or
+RPC changes for this follow-up. Sync main and Publish → Update.
+
 ## October 27: direct owner Catalog Studio
 
 New owner-only /catalog-studio route with a mobile top-bar shortcut, desktop/

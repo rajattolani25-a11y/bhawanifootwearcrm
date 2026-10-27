@@ -1298,6 +1298,8 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Choose a look, then preview or save your theme.": {english:"Choose a look, then preview or save your theme.",hindi:"एक रूप चुनें, फिर थीम का पूर्वावलोकन देखें या सहेजें।",hinglish:"Look chuno, phir theme preview dekho ya save karo."},
+  "Preview selected theme": {english:"Preview selected theme",hindi:"चुनी हुई थीम का पूर्वावलोकन",hinglish:"Selected theme ka preview dekho"},
   "Edit product": {english:"Edit product",hindi:"प्रोडक्ट संपादित करें",hinglish:"Product edit karo"},
   "Preview": {english:"Preview",hindi:"पूर्वावलोकन",hinglish:"Preview"},
   "Loading products…": {english:"Loading products…",hindi:"प्रोडक्ट लोड हो रहे हैं…",hinglish:"Products load ho rahe hain…"},
