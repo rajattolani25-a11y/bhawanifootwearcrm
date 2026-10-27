@@ -1,0 +1,18 @@
+{
+  "productActuallyMoves": true,
+  "spotlightActuallyMoves": true,
+  "lightSweep": true,
+  "motionOffStops": true,
+  "reducedMotionStops": true,
+  "offscreenPauses": true,
+  "backgroundHandlerPauses": true,
+  "ctaResponds": true,
+  "widths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "realWrites": 0,
+  "errors": []
+}

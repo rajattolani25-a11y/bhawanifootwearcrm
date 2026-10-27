@@ -1,5 +1,21 @@
 # Lovable release handoff
 
+## Latest hero motion refinement
+
+The compact hero adds a shoe entrance, staggered copy/CTA entry, breathing floor
+shadow, drifting spotlight and a quiet light sweep. Loops use transform/opacity
+on static gradients and the existing product image. Existing hero/master Motion
+OFF, reduced-motion and offscreen/background pause behaviour remain effective.
+No new library, upload, database field or RPC change is required. Publish the
+synced frontend in Lovable. Preview: docs/previews/hero-motion.mp4 (sample shoe).
+
+Actual browser checks cover moving photo/light, OFF/reduced motion, offscreen
+pause, a simulated document-hidden handler, working CTA and four viewport
+widths. Existing seven-palette layout checks pass. These tests do not establish
+real-phone frame rate. Optional reproduction: tests/hero-motion-audit.mjs,
+using Playwright/Chromium with its recording FFmpeg installed; PREVIEW_SHOE
+can point to a local cutout, otherwise the fixture uses a synthetic shoe SVG.
+
 ## Latest: sidebar-only Studio and dedicated Appearance editing
 
 The owner's latest preference supersedes the shortcut placement below: Catalog
