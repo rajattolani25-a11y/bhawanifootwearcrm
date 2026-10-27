@@ -3,7 +3,7 @@
 ## October 27: direct owner Catalog Studio
 
 New owner-only /catalog-studio route with a mobile top-bar shortcut, desktop/
-menu entry directly after Products, and a direct link from Settings. The page
+menu entry last, after Stock Ledger, and a direct link from Settings. The page
 reuses the existing banner/theme/offer/delivery controls; Settings now defaults
 to Store and links to Studio instead of mounting duplicate catalog forms.
 Products & visibility includes product search, listing preview, existing cover

@@ -17,7 +17,6 @@ export const MODULES: ModuleDef[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/pos", label: "POS Billing", icon: ScanBarcode, },
   { to: "/products", label: "Products", icon: Package },
-  { to: "/catalog-studio", label: "Catalog Studio", icon: Paintbrush, ownerOnly: true },
   { to: "/purchase", label: "Purchase", icon: Truck, ownerOnly: true },
   { to: "/sales", label: "Sales History", icon: Receipt },
   { to: "/suppliers", label: "Suppliers", icon: Factory, ownerOnly: true },
@@ -32,6 +31,7 @@ export const MODULES: ModuleDef[] = [
   { to: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
   { to: "/community", label: "WhatsApp & Posters", icon: Megaphone },
   { to: "/stock-ledger", label: "Stock Ledger", icon: ScrollText },
+  { to: "/catalog-studio", label: "Catalog Studio", icon: Paintbrush, ownerOnly: true },
 ];
 
 export const inr = (n: number | null | undefined) =>
