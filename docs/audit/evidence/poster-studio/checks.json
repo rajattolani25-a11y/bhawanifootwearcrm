@@ -1,0 +1,33 @@
+{
+  "themes": [
+    "luxury",
+    "sale",
+    "editorial",
+    "collection",
+    "light",
+    "dark"
+  ],
+  "png": "1080x1920",
+  "offersOptionalInAllThemes": true,
+  "hiddenFieldsOmitted": true,
+  "noSizeMessageCTA": true,
+  "inStockSizesOnly": true,
+  "transparentAndOpaquePhotos": true,
+  "longTextAndPortraitPhotos": true,
+  "noTextCollisionsOrClipping": true,
+  "downloadPass": true,
+  "shareApiMockAndFallbackPass": true,
+  "guideLanguages": [
+    "english",
+    "hindi",
+    "hinglish"
+  ],
+  "widths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "realWrites": [],
+  "errors": []
+}

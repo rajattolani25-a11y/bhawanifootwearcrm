@@ -1,5 +1,35 @@
 # Lovable release handoff
 
+## Latest: WhatsApp poster themes and optional details
+
+Open WhatsApp & Posters, select a product, then use Poster studio. Luxury Drop,
+Bold Sale, Clean Editorial and Collection Grid join the existing light/dark
+styles. Each renders a real 1080×1920 PNG, with a preview, download, print and
+native file share (or download fallback). The size-inquiry CTA is absent.
+Every theme supports optional free-text offers; blank means no offer. Store,
+campaign/design headings, product photo/details, price, available sizes, phone,
+visit line and offer each have a show/hide switch. Poster file sharing adds no
+separate caption that could reveal hidden details. The community text message
+remains independently editable. Selections are session-only.
+
+Existing prices/photos and in-stock sizes are reused. Offers are promotional
+text, not checkout discounts. No database writes, migrations, RPC edits, photo
+uploads or new dependencies. Fonts reuse the self-hosted hero assets. Collection
+Grid shows crops of the same photo, not additional products or 3D assets.
+Opaque photos are contained on a light panel. Actual-alpha guidance, resolution
+warnings and photo instructions are available in English/Hindi/Hinglish. There
+is no automatic background removal. Changing a photo in Products still affects
+the shared POS/catalog photo.
+
+Verified with tests/poster-studio-audit.mjs: six exports, optional/hidden fields,
+stock sizes, text bounds/collisions, long/non-Latin names, opaque/transparent and
+missing/failed photos, real PNG download, mocked native file share and fallback,
+three guide languages, and 320/390/768/1440px widths. No live shop writes or
+uncaught browser errors. Native sharing in the installed phone/WhatsApp app
+still needs a device check. TypeScript, targeted ESLint and production build
+pass. Evidence: docs/audit/evidence/poster-studio; actual sample output:
+docs/previews/whatsapp-posters.png. Sync main and Lovable Publish → Update.
+
 ## Latest hero motion refinement
 
 The compact hero adds a shoe entrance, staggered copy/CTA entry, breathing floor
