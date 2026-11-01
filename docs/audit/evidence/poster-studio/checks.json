@@ -15,6 +15,8 @@
   "transparentAndOpaquePhotos": true,
   "longTextAndPortraitPhotos": true,
   "noTextCollisionsOrClipping": true,
+  "customHeadlinesAllThemesAndAlignments": true,
+  "presetSaveReloadUpdateDeleteAndBlockedStorage": true,
   "downloadPass": true,
   "shareApiMockAndFallbackPass": true,
   "guideLanguages": [

@@ -283,6 +283,132 @@ try {
   await page.getByText("Product photo ki guide", { exact: true }).waitFor();
   await page.getByRole("button", { name: "English", exact: true }).click();
   await page.getByText("Product photo guide", { exact: true }).waitFor();
+  const custom = await page.evaluate(async () => {
+    const api = window.__posters,
+      p = window.__products[0],
+      results = [];
+    for (const theme of api.POSTER_THEMES)
+      for (const align of ["left", "center", "right"]) {
+        window.__drawn = [];
+        await api.drawPoster(
+          p,
+          "Shop",
+          "00000",
+          "NEW ARRIVAL",
+          theme.id,
+          "Flat ₹200 off",
+          api.DEFAULT_POSTER_VISIBILITY,
+          { line1: "Wedding favourites", line2: "हर कदम खास", size: 100, align },
+        );
+        const labels = [...window.__drawn];
+        results.push({ theme: theme.id, align, labels });
+      }
+    return results;
+  });
+  for (const row of custom) {
+    assert(row.labels.some((l) => l.value === "Wedding favourites"));
+    assert(row.labels.some((l) => l.value === "हर कदम खास"));
+    for (const text of row.labels)
+      assert(
+        text.x1 >= 50 && text.x2 <= 1030 && text.y1 >= 100 && text.y2 <= 1820,
+        "Custom headline clipping",
+      );
+    for (const [i, a] of row.labels.entries())
+      for (const b of row.labels.slice(i + 1))
+        assert(
+          !(
+            Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1) > 3 &&
+            Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1) > 3
+          ),
+          `Custom text collision: ${row.theme} ${a.value} / ${b.value}`,
+        );
+  }
+  await page.getByText("Campaign presets", { exact: true }).click();
+  await page.getByLabel("Choose campaign", { exact: true }).selectOption("wedding");
+  await page.getByRole("button", { name: "Apply preset", exact: true }).click();
+  await ready();
+  await page.getByText("Edit design headline", { exact: true }).click();
+  assert.equal(await page.getByLabel("Headline line 1", { exact: true }).inputValue(), "WEDDING");
+  await page.getByLabel("Headline line 1", { exact: true }).fill("MY WEEKEND");
+  await page.getByLabel("Headline line 2", { exact: true }).fill("EDIT.");
+  await page.getByLabel("Headline alignment", { exact: true }).selectOption("right");
+  await page.getByLabel("Headline size (%)", { exact: true }).fill("80");
+  await page.getByLabel("Offer text (optional)", { exact: true }).fill("Flat ₹200 off");
+  await page.getByLabel("Price", { exact: true }).uncheck();
+  await page.getByLabel("Preset name", { exact: true }).fill("My weekend");
+  await page.getByRole("button", { name: "Save preset", exact: true }).click();
+  await page.getByText("Campaign preset saved on this device.", { exact: true }).waitFor();
+  const stored = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("solestack-poster-campaigns-v1")),
+  );
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].visible.price, false);
+  assert(!JSON.stringify(stored).includes("Daily Comfort"));
+  assert(!JSON.stringify(stored).includes("999"));
+  // Saving the same name updates one preset rather than silently duplicating it.
+  await page.getByLabel("Offer text (optional)", { exact: true }).fill("Weekend collection");
+  await page.getByRole("button", { name: "Save preset", exact: true }).click();
+  assert.equal(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("solestack-poster-campaigns-v1")).length,
+    ),
+    1,
+  );
+  await page.reload();
+  await ready();
+  await page.getByText("Campaign presets", { exact: true }).click();
+  await page.getByLabel("Choose campaign", { exact: true }).selectOption(stored[0].id);
+  await page.getByRole("button", { name: "Apply preset", exact: true }).click();
+  await ready();
+  await page.getByText("Edit design headline", { exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Headline line 1", { exact: true }).inputValue(),
+    "MY WEEKEND",
+  );
+  assert.equal(await page.getByLabel("Headline alignment", { exact: true }).inputValue(), "right");
+  assert.equal(await page.getByLabel("Headline size (%)", { exact: true }).inputValue(), "80");
+  assert.equal(
+    await page.getByLabel("Offer text (optional)", { exact: true }).inputValue(),
+    "Weekend collection",
+  );
+  await page.getByText("Show or hide poster details", { exact: true }).click();
+  assert.equal(await page.getByLabel("Price", { exact: true }).isChecked(), false);
+  const storageFailure = await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new DOMException("full", "QuotaExceededError");
+    };
+    window.__restoreStorage = () => {
+      Storage.prototype.setItem = original;
+    };
+    return true;
+  });
+  await page.getByLabel("Preset name", { exact: true }).fill("Blocked save");
+  await page.getByRole("button", { name: "Save preset", exact: true }).click();
+  await page
+    .getByText("Could not save presets. Device storage may be full or blocked.", { exact: true })
+    .waitFor();
+  assert(storageFailure);
+  await page.evaluate(() => window.__restoreStorage());
+  await page.getByRole("button", { name: "Delete preset", exact: true }).click();
+  assert.equal(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("solestack-poster-campaigns-v1")).length,
+    ),
+    0,
+  );
+  const parsed = await page.evaluate(async () => {
+    const { parseCampaigns } = await import("/src/lib/poster-campaigns.ts");
+    return [parseCampaigns("{broken"), parseCampaigns('[{"id":"bad"}]')];
+  });
+  assert.deepEqual(parsed, [[], []]);
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
+      false,
+    );
+  }
   assert.deepEqual(errors, []);
   assert.deepEqual(writes, []);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -298,6 +424,8 @@ try {
     transparentAndOpaquePhotos: true,
     longTextAndPortraitPhotos: true,
     noTextCollisionsOrClipping: true,
+    customHeadlinesAllThemesAndAlignments: true,
+    presetSaveReloadUpdateDeleteAndBlockedStorage: true,
     downloadPass: true,
     shareApiMockAndFallbackPass: true,
     guideLanguages: ["english", "hindi", "hinglish"],

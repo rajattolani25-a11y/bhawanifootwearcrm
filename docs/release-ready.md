@@ -1,5 +1,30 @@
 # Lovable release handoff
 
+## Latest: editable headlines and device campaign presets
+
+WhatsApp & Posters → Poster studio now includes Edit design headline, with two
+editable lines (80 characters each), size 60–100%, left/centre/right/theme
+alignment and reset to the theme defaults. Campaign label is also editable.
+Clearing a line hides it. Canvas typography fits measured glyph bounds into
+reserved headline slots, including descenders and Hindi text. Classic styles
+reserve extra room above the photo when custom headings are supplied.
+
+Campaign presets has New Arrival, Festival Sale and Wedding Collection starters
+with no invented discounts. Save up to 20 named designs locally, apply to the
+current product, update by saving the same name, or delete a saved design.
+Presets store theme/palette, label, offer, typography and visibility flags only;
+never photos, product/price/stock, phone numbers or customer data. Storage is
+specific to this browser/device, not synced across devices. Clearing browser
+data removes saved presets. Corrupt data is ignored; full/blocked storage
+reports an error rather than claiming success. No DB/RPC/migration changes.
+
+TypeScript, targeted ESLint and production build pass. Browser audit extends
+the previous poster checks with custom English/Hindi headline exports in six
+themes and three alignments, collision/bounds checks, preset save/reload/update/
+delete and blocked-storage handling, plus four mobile/desktop widths. Sharing
+remains browser-mocked; native WhatsApp still needs a device check. Updated
+evidence: docs/audit/evidence/poster-studio. Push main → Lovable Publish/Update.
+
 ## Latest: WhatsApp poster themes and optional details
 
 Open WhatsApp & Posters, select a product, then use Poster studio. Luxury Drop,

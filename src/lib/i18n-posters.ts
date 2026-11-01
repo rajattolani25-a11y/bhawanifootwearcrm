@@ -1,4 +1,49 @@
 export const POSTERS: Record<string, { hindi: string; hinglish: string }> = {
+  "Campaign presets": { hindi: "प्रचार के प्रीसेट", hinglish: "Campaign presets" },
+  "Choose campaign": { hindi: "प्रचार चुनें", hinglish: "Campaign chuno" },
+  "Apply preset": { hindi: "प्रीसेट लगाएँ", hinglish: "Preset lagao" },
+  "Delete preset": { hindi: "प्रीसेट हटाएँ", hinglish: "Preset hatao" },
+  "Preset name": { hindi: "प्रीसेट का नाम", hinglish: "Preset ka naam" },
+  "Save preset": { hindi: "प्रीसेट सहेजें", hinglish: "Preset save karo" },
+  "Edit design headline": { hindi: "डिज़ाइन हेडलाइन बदलें", hinglish: "Design headline edit karo" },
+  "Headline line 1": { hindi: "हेडलाइन की पहली लाइन", hinglish: "Headline ki pehli line" },
+  "Headline line 2": { hindi: "हेडलाइन की दूसरी लाइन", hinglish: "Headline ki doosri line" },
+  "Headline size (%)": { hindi: "हेडलाइन का आकार (%)", hinglish: "Headline size (%)" },
+  "Headline alignment": { hindi: "हेडलाइन की दिशा", hinglish: "Headline alignment" },
+  "Theme default": { hindi: "थीम के अनुसार", hinglish: "Theme default" },
+  Left: { hindi: "बाएँ", hinglish: "Left" },
+  Centre: { hindi: "बीच में", hinglish: "Beech mein" },
+  Right: { hindi: "दाएँ", hinglish: "Right" },
+  "Reset headline": { hindi: "हेडलाइन रीसेट करें", hinglish: "Headline reset karo" },
+  "Long headlines auto-fit. Clear either line to hide it. Maximum size preserves the layout.": {
+    hindi:
+      "लंबी हेडलाइन अपने आप फिट होगी। लाइन छिपाने के लिए खाली करें। अधिकतम आकार लेआउट को सुरक्षित रखता है।",
+    hinglish:
+      "Lambi headline auto-fit hogi. Line chhupani ho toh khali karo. Maximum size layout ko sahi rakhta hai.",
+  },
+  "Preset storage is unavailable on this device.": {
+    hindi: "इस डिवाइस पर प्रीसेट सहेजना उपलब्ध नहीं है।",
+    hinglish: "Is device pe preset storage available nahi hai.",
+  },
+  "Could not save presets. Device storage may be full or blocked.": {
+    hindi: "प्रीसेट सहेज नहीं पाए। डिवाइस स्टोरेज भरा या बंद हो सकता है।",
+    hinglish: "Preset save nahi hua. Device storage full ya blocked ho sakta hai.",
+  },
+  "You can save up to 20 presets. Delete one to add another.": {
+    hindi: "20 प्रीसेट सहेज सकते हैं। नया जोड़ने के लिए एक हटाएँ।",
+    hinglish: "20 presets save kar sakte ho. Naya add karne ke liye ek hatao.",
+  },
+  "Campaign preset saved on this device.": {
+    hindi: "प्रचार प्रीसेट इस डिवाइस पर सहेजा गया।",
+    hinglish: "Campaign preset is device pe save hua.",
+  },
+  "Saved on this browser only. Presets remember theme colours, headlines, offers and visible details, not product data. Saving the same name updates that preset.":
+    {
+      hindi:
+        "सिर्फ़ इसी ब्राउज़र में सहेजते हैं। प्रीसेट में थीम के रंग, हेडलाइन, ऑफ़र और दिखाई जाने वाली जानकारी रहती है; प्रोडक्ट का डेटा नहीं। उसी नाम से सहेजने पर प्रीसेट अपडेट होगा।",
+      hinglish:
+        "Sirf isi browser pe save hota hai. Preset mein theme colours, headlines, offer aur visible details rehte hain, product data nahi. Wahi naam save karoge toh preset update hoga.",
+    },
   "Could not share this poster. Download it and attach it in WhatsApp.": {
     hindi: "पोस्टर शेयर नहीं हो पाया। डाउनलोड करके WhatsApp में जोड़ें।",
     hinglish: "Poster share nahi ho paya. Download karke WhatsApp mein attach karo.",

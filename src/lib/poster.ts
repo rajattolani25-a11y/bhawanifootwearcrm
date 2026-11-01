@@ -39,6 +39,26 @@ export const DEFAULT_POSTER_VISIBILITY: PosterVisibility = {
   visit: false,
   offer: true,
 };
+export const POSTER_HEADLINES: Record<PosterTheme, [string, string]> = {
+  luxury: ["THE NEW", "EVERYDAY."],
+  sale: ["FRESH", "PICKS."],
+  editorial: ["Good shoes.", "Great days."],
+  collection: ["FIND YOUR", "NEXT PAIR."],
+  light: ["", ""],
+  dark: ["", ""],
+};
+export type PosterTypography = {
+  line1: string | null;
+  line2: string | null;
+  size: number;
+  align: "theme" | "left" | "center" | "right";
+};
+export const DEFAULT_POSTER_TYPOGRAPHY: PosterTypography = {
+  line1: null,
+  line2: null,
+  size: 100,
+  align: "theme",
+};
 export type PosterPhoto = { transparent: boolean; width: number; height: number } | null;
 export const posterSizes = (p: Product) =>
   [...new Set(p.product_variants.filter((v) => v.stock > 0).map((v) => v.size))].sort(
@@ -109,6 +129,7 @@ export async function drawPoster(
   theme: PosterTheme,
   offer = "",
   visible: PosterVisibility = DEFAULT_POSTER_VISIBILITY,
+  typography: PosterTypography = DEFAULT_POSTER_TYPOGRAPHY,
 ) {
   const [image] = await Promise.all([loadPhoto(visible.photo ? p.image_src : null), loadFonts()]);
   const photo = photoInfo(image);
@@ -127,6 +148,77 @@ export async function drawPoster(
   const serif = '"Poster Serif", Georgia, serif',
     bold = '"Poster Bold", sans-serif',
     sans = "sans-serif";
+
+  function heading(
+    index: 0 | 1,
+    y: number,
+    size: number,
+    color: string,
+    family: string,
+    align: CanvasTextAlign = "center",
+  ) {
+    if (!visible.headline) return;
+    const value =
+      (index === 0 ? typography.line1 : typography.line2) ?? POSTER_HEADLINES[theme][index];
+    if (!value.trim()) return;
+    const alignment = typography.align === "theme" ? align : typography.align;
+    const slots: Record<PosterTheme, [[number, number], [number, number]]> = {
+      luxury: [
+        [305, 445],
+        [460, 600],
+      ],
+      sale: [
+        [210, 395],
+        [410, 595],
+      ],
+      editorial: [
+        [300, 450],
+        [460, 630],
+      ],
+      collection: [
+        [325, 435],
+        [450, 570],
+      ],
+      light: [
+        [365, 450],
+        [460, 540],
+      ],
+      dark: [
+        [365, 450],
+        [460, 540],
+      ],
+    };
+    const [top, bottom] = slots[theme][index];
+    const weight = family === bold ? 800 : 600;
+    let fitted = (size * Math.max(60, Math.min(100, typography.size))) / 100;
+    let metrics: TextMetrics;
+    do {
+      g.font = `${weight} ${fitted}px ${family}`;
+      metrics = g.measureText(value.slice(0, 80));
+      if (
+        metrics.width <= 936 &&
+        metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent <= bottom - top
+      )
+        break;
+      fitted--;
+    } while (fitted > 26);
+    // Centre vertically inside reserved slots, including descenders and non-Latin text.
+    const baseline =
+      top +
+      (bottom - top - metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2 +
+      metrics.actualBoundingBoxAscent;
+    text(
+      value.slice(0, 80),
+      alignment === "left" ? 72 : alignment === "right" ? 1008 : 540,
+      baseline,
+      936,
+      fitted,
+      color,
+      family,
+      weight,
+      alignment,
+    );
+  }
 
   function box(
     x: number,
@@ -287,8 +379,8 @@ export async function drawPoster(
     box(0, 420, 1080, 920, glow);
     if (visible.store) text(shop.toUpperCase(), 540, 168, 936, 35, gold, sans, 600, "center");
     if (visible.tag) pill(tag, 220, gold);
-    if (visible.headline) text("THE NEW", 540, 430, 936, 155, cream, serif, 600, "center");
-    if (visible.headline) text("EVERYDAY.", 540, 588, 936, 155, gold, serif, 600, "center");
+    heading(0, 430, 155, cream, serif, "center");
+    heading(1, 588, 155, gold, serif, "center");
     g.strokeStyle = "#b8955c";
     g.lineWidth = 2;
     g.beginPath();
@@ -302,8 +394,8 @@ export async function drawPoster(
   } else if (theme === "sale") {
     box(0, 0, 1080, 1920, "#b44823");
     if (visible.store) text(shop.toUpperCase(), 540, 168, 936, 35, cream, sans, 600, "center");
-    if (visible.headline) text("FRESH", 72, 377, 936, 230, cream, bold, 800);
-    if (visible.headline) text("PICKS.", 72, 580, 936, 230, "#351c13", bold, 800);
+    heading(0, 377, 230, cream, bold, "left");
+    heading(1, 580, 230, "#351c13", bold, "left");
     g.fillStyle = cream;
     g.beginPath();
     g.moveTo(0, 1070);
@@ -328,8 +420,8 @@ export async function drawPoster(
     g.fill();
     if (visible.store) text(shop.toUpperCase(), 540, 168, 936, 35, ink, sans, 600, "center");
     if (visible.tag) text(tag, 72, 275, 936, 30, "#56674e");
-    if (visible.headline) text("Good shoes.", 72, 430, 936, 150, ink, serif, 600);
-    if (visible.headline) text("Great days.", 72, 585, 936, 150, ink, serif, 600);
+    heading(0, 430, 150, ink, serif, "left");
+    heading(1, 585, 150, ink, serif, "left");
     if (visible.offer && offer.trim())
       text(offer.trim(), 540, 670, 936, 40, "#56674e", sans, 600, "center");
     shoe(60, 700, 960, 535);
@@ -342,8 +434,8 @@ export async function drawPoster(
     if (visible.tag) text(tag, 540, 255, 936, 30, cream, sans, 500, "center");
     if (visible.offer && offer.trim())
       text(offer.trim(), 540, 305, 936, 30, gold, sans, 600, "center");
-    if (visible.headline) text("FIND YOUR", 540, 430, 936, 132, cream, serif, 600, "center");
-    if (visible.headline) text("NEXT PAIR.", 540, 565, 936, 132, gold, serif, 600, "center");
+    heading(0, 430, 132, cream, serif, "center");
+    heading(1, 565, 132, gold, serif, "center");
     box(72, 580, 936, 600, "#f4f0e7", 30);
     shoe(88, 595, 904, 390, true);
     if (visible.brand) text(p.brand.toUpperCase(), 540, 1033, 868, 27, ink, sans, 600, "center");
@@ -373,7 +465,13 @@ export async function drawPoster(
     box(0, 0, 1080, 340, "#242424");
     if (visible.store) text(shop.toUpperCase(), 540, 168, 936, 46, "#ffffff", sans, 600, "center");
     if (visible.tag) text(tag, 540, 275, 936, 62, accent, bold, 800, "center");
-    shoe(60, 385, 960, 690);
+    const customHeading =
+      visible.headline && (typography.line1?.trim() || typography.line2?.trim());
+    if (customHeading) {
+      heading(0, 435, 78, fg, bold);
+      heading(1, 525, 78, fg, bold);
+    }
+    shoe(60, customHeading ? 560 : 385, 960, customHeading ? 515 : 690);
     if (visible.offer && offer.trim())
       text(offer.trim(), 540, 1140, 936, 34, accent, sans, 600, "center");
     identity(1190, fg, accent);

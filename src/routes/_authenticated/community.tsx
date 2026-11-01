@@ -14,6 +14,9 @@ import { printHtml } from "@/lib/print";
 import { useLang } from "@/lib/i18n";
 import {
   DEFAULT_POSTER_VISIBILITY,
+  DEFAULT_POSTER_TYPOGRAPHY,
+  POSTER_HEADLINES,
+  type PosterTypography,
   POSTER_FIELDS,
   POSTER_THEMES,
   drawPoster,
@@ -22,6 +25,13 @@ import {
   type PosterPhoto,
   type PosterTheme,
 } from "@/lib/poster";
+
+import {
+  CAMPAIGN_KEY,
+  CAMPAIGN_STARTERS,
+  parseCampaigns,
+  type PosterCampaign,
+} from "@/lib/poster-campaigns";
 
 export const Route = createFileRoute("/_authenticated/community")({
   head: () => ({
@@ -52,6 +62,66 @@ function Community() {
   const [days, setDays] = useState(7);
   const [tag, setTag] = useState("NEW ARRIVAL");
   const [theme, setTheme] = useState<PosterTheme>("luxury");
+  const [typography, setTypography] = useState<PosterTypography>({ ...DEFAULT_POSTER_TYPOGRAPHY });
+  const [campaigns, setCampaigns] = useState<PosterCampaign[]>([]);
+  const [campaignId, setCampaignId] = useState("new");
+  const [campaignName, setCampaignName] = useState("");
+  useEffect(() => {
+    try {
+      setCampaigns(parseCampaigns(localStorage.getItem(CAMPAIGN_KEY)));
+    } catch {
+      toast.info(t("Preset storage is unavailable on this device."));
+    }
+    // Load device presets once; the current poster is never overwritten on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function storeCampaigns(next: PosterCampaign[]) {
+    try {
+      localStorage.setItem(CAMPAIGN_KEY, JSON.stringify(next));
+      setCampaigns(next);
+      return true;
+    } catch {
+      toast.error(t("Could not save presets. Device storage may be full or blocked."));
+      return false;
+    }
+  }
+  function applyCampaign() {
+    const value = [...CAMPAIGN_STARTERS, ...campaigns].find((item) => item.id === campaignId);
+    if (!value) return;
+    setTheme(value.theme);
+    setTag(value.tag);
+    setOffer(value.offer);
+    setVisible({ ...value.visible });
+    setTypography({ ...value.typography });
+    setCampaignName(value.id.startsWith("local-") ? value.name : "");
+  }
+  function saveCampaign() {
+    const name = campaignName.trim();
+    if (!name) return;
+    const existing = campaigns.find(
+      (item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+    );
+    if (!existing && campaigns.length >= 20) {
+      toast.error(t("You can save up to 20 presets. Delete one to add another."));
+      return;
+    }
+    const value: PosterCampaign = {
+      id: existing?.id ?? `local-${crypto.randomUUID()}`,
+      name,
+      theme,
+      tag,
+      offer,
+      visible: { ...visible },
+      typography: { ...typography },
+    };
+    const next = existing
+      ? campaigns.map((item) => (item.id === existing.id ? value : item))
+      : [...campaigns, value];
+    if (storeCampaigns(next)) {
+      setCampaignId(value.id);
+      toast.success(t("Campaign preset saved on this device."));
+    }
+  }
   const [offer, setOffer] = useState("");
   const [visible, setVisible] = useState({ ...DEFAULT_POSTER_VISIBILITY });
   const [photo, setPhoto] = useState<PosterPhoto>(null);
@@ -106,7 +176,7 @@ function Community() {
     }
     setRendering(true);
     const timer = setTimeout(() => {
-      drawPoster(active, shop, phone, tag, theme, offer, visible)
+      drawPoster(active, shop, phone, tag, theme, offer, visible, typography)
         .then(({ canvas, photo: info }) => {
           if (cancelled) return;
           setPosterUrl(canvas.toDataURL("image/png"));
@@ -124,7 +194,7 @@ function Community() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [active, shop, phone, tag, theme, offer, visible, retry]);
+  }, [active, shop, phone, tag, theme, offer, visible, typography, retry]);
 
   useEffect(() => {
     if (active) setMessage(arrivalMessage(shop, active, sizesOf(active), phone));
@@ -139,7 +209,7 @@ function Community() {
     setSelected(p.id);
     setPreparing(true);
     try {
-      const { canvas } = await drawPoster(p, shop, phone, tag, theme, offer, visible);
+      const { canvas } = await drawPoster(p, shop, phone, tag, theme, offer, visible, typography);
       const file = new File([await posterBlob(canvas)], `${p.article}-${theme}-poster.png`, {
         type: "image/png",
       });
@@ -216,6 +286,65 @@ function Community() {
         </div>
         <div ref={previewRef} className="min-w-0 h-fit scroll-mt-4 rounded-xl border bg-card p-4">
           <h2 className="mb-3 font-semibold">Poster studio</h2>
+          <details className="mb-4 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">Campaign presets</summary>
+            <p className="my-2 text-xs text-muted-foreground">
+              Saved on this browser only. Presets remember theme colours, headlines, offers and
+              visible details, not product data. Saving the same name updates that preset.
+            </p>
+            <label className="block text-sm">
+              <span>Choose campaign</span>
+              <select
+                aria-label={t("Choose campaign")}
+                disabled={preparing}
+                value={campaignId}
+                onChange={(e) => setCampaignId(e.target.value)}
+                className="mt-1 h-9 w-full rounded border bg-background px-2"
+              >
+                {[...CAMPAIGN_STARTERS, ...campaigns].map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="my-2 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" disabled={preparing} onClick={applyCampaign}>
+                Apply preset
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={preparing || !campaignId.startsWith("local-")}
+                onClick={() => {
+                  if (storeCampaigns(campaigns.filter((item) => item.id !== campaignId))) {
+                    setCampaignId("new");
+                    setCampaignName("");
+                  }
+                }}
+              >
+                Delete preset
+              </Button>
+            </div>
+            <label className="block text-sm">
+              <span>Preset name</span>
+              <Input
+                aria-label={t("Preset name")}
+                disabled={preparing}
+                maxLength={40}
+                value={campaignName}
+                onChange={(e) => setCampaignName(e.target.value)}
+              />
+            </label>
+            <Button
+              className="mt-2"
+              size="sm"
+              disabled={preparing || !campaignName.trim()}
+              onClick={saveCampaign}
+            >
+              Save preset
+            </Button>
+          </details>
           <div className="mb-4 grid grid-cols-2 gap-2" role="group" aria-label={t("Poster style")}>
             {POSTER_THEMES.map((item) => (
               <button
@@ -238,19 +367,80 @@ function Community() {
             ))}
           </div>
           <label className="mb-3 block text-sm">
-            <span>Poster headline</span>
-            <select
+            <span>Campaign label</span>
+            <Input
               aria-label={t("Poster headline")}
               disabled={preparing || !visible.tag}
               value={tag}
+              maxLength={60}
               onChange={(e) => setTag(e.target.value)}
-              className="mt-1 h-9 w-full rounded border bg-background px-2 text-sm"
-            >
-              <option>NEW ARRIVAL</option>
-              <option>BACK IN STOCK</option>
-              <option>IN STORE NOW</option>
-            </select>
+            />
           </label>
+          <details className="mb-3 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">Edit design headline</summary>
+            <div className="mt-3 space-y-3">
+              {(["line1", "line2"] as const).map((key, i) => (
+                <label key={key} className="block text-sm">
+                  <span>{t(i === 0 ? "Headline line 1" : "Headline line 2")}</span>
+                  <Input
+                    aria-label={t(i === 0 ? "Headline line 1" : "Headline line 2")}
+                    maxLength={80}
+                    disabled={preparing || !visible.headline}
+                    value={typography[key] ?? POSTER_HEADLINES[theme][i]}
+                    onChange={(e) => setTypography((v) => ({ ...v, [key]: e.target.value }))}
+                  />
+                </label>
+              ))}
+              <label className="block text-sm">
+                <span>
+                  {t("Headline size (%)")} · {typography.size}
+                </span>
+                <input
+                  aria-label={t("Headline size (%)")}
+                  type="range"
+                  min="60"
+                  max="100"
+                  step="5"
+                  className="mt-2 w-full"
+                  disabled={preparing || !visible.headline}
+                  value={typography.size}
+                  onChange={(e) => setTypography((v) => ({ ...v, size: Number(e.target.value) }))}
+                />
+              </label>
+              <label className="block text-sm">
+                <span>Headline alignment</span>
+                <select
+                  aria-label={t("Headline alignment")}
+                  disabled={preparing || !visible.headline}
+                  value={typography.align}
+                  onChange={(e) =>
+                    setTypography((v) => ({
+                      ...v,
+                      align: e.target.value as PosterTypography["align"],
+                    }))
+                  }
+                  className="mt-1 h-9 w-full rounded border bg-background px-2"
+                >
+                  <option value="theme">{t("Theme default")}</option>
+                  <option value="left">{t("Left")}</option>
+                  <option value="center">{t("Centre")}</option>
+                  <option value="right">{t("Right")}</option>
+                </select>
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Long headlines auto-fit. Clear either line to hide it. Maximum size preserves the
+                layout.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={preparing}
+                onClick={() => setTypography({ ...DEFAULT_POSTER_TYPOGRAPHY })}
+              >
+                Reset headline
+              </Button>
+            </div>
+          </details>
           <label className="mb-1 block text-sm">
             <span>Offer text (optional)</span>
             <Input
