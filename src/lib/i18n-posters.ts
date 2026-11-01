@@ -1,4 +1,13 @@
 export const POSTERS: Record<string, { hindi: string; hinglish: string }> = {
+  "Poster workspace": { hindi: "पोस्टर कार्यक्षेत्र", hinglish: "Poster workspace" },
+  Product: { hindi: "प्रोडक्ट", hinglish: "Product" },
+  Design: { hindi: "डिज़ाइन", hinglish: "Design" },
+  Preview: { hindi: "प्रीव्यू", hinglish: "Preview" },
+  "Select a product": { hindi: "प्रोडक्ट चुनें", hinglish: "Product chuno" },
+  "Recent arrivals": { hindi: "हाल में आया माल", hinglish: "Naya aaya maal" },
+  "Poster products": { hindi: "पोस्टर के प्रोडक्ट", hinglish: "Poster ke products" },
+  "Poster design": { hindi: "पोस्टर डिज़ाइन", hinglish: "Poster design" },
+  "Loading products": { hindi: "प्रोडक्ट लोड हो रहे हैं", hinglish: "Products load ho rahe hain" },
   "Campaign presets": { hindi: "प्रचार के प्रीसेट", hinglish: "Campaign presets" },
   "Choose campaign": { hindi: "प्रचार चुनें", hinglish: "Campaign chuno" },
   "Apply preset": { hindi: "प्रीसेट लगाएँ", hinglish: "Preset lagao" },

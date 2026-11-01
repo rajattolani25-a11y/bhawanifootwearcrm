@@ -90,14 +90,14 @@
 .limited { position: absolute; bottom: 10px; left: 10px; right: 10px; width: fit-content; padding: 4px 7px; border-radius: 6px; background: var(--catalog-paper); color: var(--catalog-accent); font-size: 10px; font-weight: 600; }
 .productInfo { display: flex; flex-direction: column; flex: 1; padding: 16px; }
 .brand { color: var(--catalog-muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; overflow-wrap: anywhere; }
-.productInfo h3 { margin-top: 4px; font-family: var(--font-sans); font-size: 15px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.productInfo h3 { margin-top: 4px; min-height:2.8em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-family: var(--font-sans); font-size: 15px; line-height: 1.4; font-weight: 600; letter-spacing:-.015em; overflow-wrap: anywhere; }
 .price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.price strong { color: var(--catalog-ink); font-size: 21px; font-weight: 700; }
+.price strong { color: var(--catalog-ink); font-size: 21px; font-weight: 700; font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
 .price del { color: var(--catalog-muted); font-size: 12px; }
 .sizeSummary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; margin-top: auto; padding-top: 14px; color: var(--catalog-muted); font-size: 11px; }
 .sizeChips { display: flex; flex-wrap: wrap; gap: 4px; }
 .sizeChips > span { display: inline-flex; justify-content: center; min-width: 22px; padding: 2px 4px; border-radius: 4px; background: var(--catalog-image); color: var(--catalog-ink); font-size: 11px; }
-.cardAction { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 40px; margin-top: 13px; padding-top: 10px; border-top: 1px solid var(--catalog-line); color: var(--catalog-accent); font-size: 12px; font-weight: 600; }
+.cardAction { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; margin-top: 13px; padding:10px; border-radius:10px; background:var(--catalog-tint); color: var(--catalog-accent); font-size: 12px; font-weight: 600; }
 .cardAction svg { width: 16px; height: 16px; }
 .empty { display: flex; align-items: center; flex-direction: column; gap: 10px; padding: 70px 20px; text-align: center; }
 .empty > svg { color: var(--catalog-muted); }

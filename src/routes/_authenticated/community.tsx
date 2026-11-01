@@ -1,3 +1,5 @@
+import studio from "@/components/poster-studio.module.css";
+import { PosterThemePreviews } from "@/components/PosterThemePreviews";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +20,6 @@ import {
   POSTER_HEADLINES,
   type PosterTypography,
   POSTER_FIELDS,
-  POSTER_THEMES,
   drawPoster,
   posterBlob,
   posterSizes,
@@ -56,8 +57,9 @@ export const Route = createFileRoute("/_authenticated/community")({
 const sizesOf = posterSizes;
 
 function Community() {
-  const { data = [] } = useStock();
+  const { data = [], isLoading } = useStock();
   const { t } = useLang();
+  const [mobilePanel, setMobilePanel] = useState("products");
   const previewRef = useRef<HTMLDivElement>(null);
   const [days, setDays] = useState(7);
   const [tag, setTag] = useState("NEW ARRIVAL");
@@ -167,10 +169,10 @@ function Community() {
 
   useEffect(() => {
     let cancelled = false;
-    setPosterUrl("");
     setPhoto(null);
     setPosterError(false);
     if (!active) {
+      setPosterUrl("");
       setRendering(false);
       return;
     }
@@ -200,10 +202,19 @@ function Community() {
     if (active) setMessage(arrivalMessage(shop, active, sizesOf(active), phone));
   }, [active, shop, phone]);
 
+  function showPreview() {
+    setMobilePanel("preview");
+    requestAnimationFrame(() =>
+      previewRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start",
+      }),
+    );
+  }
   function poster(p: Product) {
+    showPreview();
     setSelected(p.id);
     setRetry((v) => v + 1);
-    previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   async function sharePoster(p: Product) {
     setSelected(p.id);
@@ -217,7 +228,7 @@ function Community() {
         // Share only the artwork: hidden price/size/contact fields must not leak into a caption.
         await navigator.share({ files: [file] });
       } else {
-        previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        showPreview();
         toast.info(t("Poster preview is ready — download it and attach in WhatsApp status"));
       }
     } catch (error) {
@@ -229,48 +240,82 @@ function Community() {
   }
 
   return (
-    <div>
+    <div className={studio["studio"]}>
       <PageHeader
         title="WhatsApp Community & Posters"
         subtitle="New stock message for your community group + 9:16 status posters. Free, no API."
       />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="min-w-0 rounded-xl border bg-card p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm">New stock of last</span>
-            {[3, 7, 15, 30].map((d) => (
-              <Button
-                key={d}
-                size="sm"
-                variant={days === d ? "default" : "secondary"}
-                onClick={() => setDays(d)}
-              >
-                {d} days
-              </Button>
-            ))}
-          </div>
-          <p className="mb-2 text-sm text-muted-foreground">{fresh.length} new articles found</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {fresh.map((p) => (
-              <PCard
-                key={p.id}
-                p={p}
-                selected={active?.id === p.id}
-                busy={preparing}
-                onSelect={() => setSelected(p.id)}
-                onPoster={() => poster(p)}
-                onShare={() => sharePoster(p)}
-              />
-            ))}
-          </div>
-          <h3 className="mb-2 mt-5 font-semibold">Poster for any stock</h3>
+      <nav className={studio["tabs"]} aria-label={t("Poster workspace")}>
+        {(
+          [
+            ["products", "Product"],
+            ["design", "Design"],
+            ["preview", "Preview"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={mobilePanel === id}
+            onClick={() => setMobilePanel(id)}
+          >
+            {t(label)}
+          </button>
+        ))}
+      </nav>
+      <div className={studio["grid"]}>
+        <section
+          className={studio["panel"]}
+          data-active={mobilePanel === "products"}
+          aria-label={t("Poster products")}
+          aria-busy={isLoading}
+        >
+          <h2>Select a product</h2>
+          {isLoading && (
+            <div role="status" aria-label={t("Loading products")} className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-20 rounded-xl bg-muted" />
+              ))}
+            </div>
+          )}
+          <details className="mb-4 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm">Recent arrivals</summary>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-sm">New stock of last</span>
+              {[3, 7, 15, 30].map((d) => (
+                <Button
+                  key={d}
+                  size="sm"
+                  variant={days === d ? "default" : "secondary"}
+                  onClick={() => setDays(d)}
+                >
+                  {d} days
+                </Button>
+              ))}
+            </div>
+            <p className="mb-2 text-sm text-muted-foreground">{fresh.length} new articles found</p>
+            <div className={studio["products"]}>
+              {fresh.map((p) => (
+                <PCard
+                  key={p.id}
+                  p={p}
+                  selected={active?.id === p.id}
+                  busy={preparing}
+                  onSelect={() => setSelected(p.id)}
+                  onPoster={() => poster(p)}
+                  onShare={() => sharePoster(p)}
+                />
+              ))}
+            </div>
+          </details>
+          <h3 className="mb-2 font-semibold">Poster for any stock</h3>
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search article"
             className="mb-2 h-9 w-full sm:max-w-64"
           />
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className={studio["products"]}>
             {all.map((p) => (
               <PCard
                 key={p.id}
@@ -283,9 +328,129 @@ function Community() {
               />
             ))}
           </div>
-        </div>
-        <div ref={previewRef} className="min-w-0 h-fit scroll-mt-4 rounded-xl border bg-card p-4">
-          <h2 className="mb-3 font-semibold">Poster studio</h2>
+        </section>
+        <section
+          className={`${studio["panel"]} ${studio["preview"]}`}
+          data-active={mobilePanel === "preview"}
+          ref={previewRef}
+          aria-label={t("Poster preview")}
+        >
+          <h2>Poster preview</h2>
+          {rendering && (
+            <p role="status" className="my-4 text-sm text-muted-foreground">
+              Preparing poster…
+            </p>
+          )}
+          {posterError && (
+            <div role="alert" className="my-4 text-sm">
+              <p>Could not render photo. Try uploading this product photo again.</p>
+              <Button variant="outline" size="sm" onClick={() => setRetry((v) => v + 1)}>
+                Retry
+              </Button>
+            </div>
+          )}
+          {!active && (
+            <p className="my-4 text-sm text-muted-foreground">
+              Select an in-stock product to preview a poster.
+            </p>
+          )}
+          {posterUrl && visible.photo && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              {!photo
+                ? t("Add photo in Products")
+                : !photo.transparent
+                  ? t(
+                      "This photo has a background. A light panel keeps it readable; use a transparent PNG or WebP for the cutout look.",
+                    )
+                  : Math.max(photo.width, photo.height) < 800
+                    ? t("This photo is small. Use a sharper image to avoid a blurry poster.")
+                    : t("Transparent product photo detected.")}
+            </p>
+          )}
+          <div className={studio["canvas"]} aria-busy={rendering}>
+            {rendering && !posterUrl && <div className={studio["skeleton"]} aria-hidden="true" />}
+            {posterUrl && (
+              <div className="mb-5">
+                <img src={posterUrl} alt="Selected product poster" key={posterUrl} />
+                {!rendering && (
+                  <div className={studio["actions"]}>
+                    <Button variant="outline" asChild>
+                      <a href={posterUrl} download={posterName}>
+                        <Download className="h-4 w-4" /> Download
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={preparing}
+                      onClick={() => active && sharePoster(active)}
+                    >
+                      <Share2 className="h-4 w-4" /> Share
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        printHtml(
+                          "Poster",
+                          `<img src="${posterUrl}" alt="Poster" style="width:100%;max-width:190mm;height:auto;display:block;margin:auto">`,
+                          "@page{size:A4;margin:5mm}",
+                        )
+                      }
+                    >
+                      <Printer className="h-4 w-4" /> Print
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <details className={studio["message"]}>
+            <summary className="cursor-pointer font-semibold">Community message</summary>
+            <p className="mb-2 text-xs text-muted-foreground">
+              These switches change only the poster. The community message can be edited separately.
+            </p>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="h-72 w-full rounded-lg border bg-muted/50 p-3 text-sm"
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(message);
+                  toast.success("Message copied");
+                }}
+              >
+                <Copy className="h-4 w-4" /> Copy
+              </Button>
+              <Button asChild>
+                <a
+                  target="_blank"
+                  rel="noreferrer"
+                  href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                className="col-span-2"
+                onClick={() => navigator.share?.({ title: tag, text: message }).catch(() => {})}
+              >
+                <Share2 className="h-4 w-4" /> Share to another app
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              WhatsApp will open. Choose your community or group, then send.
+            </p>
+          </details>
+        </section>
+        <section
+          className={studio["panel"]}
+          data-active={mobilePanel === "design"}
+          aria-label={t("Poster design")}
+        >
+          <h2>Poster studio</h2>
           <details className="mb-4 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-medium">Campaign presets</summary>
             <p className="my-2 text-xs text-muted-foreground">
@@ -345,27 +510,18 @@ function Community() {
               Save preset
             </Button>
           </details>
-          <div className="mb-4 grid grid-cols-2 gap-2" role="group" aria-label={t("Poster style")}>
-            {POSTER_THEMES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                disabled={preparing}
-                aria-pressed={theme === item.id}
-                onClick={() => setTheme(item.id)}
-                className={`min-w-0 rounded-lg border p-2 text-left text-xs transition-colors ${theme === item.id ? "border-primary ring-1 ring-primary" : "border-border"}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="mb-2 block h-8 rounded"
-                  style={{
-                    background: `linear-gradient(135deg, ${item.color} 65%, ${item.accent} 65%)`,
-                  }}
-                />
-                <span data-no-translate>{item.label}</span>
-              </button>
-            ))}
-          </div>
+          <PosterThemePreviews
+            product={active}
+            shop={shop}
+            phone={phone}
+            tag={tag}
+            offer={offer}
+            visible={visible}
+            typography={typography}
+            theme={theme}
+            busy={preparing}
+            onSelect={setTheme}
+          />
           <label className="mb-3 block text-sm">
             <span>Campaign label</span>
             <Input
@@ -504,113 +660,7 @@ function Community() {
               </li>
             </ul>
           </details>
-          {rendering && (
-            <p role="status" className="my-4 text-sm text-muted-foreground">
-              Preparing poster…
-            </p>
-          )}
-          {posterError && (
-            <div role="alert" className="my-4 text-sm">
-              <p>Could not render photo. Try uploading this product photo again.</p>
-              <Button variant="outline" size="sm" onClick={() => setRetry((v) => v + 1)}>
-                Retry
-              </Button>
-            </div>
-          )}
-          {!active && (
-            <p className="my-4 text-sm text-muted-foreground">
-              Select an in-stock product to preview a poster.
-            </p>
-          )}
-          {posterUrl && visible.photo && (
-            <p className="mb-3 text-xs text-muted-foreground">
-              {!photo
-                ? t("Add photo in Products")
-                : !photo.transparent
-                  ? t(
-                      "This photo has a background. A light panel keeps it readable; use a transparent PNG or WebP for the cutout look.",
-                    )
-                  : Math.max(photo.width, photo.height) < 800
-                    ? t("This photo is small. Use a sharper image to avoid a blurry poster.")
-                    : t("Transparent product photo detected.")}
-            </p>
-          )}
-          {posterUrl && (
-            <div className="mb-5">
-              <p className="mb-2 font-semibold">Poster preview</p>
-              <img
-                src={posterUrl}
-                alt="Selected product poster"
-                className="mx-auto max-h-96 w-auto max-w-full border object-contain"
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button variant="outline" asChild>
-                  <a href={posterUrl} download={posterName}>
-                    <Download className="h-4 w-4" /> Download
-                  </a>
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={preparing}
-                  onClick={() => active && sharePoster(active)}
-                >
-                  <Share2 className="h-4 w-4" /> Share
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    printHtml(
-                      "Poster",
-                      `<img src="${posterUrl}" alt="Poster" style="width:100%;max-width:190mm;height:auto;display:block;margin:auto">`,
-                      "@page{size:A4;margin:5mm}",
-                    )
-                  }
-                >
-                  <Printer className="h-4 w-4" /> Print
-                </Button>
-              </div>
-            </div>
-          )}
-          <p className="mb-2 font-semibold">Community message</p>
-          <p className="mb-2 text-xs text-muted-foreground">
-            These switches change only the poster. The community message can be edited separately.
-          </p>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="h-72 w-full rounded-lg border bg-muted/50 p-3 text-sm"
-          />
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                navigator.clipboard.writeText(message);
-                toast.success("Message copied");
-              }}
-            >
-              <Copy className="h-4 w-4" /> Copy
-            </Button>
-            <Button asChild>
-              <a
-                target="_blank"
-                rel="noreferrer"
-                href={`https://wa.me/?text=${encodeURIComponent(message)}`}
-              >
-                <MessageCircle className="h-4 w-4" /> WhatsApp
-              </a>
-            </Button>
-            <Button
-              variant="outline"
-              className="col-span-2"
-              onClick={() => navigator.share?.({ title: tag, text: message }).catch(() => {})}
-            >
-              <Share2 className="h-4 w-4" /> Share to another app
-            </Button>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            WhatsApp will open. Choose your community or group, then send.
-          </p>
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -632,29 +682,22 @@ function PCard({
   onShare: () => void;
 }) {
   return (
-    <div
-      className={`rounded-lg border p-2.5 ${selected ? "border-primary bg-accent/40" : ""}`}
-      onClick={onSelect}
-    >
-      <div className="mb-2 h-28 overflow-hidden rounded-md bg-muted">
-        {p.image_src ? (
-          <img
-            src={p.image_src}
-            alt={`${p.brand} ${p.article}`}
-            className="h-full w-full object-contain"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-            Add photo in Products
-          </div>
-        )}
+    <div className={studio["product"]} data-selected={selected}>
+      <div className={studio["productPhoto"]}>
+        {p.image_src ? <img src={p.image_src} alt="" loading="lazy" decoding="async" /> : null}
       </div>
-      <p className="text-[11px] font-bold uppercase text-primary">{p.brand}</p>
-      <p className="break-words font-semibold leading-tight">
-        {p.article} <span className="font-display">{inr(p.selling_price)}</span>
-      </p>
-      <p className="text-xs text-muted-foreground">Sizes {sizesOf(p).join(", ")}</p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <button
+        type="button"
+        className={studio["selectProduct"]}
+        onClick={onSelect}
+        aria-pressed={selected}
+      >
+        <small data-no-translate>{p.brand}</small>
+        <strong data-no-translate>{p.article}</strong>
+        <span className={studio["productPrice"]}>{inr(p.selling_price)}</span>
+        <span className="block text-xs text-muted-foreground">Sizes {sizesOf(p).join(", ")}</span>
+      </button>
+      <div className={studio["productActions"]}>
         <Button
           size="sm"
           variant="outline"

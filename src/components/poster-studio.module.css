@@ -1,0 +1,250 @@
+.studio {
+  container: poster / inline-size;
+  min-width: 0;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.tabs button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tabs button[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.grid {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+.panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+}
+.panel[data-active="false"] {
+  display: none;
+}
+.panel h2 {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  margin-bottom: 14px;
+}
+.panel :where(input, select, textarea) {
+  border-radius: 10px;
+}
+.panel details {
+  background: color-mix(in srgb, var(--muted) 30%, var(--card));
+}
+.panel summary {
+  min-height: 32px;
+  line-height: 1.5;
+}
+.products {
+  display: grid;
+  gap: 8px;
+}
+.product {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--card);
+}
+.product[data-selected="true"] {
+  border-color: var(--primary);
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.productPhoto {
+  width: 64px;
+  height: 72px;
+  border-radius: 9px;
+  background: var(--muted);
+  overflow: hidden;
+}
+.productPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.selectProduct {
+  width: 100%;
+  text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.selectProduct small {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+}
+.selectProduct strong {
+  display: block;
+  margin-block: 3px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.productPrice {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.productActions {
+  grid-column: 1/-1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.themes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.themes button {
+  min-width: 0;
+  padding: 5px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.themes button[aria-pressed="true"] {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.themes button > span:last-child {
+  display: block;
+  padding: 5px 2px 2px;
+}
+.themeImage {
+  display: block;
+  position: relative;
+  aspect-ratio: 9/16;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.themeImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.thumbSkeleton {
+  position: absolute;
+  inset: 28% 15%;
+  opacity: 0.14;
+  border-radius: 50%;
+}
+.canvas {
+  min-height: 300px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      ellipse at 50% 20%,
+      color-mix(in srgb, var(--primary) 10%, transparent),
+      transparent 65%
+    ),
+    var(--muted);
+}
+.canvas img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-height: 640px;
+  max-width: 100%;
+  margin: auto;
+  box-shadow: 0 12px 28px #0002;
+  animation: posterEnter 200ms ease-out;
+}
+.canvas[aria-busy="true"] img {
+  opacity: 0.45;
+}
+.skeleton {
+  width: min(100%, 320px);
+  aspect-ratio: 9/16;
+  border-radius: 6px;
+  margin: auto;
+  background: color-mix(in srgb, var(--primary) 10%, var(--muted));
+}
+.status {
+  min-height: 24px;
+  margin-block: 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.message {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+@container poster (min-width:1000px) {
+  .tabs {
+    display: none;
+  }
+  .grid {
+    grid-template-columns: minmax(190px, 0.75fr) minmax(290px, 1.3fr) minmax(290px, 1fr);
+  }
+  .panel[data-active="false"] {
+    display: block;
+  }
+  .preview {
+    position: sticky;
+    top: 20px;
+  }
+  .products {
+    max-height: 680px;
+    overflow: auto;
+    padding: 2px;
+    scrollbar-width: thin;
+  }
+}
+@keyframes posterEnter {
+  from {
+    opacity: 0.6;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .canvas img {
+    animation: none;
+  }
+}
+
+.actions :is(button, a) {
+  min-height: 44px;
+}
+.productActions button {
+  min-height: 36px;
+}

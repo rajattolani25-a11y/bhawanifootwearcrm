@@ -188,7 +188,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
             return (
               <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className={styles["productCard"]} aria-label={`${p.brand} ${p.article}`}>
                 <div className={styles["productImage"]}>
-                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" /> : <div className={styles["imageFallback"]}><ShoppingBag aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}
+                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" decoding="async" width="500" height="500" /> : <div className={styles["imageFallback"]}><ShoppingBag aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}
                   {off > 0 && <span className={styles["discount"]}>{off}% <span>OFF</span></span>}
                   {p.few_left && <span className={styles["limited"]}>Few sizes left</span>}
                 </div>
@@ -354,7 +354,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           <div>
             <p className="mb-2 text-sm font-semibold">Choose size</p>
             <div className="flex flex-wrap gap-2">
-              {product.sizes.map((s) => <button key={s.id} disabled={!s.available} onClick={() => setSize(s.id)} className={`min-w-12 rounded-md border px-3 py-2 text-sm font-semibold ${!s.available ? "cursor-not-allowed text-muted-foreground/40 line-through" : size === s.id ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{s.size}</button>)}
+              {product.sizes.map((s) => <button key={s.id} disabled={!s.available} aria-pressed={size === s.id} onClick={() => setSize(s.id)} className={`min-w-12 rounded-md border px-3 py-2 text-sm font-semibold ${!s.available ? "cursor-not-allowed text-muted-foreground/40 line-through" : size === s.id ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{s.size}</button>)}
             </div>
           </div>
           <div className="flex flex-col gap-2">

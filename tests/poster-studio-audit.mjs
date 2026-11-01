@@ -67,6 +67,23 @@ const ready = async () => {
 try {
   await page.goto("http://localhost:8080/poster-studio.html");
   await ready();
+  const productsBox = await page
+    .getByRole("region", { name: "Poster products", exact: true })
+    .boundingBox();
+  const previewBox = await page
+    .getByRole("region", { name: "Poster preview", exact: true })
+    .boundingBox();
+  const designBox = await page
+    .getByRole("region", { name: "Poster design", exact: true })
+    .boundingBox();
+  assert(
+    productsBox.x < previewBox.x && previewBox.x < designBox.x,
+    "Desktop is not three columns",
+  );
+  await page.waitForFunction(
+    () => document.querySelectorAll('[aria-label="Poster style"] img').length === 6,
+  );
+  await page.screenshot({ path: out + "/workspace-desktop.png", fullPage: false });
   const themes = await page.evaluate(() => window.__posters.POSTER_THEMES);
   const renders = await page.evaluate(async () => {
     const api = window.__posters,
@@ -412,8 +429,31 @@ try {
   assert.deepEqual(errors, []);
   assert.deepEqual(writes, []);
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Design", exact: true }).click();
   await page.getByRole("heading", { name: "Poster studio" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: out + "/mobile.png" });
+  for (const panel of ["Product", "Design", "Preview"]) {
+    await page.getByRole("button", { name: panel, exact: true }).click();
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
+      false,
+      panel + " tab overflow",
+    );
+  }
+  await page.getByAltText("Selected product poster").waitFor();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  assert.equal(
+    await page
+      .getByAltText("Selected product poster")
+      .evaluate((el) => getComputedStyle(el).animationName),
+    "none",
+  );
+  await page.getByRole("button", { name: "Design", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Headline line 1", { exact: true }).inputValue(),
+    "MY WEEKEND",
+    "Tab switch lost edits",
+  );
   const result = {
     themes: themes.map((t) => t.id),
     png: "1080x1920",
@@ -424,6 +464,9 @@ try {
     transparentAndOpaquePhotos: true,
     longTextAndPortraitPhotos: true,
     noTextCollisionsOrClipping: true,
+    threeColumnDesktop: true,
+    realThemeThumbnails: true,
+    mobileTabs: true,
     customHeadlinesAllThemesAndAlignments: true,
     presetSaveReloadUpdateDeleteAndBlockedStorage: true,
     downloadPass: true,

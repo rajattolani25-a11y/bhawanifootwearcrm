@@ -130,13 +130,16 @@ export async function drawPoster(
   offer = "",
   visible: PosterVisibility = DEFAULT_POSTER_VISIBILITY,
   typography: PosterTypography = DEFAULT_POSTER_TYPOGRAPHY,
+  renderScale = 1,
 ) {
   const [image] = await Promise.all([loadPhoto(visible.photo ? p.image_src : null), loadFonts()]);
   const photo = photoInfo(image);
   const canvas = document.createElement("canvas");
-  canvas.width = 1080;
-  canvas.height = 1920;
+  const scale = Math.max(0.1, Math.min(1, renderScale));
+  canvas.width = Math.round(1080 * scale);
+  canvas.height = Math.round(1920 * scale);
   const g = canvas.getContext("2d")!;
+  g.scale(scale, scale);
   g.imageSmoothingQuality = "high";
   g.textBaseline = "alphabetic";
   const money = new Intl.NumberFormat("en-IN", {

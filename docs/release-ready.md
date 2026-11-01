@@ -1,5 +1,38 @@
 # Lovable release handoff
 
+## Latest: promotion workspace and shared UI polish
+
+WhatsApp & Posters now has products on the left, a large poster/export preview
+in the centre, and design controls on the right when the available workspace
+is at least 1000px wide. Narrower layouts use Product/Design/Preview tabs;
+panels stay mounted so preset/headline/offer edits survive switching. The
+community message is an expandable section below the preview. Product selection
+is keyboard accessible. Product loading and preview preparation have placeholders;
+the old preview is dimmed while refreshing and its export actions are withheld.
+
+Six theme tiles render the selected product with the same design settings as
+the full export, at 16% canvas resolution. Generation is debounced, sequential,
+and gated by viewport and document visibility. No new library, uploaded image
+or database storage. Full exports stay 1080×1920. Preview changes have a short
+entry animation, disabled for reduced-motion devices. Existing preset-save
+confirmation and all promotional/billing boundaries remain unchanged.
+
+Shared owner page headings now use the app sans font; workspace section headings,
+numeric alignment, label spacing and default button corners are consistent.
+Public catalog cards keep consistent image framing, two-line title space with
+ellipsis (full names remain in accessible labels and product dialogs), tabular
+prices and a clearer 44px action area. Size buttons expose their selected state.
+No ordering, prices, stock, billing calculations, RLS, migration or RPC edits.
+
+TypeScript/build and targeted lint pass (one existing button export warning).
+Browser checks cover three columns, real thumbnails, mobile tabs/edit retention,
+reduced motion, all poster exports/presets, 320/390/768/1440px catalog layouts,
+light/dark, product dialogs, unavailable sizes, selecting an available size and
+opening delivery options without placing an order. Native WhatsApp sharing and
+real-phone performance are not established by these mocked browser checks.
+Evidence: docs/audit/evidence/poster-studio and catalog-card-ui. Sample previews:
+docs/previews/poster-workspace.png and catalog-mobile.png. Publish/Update in Lovable.
+
 ## Latest: editable headlines and device campaign presets
 
 WhatsApp & Posters → Poster studio now includes Edit design headline, with two

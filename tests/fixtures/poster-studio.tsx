@@ -1,3 +1,4 @@
+import premium from "/src/components/premium.module.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -48,7 +49,10 @@ const Community = Route.options.component as React.ComponentType;
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={client}>
     <LanguageProvider>
-      <main style={{ padding: 16, maxWidth: 1280, margin: "auto" }}>
+      <main
+        className={premium["workspace"]}
+        style={{ padding: 16, maxWidth: 1280, margin: "auto" }}
+      >
         <LanguageSelect />
         <Community />
       </main>

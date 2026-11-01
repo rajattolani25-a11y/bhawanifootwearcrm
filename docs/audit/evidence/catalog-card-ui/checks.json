@@ -1,0 +1,15 @@
+{
+  "widths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "lightAndDark": true,
+  "productDialog": true,
+  "availableSizeSelection": true,
+  "unavailableSizeDisabled": true,
+  "deliveryOptionsOpen": true,
+  "realWrites": 0,
+  "errors": []
+}
