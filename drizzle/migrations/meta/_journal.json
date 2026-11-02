@@ -183,6 +183,13 @@
       "when": 1793592727751,
       "tag": "0025_safe_store_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793650152655,
+      "tag": "0026_catalog_product_photos",
+      "breakpoints": true
     }
   ]
 }

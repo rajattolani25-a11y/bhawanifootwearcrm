@@ -20,7 +20,7 @@ await p.route("**/*", async (r) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return r.fulfill({
       contentType: "application/javascript",
-      body: `export const getCatalog=async()=>({enabled:false});export const trackOrder=async()=>null;export const createBooking=async()=>{window.__orderCalls++;throw Error('Fixture blocks orders')};export const checkCoupon=async({data})=>{await new Promise(r=>setTimeout(r,data.code==='SLOW'?350:35));if(data.code==='BAD')throw Error('Invalid coupon');return {code:data.code,amount:100}};`,
+      body: `export const getCatalogPhotos=async()=>({images:[],available:true});export const getCatalog=async()=>({enabled:false});export const trackOrder=async()=>null;export const createBooking=async()=>{window.__orderCalls++;throw Error('Fixture blocks orders')};export const checkCoupon=async({data})=>{await new Promise(r=>setTimeout(r,data.code==='SLOW'?350:35));if(data.code==='BAD')throw Error('Invalid coupon');return {code:data.code,amount:100}};`,
     });
   if (u.pathname === "/catalog-features.html")
     return r.fulfill({
