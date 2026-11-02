@@ -1,0 +1,158 @@
+{
+  "scope": "390px Chromium, empty mocked shop and mocked owner/staff; no real backend requests from browser",
+  "routes": [
+    {
+      "path": "/dashboard",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/pos",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/products",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/purchase",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/sales",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/suppliers",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/customers",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/khata",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/inventory-control",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/reports",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/accounting",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/barcodes",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/settings",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/coupons",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/community",
+      "title": "",
+      "overflow": false,
+      "body": "",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/stock-ledger",
+      "title": "Stock Ledger",
+      "overflow": false,
+      "body": "SoleStack POS\nStock Ledger\n\nLatest 300 movements.\n\nDATE\tTYPE\tPRODUCT\tSIZE\tIN\tOUT\tNOTE\nNo movements yet.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/bookings",
+      "title": "Online Orders",
+      "overflow": false,
+      "body": "SoleStack POS\nOnline Orders\n\nPickup bookings and delivery orders from your catalog. These pairs are already taken out of stock, so nobody else can buy them.\n\nCopy catalog link\nPending payment (0)\nTo fulfil (0)\nCompleted (0)\nCancelled (0)\n\nNo bookings here.",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "path": "/dashboard",
+      "title": "Good morning. The counter is live.",
+      "overflow": false,
+      "body": "SoleStack POS\nSearch article, barcode, customer, bill…\n\nRETAIL CONTROL ROOM ·\n\nGood morning. The counter is live.\n\nToday’s sales, stock movement and urgent actions—updated as they happen.\n\n03:15:19 am\n\nMON, 02 NOV · IST\n\nNew Bill\nReceive Stock\nCustomers\nLIVE\n\nToday ₹0 from 0 bills · 0 pairs in stock",
+      "alert": [],
+      "errors": []
+    },
+    {
+      "staffRequested": "reports",
+      "redirect": "/pos"
+    },
+    {
+      "staffRequested": "accounting",
+      "redirect": "/pos"
+    }
+  ],
+  "failures": []
+}

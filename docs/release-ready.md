@@ -1,5 +1,21 @@
 # Lovable release handoff
 
+## Latest: reversible frontend performance pass
+
+Shared inventory snapshot for POS/Products/stock screens; cached/coalesced photo
+signing with early expiry and auth reset; visible/debounced inventory/Dashboard
+realtime; operational refresh that preserves unchanged configuration; on-demand
+barcode/QR imports; incremental poster lists. No migration, RPC, calculation or
+dependency changes. Existing audit defects are outside this performance scope.
+
+Controlled navigation benchmark: product reads 3→1, signing requests 6→2 for 120
+synthetic products/101 photos. This is not a real-phone speed multiplier. Tests,
+freshness/auth checks, labels/posters/PDF/guards, TypeScript/build and targeted
+lint pass. Exact affected files, preview checklist, tradeoffs and safe rollback:
+docs/audit/2026-11-02-safe-performance.md. Sync main, check Lovable preview, then
+Publish → Update. Four runtime commits restore cleanly in reverse order without
+any DB rollback; keep published Git history intact.
+
 ## Latest: promotion workspace and shared UI polish
 
 WhatsApp & Posters now has products on the left, a large poster/export preview

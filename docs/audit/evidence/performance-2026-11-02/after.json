@@ -1,0 +1,12 @@
+{
+  "scope": "120 synthetic products,101 unique photo paths; warm client navigation POS→Products→Posters; no real writes",
+  "productReads": 1,
+  "signCalls": 2,
+  "signedPaths": 101,
+  "productBytes": 45382,
+  "errors": [],
+  "incrementalListAndSearch": true,
+  "lazyBarcodeAndQrTools": true,
+  "logoutLoginRenewsImages": true,
+  "sameBrowserContextAuthReset": true
+}

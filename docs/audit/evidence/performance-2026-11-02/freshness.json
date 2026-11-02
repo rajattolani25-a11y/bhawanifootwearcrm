@@ -1,0 +1,15 @@
+{
+  "sharedRead": true,
+  "activeFilterPreserved": true,
+  "oneRealtimeChannel": true,
+  "priceAndStockRefresh": true,
+  "photoUrlsReused": true,
+  "hiddenEventsPaused": true,
+  "resumeRefreshSingleRequest": true,
+  "referenceCountedCleanup": true,
+  "eventDuringReadRefreshes": true,
+  "reads": 5,
+  "signs": 1,
+  "realWrites": 0,
+  "errors": []
+}

@@ -1,0 +1,12 @@
+✔ reuses 101 URLs, batches at 100, retries missing URLs and renews before expiry (5.638634ms)
+✔ concurrent consumers coalesce and logout discards old in-flight URLs (0.476485ms)
+✔ failed signing does not poison cache; cache storage stays bounded (0.88354ms)
+✔ mutations invalidate financial/inventory and unknown future caches, preserving only unchanged configuration (3.254641ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 186.703389
