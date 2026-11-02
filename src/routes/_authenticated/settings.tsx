@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import { exportAll, importLegacy } from "@/lib/legacy-import";
+import { importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
 import { LanguageSelect } from "@/lib/i18n";
+import { StoreMaintenance } from "@/components/StoreMaintenance";
+import { OwnershipTransfer } from "@/components/OwnershipTransfer";
 import { StorageMeter } from "@/components/StorageMeter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -35,8 +37,6 @@ function SettingsPage() {
   const [f, setF] = useState<Record<string, string>>({});
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [backupDone, setBackupDone] = useState(false);
-  const [confirm, setConfirm] = useState("");
   const [changingRole, setChangingRole] = useState<string | null>(null);
 
   const { data: settings } = useQuery({
@@ -148,45 +148,6 @@ function SettingsPage() {
     } finally {
       setBusy(false);
       e.target.value = "";
-    }
-  }
-
-  async function download() {
-    setBackupDone(false);
-    setBusy(true);
-    try {
-      const data = await exportAll();
-      const a = document.createElement("a");
-      const url = URL.createObjectURL(
-        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      );
-      a.href = url;
-      a.download = `solestack-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setBackupDone(true);
-      toast.success("Full backup downloaded");
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function resetData() {
-    if (!backupDone || confirm.trim().toUpperCase() !== "RESET") return;
-    setBusy(true);
-    try {
-      const { error } = await supabase.rpc("reset_store_data", { _confirmation: confirm });
-      if (error) throw error;
-      setConfirm("");
-      setBackupDone(false);
-      toast.success("Store data reset completed");
-      window.location.reload();
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -373,77 +334,40 @@ function SettingsPage() {
               ))}
             </ul>
           </section>
+          <OwnershipTransfer />
         </TabsContent>
         <TabsContent value="data" forceMount className="space-y-5 data-[state=inactive]:hidden">
+          <StoreMaintenance />
           <StorageMeter />
-          <section className="rounded-xl border bg-card p-5">
-            <h2 className="font-semibold">Data</h2>
-            <p className="mb-3 text-sm text-muted-foreground">
-              Import your old backup file (solestack-db.json). Running it again won't create
-              duplicates.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <label className="inline-flex h-10 cursor-pointer items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
-                {busy ? "Importing…" : "Import old JSON"}
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={onFile}
-                  disabled={busy}
-                />
-              </label>
-              <Button variant="outline" onClick={download}>
-                Download full backup
-              </Button>
-            </div>
-            {log.length > 0 && (
-              <ul className="mt-3 space-y-1 text-sm text-success">
-                {log.map((l) => (
-                  <li key={l}>✓ {l}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <details className="rounded-xl border border-destructive/30 p-4">
-            <summary className="cursor-pointer font-semibold text-destructive">
-              Advanced: reset store data
+          <details className="rounded-xl border bg-card p-5">
+            <summary className="cursor-pointer font-semibold">
+              Import from the old offline app
             </summary>
-            <section className="rounded-xl border border-destructive/40 bg-card p-5">
-              <h2 className="font-semibold text-destructive">Reset store data</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Bills, stock, products, customers, purchases and accounting entries will be
-                permanently removed. Your account, team and store settings remain.
+            <div className="mt-3">
+              <p className="mb-3 text-sm text-muted-foreground">
+                Import your old backup file (solestack-db.json). Running it again won't create
+                duplicates.
               </p>
-              <ol className="my-3 list-inside list-decimal space-y-1 text-sm">
-                <li>Download a fresh full backup.</li>
-                <li>Type the exact confirmation shown below.</li>
-              </ol>
-              <Button variant="outline" disabled={busy} onClick={download}>
-                {busy
-                  ? "Preparing backup…"
-                  : backupDone
-                    ? "Backup downloaded"
-                    : "1. Download required backup"}
-              </Button>
-              <Label className="mt-4 block">
-                Type: <b>RESET</b>
-              </Label>
-              <Input
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1 max-w-md"
-                autoComplete="off"
-              />
-              <Button
-                variant="destructive"
-                className="mt-3"
-                disabled={!backupDone || confirm.trim().toUpperCase() !== "RESET" || busy}
-                onClick={resetData}
-              >
-                Permanently reset store data
-              </Button>
-            </section>
+              <div className="flex flex-wrap gap-3">
+                <label className="inline-flex h-10 cursor-pointer items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+                  {busy ? "Importing…" : "Import old JSON"}
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    onChange={onFile}
+                    disabled={busy}
+                  />
+                </label>
+              </div>
+              {log.length > 0 && (
+                <ul className="mt-3 space-y-1 text-sm text-success">
+                  {log.map((l) => (
+                    <li key={l}>✓ {l}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </details>
         </TabsContent>
       </Tabs>

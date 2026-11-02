@@ -1,0 +1,25 @@
+{
+  "scope": "Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.",
+  "checks": [
+    "first signup owner / subsequent pending",
+    "staff, pending and anon blocked",
+    "old reset disabled",
+    "stale backup rejected",
+    "failed reset atomic",
+    "catalog orders cleared before sales/variants",
+    "owner preserved, other access revoked, Auth retained",
+    "identity/defaults and operational preference preservation; stale offers cleared",
+    "storage queue and verified acknowledgements",
+    "restore staging",
+    "missing photo blocked",
+    "corrupt restore rolls back with FK checks",
+    "exact full table restore including cost/history",
+    "nonempty restore blocked",
+    "hero/theme and numbering options",
+    "reset never opens public owner signup",
+    "atomic verified-email handover",
+    "last owner protection",
+    "queued role calls recheck ownership after handover"
+  ],
+  "result": "PASS"
+}

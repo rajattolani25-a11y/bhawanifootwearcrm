@@ -1,0 +1,25 @@
+{
+  "scope": "Real Settings UI with entirely mocked off-origin requests; no production reset, storage or ownership mutations",
+  "checks": [
+    "missing migration fails closed",
+    "typed confirmation alone cannot enable reset",
+    "backup includes actual photo bytes",
+    "damaged download rejected",
+    "saved file verified before reset",
+    "correct reset policy sent, preserving billing and catalog operational preferences",
+    "cleanup failure is explicit and retryable",
+    "no repeated reset after cleanup failure",
+    "drafts cleared; auth/theme/language retained",
+    "same-backend restore uploads photos and restores rows",
+    "mobile has no horizontal overflow",
+    "simple initial view hides advanced controls and file inputs",
+    "new-owner verification error shown",
+    "legacy importer rejects current backup before writes",
+    "remote reset clears drafts and revoked user sees approval screen"
+  ],
+  "resetCalls": 1,
+  "restoreCalls": 1,
+  "transferCalls": 1,
+  "errors": [],
+  "result": "PASS"
+}

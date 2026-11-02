@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-11-02T04:36:57.872981+00:00",
+  "scope": "Repository implementation. No live reset, production migration, real Storage deletion or live ownership transfer. Browser HTTP/WebSocket fixtures and network-disabled disposable PostgreSQL17 only.",
+  "base_commit": "c5274dd3399a03720b86dad51fc1b15220e5d905",
+  "typescript": "npx tsc --noEmit: PASS",
+  "production_build": "npm run build: PASS",
+  "targeted_lint": "New maintenance components/libraries and Settings: PASS",
+  "node_tests": "13 passed, 0 failed (backup format, existing data audit and image cache)",
+  "migration_sha256": "6a5788fe1130a2c726a8ad5a76d1ee96f6089cde9b15d604d4ec7a13a78e0646",
+  "migration_applied_live": false,
+  "default_preservation": [
+    "current owner login",
+    "shop identity / GSTIN / UPI",
+    "billing / printing preferences",
+    "daily target",
+    "catalog ordering / advance / hold / delivery preferences",
+    "catalog hero / its separate image / theme / appearance",
+    "invoice numbering continuation",
+    "device language / light-dark preference"
+  ],
+  "ui": "Three initial actions; reset, restore, legacy import and detailed preserve controls collapsed; verify-file picker shown only after backup download."
+}

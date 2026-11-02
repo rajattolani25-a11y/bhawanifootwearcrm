@@ -12,13 +12,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let request = 0;
     async function load(u: User | null) {
+      const current = ++request;
       if (!u) {
         setState({ user: null, role: null, isOwner: false, loading: false });
         return;
       }
       const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", u.id);
-      if (!active) return;
+      if (!active || current !== request) return;
       const roles = error ? [] : (data ?? []).map((r) => r.role);
       const role: Role = roles.includes("owner") ? "owner" : roles.includes("staff") ? "staff" : null;
       setState({ user: u, role, isOwner: role === "owner", loading: false });
@@ -29,10 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const onFocus = () => { void supabase.auth.getSession().then(({ data }) => load(data.session?.user ?? null)); };
     window.addEventListener("focus", onFocus);
+    window.addEventListener("solestack-store-reset", onFocus);
     return () => {
       active = false;
       sub.subscription.unsubscribe();
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("solestack-store-reset", onFocus);
     };
   }, []);
 

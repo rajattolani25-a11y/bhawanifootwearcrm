@@ -1,3 +1,4 @@
+import { StoreResetBoundary } from "@/components/StoreResetBoundary";
 import { InterfaceMotion } from "@/components/motion/provider";
 import premium from "@/components/premium.module.css";
 import { useShop } from "@/hooks/use-shop";
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => (
     <AuthProvider>
-      <InterfaceMotion><LanguageProvider><AppShell /></LanguageProvider></InterfaceMotion>
+      <StoreResetBoundary><InterfaceMotion><LanguageProvider><AppShell /></LanguageProvider></InterfaceMotion></StoreResetBoundary>
     </AuthProvider>
   ),
 });

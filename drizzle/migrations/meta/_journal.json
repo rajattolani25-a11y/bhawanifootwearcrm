@@ -176,6 +176,13 @@
       "when": 1792996486114,
       "tag": "0024_catalog_theme_apply",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793592727751,
+      "tag": "0025_safe_store_reset",
+      "breakpoints": true
     }
   ]
 }

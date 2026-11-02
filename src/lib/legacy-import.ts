@@ -5,6 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 // Old app stored one product row per size; here rows are grouped into one
 // article with a size variant each. legacy_id keeps re-imports duplicate-free.
 export async function importLegacy(db: any, log: (m: string) => void) {
+  // Check BEFORE the first write: current cloud backups use a different schema.
+  if (!db || typeof db !== "object" || db.format || db.store_settings || db.product_variants ||
+    (!Array.isArray(db.products) || db.products.some((p: any) => !p || typeof p !== "object" || "article" in p || "selling_price" in p))) {
+    throw new Error("This is not a legacy backup. Use Restore verified backup for version 2 files. Older cloud exports need a reviewed conversion; they cannot be imported as legacy data.");
+  }
   const s = db.settings ?? {};
   await supabase.from("store_settings").update({
     business_name: s.businessName, business_phone: s.businessPhone, business_address: s.businessAddress,
