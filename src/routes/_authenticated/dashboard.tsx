@@ -1,3 +1,4 @@
+import { watchVisibleQuery } from "@/lib/inventory-live";
 import { fetchAll } from "@/lib/fetch-all";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,14 +42,7 @@ function Dashboard() {
     },
   });
 
-  useEffect(() => {
-    const ch = supabase
-      .channel("dash")
-      .on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => qc.invalidateQueries({ queryKey: ["dashboard"] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => qc.invalidateQueries({ queryKey: ["dashboard"] }))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [qc]);
+  useEffect(() => watchVisibleQuery(qc, ["dashboard"], ["product_variants", "sales"], "dash"), [qc]);
 
   const m = useMemo(() => {
     const sales = data?.sales ?? [];

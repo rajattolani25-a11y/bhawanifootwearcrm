@@ -2,28 +2,64 @@ import { fetchAll } from "@/lib/fetch-all";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { watchInventory } from "./inventory-live";
 
-export type Variant = { id: string; size: string; stock: number; damaged_stock: number; min_stock: number; rack: string | null; barcode: string | null; sku: string | null };
-export type Product = { id: string; brand: string; article: string; category: string; color: string | null; gender: string | null; mrp: number; selling_price: number; created_at: string; image_url: string | null; image_src?: string | null; product_variants: Variant[] };
+export type Variant = {
+  id: string;
+  size: string;
+  stock: number;
+  damaged_stock: number;
+  min_stock: number;
+  rack: string | null;
+  barcode: string | null;
+  sku: string | null;
+};
+export type Product = {
+  id: string;
+  brand: string;
+  article: string;
+  category: string;
+  color: string | null;
+  gender: string | null;
+  mrp: number;
+  selling_price: number;
+  created_at: string;
+  status?: string;
+  catalog_visible?: boolean;
+  image_url: string | null;
+  image_src?: string | null;
+  product_variants: Variant[];
+};
 
-export const sizeSort = (a: string, b: string) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b);
+export const sizeSort = (a: string, b: string) =>
+  (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b);
 
-export function useStock() {
+const byId = (rows: Product[]) => [...rows].sort((a, b) => a.id.localeCompare(b.id));
+const activeById = (rows: Product[]) => byId(rows.filter((row) => row.status === "Active"));
+export function useStock(options?: { activeOnly?: boolean; order?: "id" }) {
   const qc = useQueryClient();
-  useEffect(() => {
-    const channel = supabase.channel("stock-live").on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => qc.invalidateQueries({ queryKey: ["stock-all"] })).on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => qc.invalidateQueries({ queryKey: ["stock-all"] })).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [qc]);
-  return useQuery({
+  useEffect(() => watchInventory(qc), [qc]);
+  return useQuery<Product[]>({
     queryKey: ["stock-all"],
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 15_000,
+    ...(options?.activeOnly
+      ? { select: activeById }
+      : options?.order === "id"
+        ? { select: byId }
+        : {}),
     queryFn: async () => {
-      const data = await fetchAll((a, b) => supabase
-        .from("products")
-        .select("id,brand,article,category,color,gender,mrp,selling_price,created_at,image_url,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku)")
-        .order("created_at", { ascending: false })
-        .range(a, b));
+      const data = await fetchAll((a, b) =>
+        supabase
+          .from("products")
+          .select(
+            "id,brand,article,category,color,gender,status,catalog_visible,mrp,selling_price,created_at,image_url,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku)",
+          )
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      );
       const { addSignedImages } = await import("@/lib/product-images");
       return addSignedImages(data as unknown as Product[]);
     },
@@ -31,7 +67,9 @@ export function useStock() {
 }
 
 export function downloadCsv(name: string, rows: (string | number)[][]) {
-  const csv = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const csv = rows
+    .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+    .join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
   a.download = name;
@@ -41,11 +79,15 @@ export function downloadCsv(name: string, rows: (string | number)[][]) {
 export function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   const split = (l: string) => {
-    const out: string[] = []; let cur = ""; let q = false;
+    const out: string[] = [];
+    let cur = "";
+    let q = false;
     for (const ch of l) {
       if (ch === '"') q = !q;
-      else if (ch === "," && !q) { out.push(cur); cur = ""; }
-      else cur += ch;
+      else if (ch === "," && !q) {
+        out.push(cur);
+        cur = "";
+      } else cur += ch;
     }
     out.push(cur);
     return out.map((s) => s.trim());

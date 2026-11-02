@@ -1,8 +1,8 @@
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { CouponTicket } from "@/components/CouponTicket";
 import { m, useReducedMotion } from "motion/react";
 import { SuccessMark } from "@/components/motion/success-mark";
 import { loadReceiptResources } from "@/components/motion/receipt-resources";
-import { fetchAll } from "@/lib/fetch-all";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,9 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { inr } from "@/lib/modules";
 import { beep, computeBill, waLink, type CartItem } from "@/lib/pos";
 import { printBill, type PrintDesign } from "@/lib/print";
-import { addSignedImages } from "@/lib/product-images";
 import { billMessage, shareText, smsLink } from "@/lib/messages";
-import { sizeSort } from "@/lib/stock";
+import { sizeSort, useStock } from "@/lib/stock";
 import { QuickAddProduct } from "@/components/QuickAddProduct";
 import { useLang } from "@/lib/i18n";
 import styles from "./pos.module.css";
@@ -94,22 +93,7 @@ function POS() {
     localStorage.setItem(HOLD_KEY, JSON.stringify(h));
   };
 
-  const { data: products = [], error: productsError, isPending: productsPending } = useQuery({
-    queryKey: ["pos-products"],
-    staleTime: 15_000,
-    queryFn: async () => {
-      const data = await fetchAll((a, b) => supabase.from("products").select("id,brand,article,category,color,selling_price,mrp,status,image_url,product_variants(id,size,stock,sku,barcode)").eq("status", "Active").order("id").range(a, b));
-      return addSignedImages(data);
-    },
-  });
-
-  useEffect(() => {
-    const ch = supabase
-      .channel("pos-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => qc.invalidateQueries({ queryKey: ["pos-products"] }))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [qc]);
+  const { data: products = [], error: productsError, isPending: productsPending } = useStock({ activeOnly: true });
 
   const cats = useMemo(() => ["All", ...new Set(products.map((p) => p.category).filter(Boolean))], [products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand).filter(Boolean))], [products]);
@@ -316,7 +300,7 @@ function POS() {
       const r = data as { bill_no: string; stamp_regular: boolean; stamp_premium?: boolean; unlocked: { card: string; amount: number }[] };
        setDone({ bill_no: r.bill_no, total: bill.total, paid, due, mobile: customer?.mobile ?? "", name: customer?.name ?? "", stamp: r.stamp_regular || !!r.stamp_premium, unlocked: r.unlocked ?? [] });
       reset();
-      qc.invalidateQueries();
+      refreshOperationalData(qc);
     } catch (e) {
       beep(false);
       toast.error((e as Error).message);
@@ -390,7 +374,7 @@ function POS() {
             </div>
           </article>)}
           {list.length > visibleCount && <Button variant="outline" onClick={() => setVisibleCount(n => n + 60)}>Show more products</Button>}
-          {!list.length && <div className={styles["emptyProducts"]}><Search aria-hidden="true" /><p>{productsPending ? "Loading products…" : productsError ? "Unable to load products." : "No products found."}</p>{productsError && <button onClick={() => qc.refetchQueries({ queryKey: ["pos-products"] })}>Try again</button>}</div>}
+          {!list.length && <div className={styles["emptyProducts"]}><Search aria-hidden="true" /><p>{productsPending ? "Loading products…" : productsError ? "Unable to load products." : "No products found."}</p>{productsError && <button onClick={() => qc.refetchQueries({ queryKey: ["stock-all"] })}>Try again</button>}</div>}
         </div>
         <div className={styles["shortcuts"]}><span>F2 · Search</span><span>F4 · Customer</span><span>F8 · Complete Sale</span></div>
       </section>

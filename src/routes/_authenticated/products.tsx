@@ -1,4 +1,4 @@
-import { fetchAll } from "@/lib/fetch-all";
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
-import { addSignedImages, uploadProductImage } from "@/lib/product-images";
+import { uploadProductImage } from "@/lib/product-images";
 import { downloadCsv, parseCsv, sizeSort, useStock } from "@/lib/stock";
 import { QuickAddProduct } from "@/components/QuickAddProduct";
 
@@ -36,23 +36,7 @@ function Products() {
   const { data: cost } = useQuery({ queryKey: ["product-profile-cost",selected], enabled: isOwner && !!selected, queryFn: async () => { const { data,error } = await supabase.from("product_costs").select("purchase_price").eq("product_id",selected ?? "").maybeSingle(); if(error) throw error; return data; } });
   const { data: history } = useQuery({ queryKey: ["product-profile-history",selected], enabled: !!selected, queryFn: async () => { const p = products.find((x)=>x.id===selected); const ids = p?.product_variants.map((v)=>v.id) ?? []; if (!ids.length) return { purchases: [], movements: [] }; const [a,b] = await Promise.all([isOwner ? supabase.from("purchases").select("id,purchase_date,supplier_name,invoice_no,quantity,purchase_price,total").in("variant_id",ids).order("purchase_date",{ascending:false}).limit(30) : Promise.resolve({data:[]}),supabase.from("stock_movements").select("id,moved_at,type,product_name,qty_in,qty_out,note").in("variant_id",ids).order("moved_at",{ascending:false}).limit(30)]); return {purchases:a.data ?? [],movements:b.data ?? []}; } });
 
-  const { data: products = [] } = useQuery({
-    queryKey: ["products"],
-    staleTime: 15_000,
-    queryFn: async () => {
-      const data = await fetchAll((a, b) => supabase.from("products").select("id,brand,article,category,color,mrp,selling_price,image_url,catalog_visible,product_variants(id,size,stock,rack,barcode)").order("id").range(a, b));
-      return addSignedImages(data);
-    },
-  });
-
-  useEffect(() => {
-    const ch = supabase
-      .channel("products-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "product_variants" }, () => qc.invalidateQueries({ queryKey: ["products"] }))
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => qc.invalidateQueries({ queryKey: ["products"] }))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [qc]);
+  const { data: products = [] } = useStock({ order: "id" });
 
   const filtered = useMemo(() => {
     const s = deferredSearch.toLowerCase().trim();
@@ -69,8 +53,8 @@ function Products() {
         title="Products"
         subtitle="Size-wise stock for every article. Green = in stock, amber = low, red = out. Tap an article for its full profile."
         actions={<div className="flex flex-wrap gap-2">{isOwner && <CsvTools />}{isOwner && <>
-          <Button variant="outline" className="h-11" onClick={async () => { const { error } = await supabase.from("products").update({ catalog_visible: true }).not("image_url", "is", null); if (error) toast.error(error.message); else { toast.success("All products with a photo are now in the catalog"); qc.invalidateQueries({ queryKey: ["products"] }); } }}>Show all with photo</Button>
-          <Button variant="outline" className="h-11" onClick={async () => { if (!window.confirm("Hide all products from the catalog?")) return; const { error } = await supabase.from("products").update({ catalog_visible: false }).eq("catalog_visible", true); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["products"] }); }}>Hide all</Button>
+          <Button variant="outline" className="h-11" onClick={async () => { const { error } = await supabase.from("products").update({ catalog_visible: true }).not("image_url", "is", null); if (error) toast.error(error.message); else { toast.success("All products with a photo are now in the catalog"); qc.invalidateQueries({ queryKey: ["stock-all"] }); } }}>Show all with photo</Button>
+          <Button variant="outline" className="h-11" onClick={async () => { if (!window.confirm("Hide all products from the catalog?")) return; const { error } = await supabase.from("products").update({ catalog_visible: false }).eq("catalog_visible", true); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["stock-all"] }); }}>Hide all</Button>
         </>}<Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Quick add</Button></div>}
       />
       <div className="relative mb-4 max-w-md">
@@ -86,7 +70,7 @@ function Products() {
             <div key={p.id} className="overflow-hidden rounded-lg border bg-card">
               <div className="relative h-32 bg-muted">
                 {p.image_src ? <img src={p.image_src} loading="lazy" decoding="async" alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain p-2" /> : <div className="flex h-full items-center justify-center font-display text-3xl text-muted-foreground/30">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}
-                {isOwner && <label className="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-md bg-card/95 px-2 py-1 text-xs font-semibold shadow-sm"><ImagePlus className="h-3.5 w-3.5" /> Photo<input type="file" accept="image/*" hidden onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const up = await uploadProductImage(p.id, file); toast.success(`Product photo saved (${Math.round(up.size / 1024)} KB)`); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["stock-all"] }); qc.invalidateQueries({ queryKey: ["pos-products"] }); } catch (err) { toast.error((err as Error).message); } e.target.value = ""; }} /></label>}
+                {isOwner && <label className="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-md bg-card/95 px-2 py-1 text-xs font-semibold shadow-sm"><ImagePlus className="h-3.5 w-3.5" /> Photo<input type="file" accept="image/*" hidden onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const up = await uploadProductImage(p.id, file); toast.success(`Product photo saved (${Math.round(up.size / 1024)} KB)`); qc.invalidateQueries({ queryKey: ["stock-all"] }); } catch (err) { toast.error((err as Error).message); } e.target.value = ""; }} /></label>}
               </div>
               <div className="p-4">
               <div className="flex items-start justify-between gap-2">
@@ -115,7 +99,7 @@ function Products() {
               </div>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">{total} pairs total</p>
-                {isOwner && <label className="flex items-center gap-2 text-xs font-medium"><span>In catalog</span><Switch checked={p.catalog_visible} onCheckedChange={async (v) => { const { error } = await supabase.from("products").update({ catalog_visible: v }).eq("id", p.id); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["products"] }); }} /></label>}
+                {isOwner && <label className="flex items-center gap-2 text-xs font-medium"><span>In catalog</span><Switch checked={!!p.catalog_visible} onCheckedChange={async (v) => { const { error } = await supabase.from("products").update({ catalog_visible: v }).eq("id", p.id); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["stock-all"] }); }} /></label>}
               </div>
               </div>
             </div>
@@ -156,7 +140,7 @@ function CsvTools() {
       for (let i = 0; i < variants.length; i += 500) { const { error } = await supabase.from("product_variants").upsert(variants.slice(i, i + 500), { onConflict: "product_id,size" }); if (error) throw error; }
       if (costs.size) { const { error } = await supabase.from("product_costs").upsert([...costs].map(([product_id, purchase_price]) => ({ product_id, purchase_price }))); if (error) throw error; }
       toast.success(`Uploaded ${variants.length} size rows (${np.length} new articles)`);
-      qc.invalidateQueries();
+      refreshOperationalData(qc);
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   }
   return (<>

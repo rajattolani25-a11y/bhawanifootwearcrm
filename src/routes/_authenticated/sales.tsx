@@ -1,3 +1,4 @@
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { fetchAll } from "@/lib/fetch-all";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
@@ -124,7 +125,7 @@ function Sales() {
         <Button variant="outline" disabled={page === 0 || isPending} onClick={() => setPage((p) => p - 1)}>Previous</Button>
         <Button variant="outline" disabled={!data || (page + 1) * pageSize >= data.count || isPending} onClick={() => setPage((p) => p + 1)}>Next</Button>
       </div>
-      <ReturnDialog sale={ret} onClose={() => setRet(null)} returned={returned} onDone={() => qc.invalidateQueries()} />
+      <ReturnDialog sale={ret} onClose={() => setRet(null)} returned={returned} onDone={() => refreshOperationalData(qc)} />
       <Dialog open={!!collect} onOpenChange={(o) => !o && setCollect(null)}>
         <DialogContent><DialogHeader><DialogTitle>Collect payment · {collect?.bill_no}</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">Current balance: {inr(collect?.due_amount ?? 0)}</p>

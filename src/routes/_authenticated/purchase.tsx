@@ -1,3 +1,4 @@
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -44,7 +45,7 @@ function Purchase() {
     if (error) { toast.error(error.message); return; }
     toast.success(`${data} pairs added to stock`);
     setLines([]); setInv("");
-    qc.invalidateQueries();
+    refreshOperationalData(qc);
   }
   const total = lines.reduce((a, l) => a + l.qty * l.price * (1 + l.gst_rate / 100), 0);
 
