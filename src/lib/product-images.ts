@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { productImageCache } from "./signed-image-cache";
 
 const BUCKET = "product-images";
 export const MAX_PHOTO_MB = 5;
@@ -7,18 +8,19 @@ const QUALITY = 0.85; // never below 0.82 so shoes stay sharp
 
 export async function signedProductImage(path?: string | null) {
   if (!path) return null;
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-  return data?.signedUrl ?? null;
+  return (await productUrls([path])).get(path) ?? null;
+}
+
+async function productUrls(paths: string[]) {
+  return productImageCache().getMany(paths, async batch => {
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrls(batch, 3600);
+    return new Map((data ?? []).filter(row => row.path && row.signedUrl).map(row => [row.path!, row.signedUrl!]));
+  });
 }
 
 export async function addSignedImages<T extends { image_url?: string | null }>(rows: T[]) {
   const paths = [...new Set(rows.map(row => row.image_url).filter((path): path is string => !!path))];
-  const urls = new Map<string, string>();
-  // Avoid one HTTP request per photograph when a large inventory loads.
-  for (let i = 0; i < paths.length; i += 100) {
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), 3600);
-    for (const image of data ?? []) if (image.path && image.signedUrl) urls.set(image.path, image.signedUrl);
-  }
+  const urls = await productUrls(paths);
   return rows.map(row => ({ ...row, image_src: row.image_url ? urls.get(row.image_url) ?? null : null }));
 }
 
