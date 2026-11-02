@@ -5,7 +5,8 @@ import { useStock } from "/src/lib/stock.ts";
 import { supabase } from "/src/integrations/supabase/client.ts";
 // Vite can reevaluate this fixture during dependency warming; keep one root/client.
 const existing = (window as any).__perf;
-const client = existing?.client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const client =
+  existing?.client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const root = existing?.root ?? createRoot(document.getElementById("root")!);
 Object.assign(window, { __perf: { client, root, supabase, focusManager } });
 function Panel({ active }: { active: boolean }) {

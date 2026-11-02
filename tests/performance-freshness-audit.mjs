@@ -9,7 +9,7 @@ let reads = 0,
   price = 999,
   delay = 0;
 const errors = [];
-await p.routeWebSocket("**/*", socket => socket.close());
+await p.routeWebSocket("**/*", (socket) => socket.close());
 p.on("pageerror", (e) => errors.push(e.message));
 await p.addInitScript(() => {
   window.__vite_plugin_react_preamble_installed__ = true;
@@ -144,7 +144,7 @@ try {
   );
   console.log(JSON.stringify(result));
 } catch (error) {
-  console.log("Diagnostic", JSON.stringify({errors,body:await p.locator("body").innerText()}));
+  console.log("Diagnostic", JSON.stringify({ errors, body: await p.locator("body").innerText() }));
   throw error;
 } finally {
   await b.close();

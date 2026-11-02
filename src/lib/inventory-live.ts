@@ -33,9 +33,11 @@ export function watchVisibleQuery(
   name: string,
 ) {
   let dirty = false,
+    stopped = false,
     timer: ReturnType<typeof setTimeout> | undefined,
     subscribed = false;
   const flush = () => {
+    if (stopped) return;
     timer = undefined;
     if (document.hidden) {
       dirty = true;
@@ -52,6 +54,7 @@ export function watchVisibleQuery(
     void client.invalidateQueries({ queryKey }, { cancelRefetch: false });
   };
   const changed = () => {
+    if (stopped) return;
     dirty = true;
     if (!document.hidden && !timer) timer = setTimeout(flush, 100);
   };
@@ -79,6 +82,7 @@ export function watchVisibleQuery(
   });
   document.addEventListener("visibilitychange", onVisible);
   return () => {
+    stopped = true;
     if (timer) clearTimeout(timer);
     document.removeEventListener("visibilitychange", onVisible);
     void supabase.removeChannel(channel);
