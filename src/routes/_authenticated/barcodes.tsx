@@ -2,8 +2,6 @@ import { LabelSelectionDock } from "@/components/LabelSelectionDock";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import JsBarcode from "jsbarcode";
-import QRCode from "qrcode";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +15,6 @@ export const Route = createFileRoute("/_authenticated/barcodes")({ head: () => (
 type Layout = "sheet" | "roll";
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 const rs = (n: number) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-function svgFor(code: string) {
-  const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  JsBarcode(el, code, { format: "CODE128", height: 30, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, margin: 0 });
-  return el.outerHTML;
-}
 
 const LABEL_CSS = `
 *{box-sizing:border-box}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -59,6 +52,13 @@ function Barcodes() {
     if (!selected.length) { toast.error("Pehle label count chuno"); return; }
     setBusy(true);
     try {
+      const [{ default: JsBarcode }, { default: QRCode }] = await Promise.all([import("jsbarcode"), import("qrcode")]);
+      function svgFor(code: string) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        JsBarcode(el, code, { format: "CODE128", height: 30, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, margin: 0 });
+        return el.outerHTML;
+      }
+
       const labels: string[] = [];
       for (const { p, v, n } of selected) {
         let code = v.barcode || v.sku;

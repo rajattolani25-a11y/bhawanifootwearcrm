@@ -61,6 +61,8 @@ function Community() {
   const { t } = useLang();
   const [mobilePanel, setMobilePanel] = useState("products");
   const previewRef = useRef<HTMLDivElement>(null);
+  const [recentCount, setRecentCount] = useState(30);
+  const [stockCount, setStockCount] = useState(30);
   const [days, setDays] = useState(7);
   const [tag, setTag] = useState("NEW ARRIVAL");
   const [theme, setTheme] = useState<PosterTheme>("luxury");
@@ -132,6 +134,8 @@ function Community() {
   const [retry, setRetry] = useState(0);
   const [preparing, setPreparing] = useState(false);
   const [q, setQ] = useState("");
+  useEffect(() => setStockCount(30), [q]);
+  useEffect(() => setRecentCount(30), [days]);
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [posterUrl, setPosterUrl] = useState("");
@@ -160,9 +164,10 @@ function Community() {
         p.product_variants.some((v) => recentIds.has(v.id))),
   );
   const s = q.toLowerCase();
-  const all = data
-    .filter((p) => sizesOf(p).length && (!s || `${p.brand} ${p.article}`.toLowerCase().includes(s)))
-    .slice(0, 30);
+  const matching = data.filter(
+    (p) => sizesOf(p).length && (!s || `${p.brand} ${p.article}`.toLowerCase().includes(s)),
+  );
+  const all = matching.slice(0, stockCount);
   const shop = st?.business_name ?? "Our Store";
   const phone = st?.business_phone ?? "";
   const active = data.find((p) => p.id === selected) ?? fresh[0] ?? all[0];
@@ -295,7 +300,7 @@ function Community() {
             </div>
             <p className="mb-2 text-sm text-muted-foreground">{fresh.length} new articles found</p>
             <div className={studio["products"]}>
-              {fresh.map((p) => (
+              {fresh.slice(0, recentCount).map((p) => (
                 <PCard
                   key={p.id}
                   p={p}
@@ -307,6 +312,11 @@ function Community() {
                 />
               ))}
             </div>
+            {fresh.length > recentCount && (
+              <Button size="sm" variant="outline" onClick={() => setRecentCount((n) => n + 30)}>
+                Show more arrivals
+              </Button>
+            )}
           </details>
           <h3 className="mb-2 font-semibold">Poster for any stock</h3>
           <Input
@@ -328,6 +338,11 @@ function Community() {
               />
             ))}
           </div>
+          {matching.length > stockCount && (
+            <Button className="mt-3" variant="outline" onClick={() => setStockCount((n) => n + 30)}>
+              Show more products
+            </Button>
+          )}
         </section>
         <section
           className={`${studio["panel"]} ${studio["preview"]}`}

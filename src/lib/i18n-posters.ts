@@ -1,4 +1,5 @@
 export const POSTERS: Record<string, { hindi: string; hinglish: string }> = {
+  "Show more arrivals": { hindi: "और नया माल दिखाएँ", hinglish: "Aur naya maal dikhao" },
   "Poster workspace": { hindi: "पोस्टर कार्यक्षेत्र", hinglish: "Poster workspace" },
   Product: { hindi: "प्रोडक्ट", hinglish: "Product" },
   Design: { hindi: "डिज़ाइन", hinglish: "Design" },
