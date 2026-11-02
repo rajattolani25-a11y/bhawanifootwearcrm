@@ -14,6 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
+      // Optional maintenance API: runtime guards handle an unapplied migration 0025.
       store_reset_state: {
         Row: { id: number; installation_id: string; generation: string; reset_at: string | null }
         Insert: { id?: number; installation_id?: string; generation?: string; reset_at?: string | null }
@@ -1295,6 +1296,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      public_catalog_photos: { Args: { _product_id: string }; Returns: string[] }
       store_backup_snapshot_v2: { Args: Record<PropertyKey, never>; Returns: Json }
       reset_store_data_v2: { Args: { _confirmation: string; _fingerprint: string; _preserve_identity?: boolean; _preserve_design?: boolean; _restart_numbers?: boolean; _preserve_operations?: boolean }; Returns: Json }
       restore_store_backup_v2: { Args: { _confirmation: string; _snapshot: Json }; Returns: undefined }
