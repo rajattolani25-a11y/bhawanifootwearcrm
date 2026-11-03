@@ -8,6 +8,8 @@
 - Owner: Products → article name or Photos → Product details / Category & subcategory / Product photos / Edit sizes & stock. Brand/name and optional description can be edited. Saved invoice line names stay historical snapshots. Description reuses approved migration 0030/editor, photo replacement/deletion reuses existing compressed private-bucket workflow.
 - Safe size changes require 0033. Empty unused sizes may be renamed/removed. Any stock, damaged stock, bill, purchase, order, return or movement history prevents identity removal/rename. New sizes get scan codes; quantity changes need a reason and are ledgered atomically. Expected stock prevents concurrent edits from overwriting a checkout.
 - Small Share icon in the public product header opens WhatsApp's contact chooser with shop, product, price, optional selected size and a clean direct link. No outgoing message is sent automatically. Link contains only public product ID and optional size. Recipient opens the actual current catalog item; unavailable items show a notice and the collection, not private or fabricated product data. Current language formats the short message.
+- Approved English share copy: `Take a look at this pair from *[Shop]*.` followed by a blank line, `*[Brand] [Product Name]*`, separate `Price:` and optional `Size:` lines, a blank line, then `View photos, available sizes and product details:` and the direct URL on its own line. Omit an unselected/blank size completely; keep shop branding dynamic and localized versions equivalent.
+
 
 ## Incorrect bill cancellation
 

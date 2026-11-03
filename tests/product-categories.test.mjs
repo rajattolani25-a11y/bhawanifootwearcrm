@@ -56,9 +56,23 @@ test("professional product share is short, localized, and has a clean product-on
   };
   const english = catalogShareText(args);
   assert(english.includes("Price: ₹1,048.95"));
-  assert(english.includes("View this product:"));
+  assert.equal(
+    english,
+    `Take a look at this pair from *Demo Footwear*.\n\n*LAKHANI FLYO*\nPrice: ₹1,048.95\nSize: 7.5\n\nView photos, available sizes and product details:\n${url}`,
+  );
+  const noSize = catalogShareText({ ...args, size: "" });
+  assert(!noSize.includes("Size:"));
+  assert(noSize.endsWith(url));
   assert(english.length < 300);
   assert(!english.includes("undefined"));
-  assert(catalogShareText({ ...args, language: "hindi" }).includes("यह प्रोडक्ट देखें"));
-  assert(catalogShareText({ ...args, language: "hinglish" }).includes("Yeh product dekhein"));
+  assert(
+    catalogShareText({ ...args, language: "hindi" }).includes(
+      "फोटो, उपलब्ध साइज़ और प्रोडक्ट की जानकारी देखें:",
+    ),
+  );
+  assert(
+    catalogShareText({ ...args, language: "hinglish" }).includes(
+      "Photos, available sizes aur product details dekhein:",
+    ),
+  );
 });

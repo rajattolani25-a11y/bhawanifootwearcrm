@@ -23,19 +23,31 @@ export function catalogShareText({
   size?: string;
   language?: string;
 }) {
+  const shopName = line(shop);
+  const productName = line(`${brand} ${article}`);
+  const selectedSize = size ? line(size) : "";
+  const introduction =
+    language === "hindi"
+      ? `*${shopName}* का यह फुटवियर देखें।`
+      : language === "hinglish"
+        ? `*${shopName}* ka yeh pair dekhiye.`
+        : `Take a look at this pair from *${shopName}*.`;
   const priceLabel = language === "hindi" ? "कीमत" : "Price";
   const sizeLabel = language === "hindi" ? "साइज़" : "Size";
   const linkLabel =
     language === "hindi"
-      ? "यह प्रोडक्ट देखें"
+      ? "फोटो, उपलब्ध साइज़ और प्रोडक्ट की जानकारी देखें:"
       : language === "hinglish"
-        ? "Yeh product dekhein"
-        : "View this product";
+        ? "Photos, available sizes aur product details dekhein:"
+        : "View photos, available sizes and product details:";
   return [
-    line(shop),
-    line(`${brand} ${article}`),
-    `${priceLabel}: ${inr(price)}${size ? ` · ${sizeLabel}: ${line(size)}` : ""}`,
+    introduction,
     "",
-    `${linkLabel}: ${url}`,
+    `*${productName}*`,
+    `${priceLabel}: ${inr(price)}`,
+    ...(selectedSize ? [`${sizeLabel}: ${selectedSize}`] : []),
+    "",
+    linkLabel,
+    url,
   ].join("\n");
 }
