@@ -1,5 +1,9 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Background motion": {"hindi": "बैकग्राउंड मोशन", "hinglish": "Background motion"},
+"Includes Liquid Ivory background motion, gallery and category transitions. Turn OFF for a still catalog. Reduced-motion preferences take priority.": {"hindi": "Liquid Ivory बैकग्राउंड, गैलरी और श्रेणी के बदलाव की एनिमेशन चालू करें। स्थिर कैटलॉग के लिए बंद करें। डिवाइस की कम मोशन पसंद को प्राथमिकता मिलेगी।", "hinglish": "Liquid Ivory background, gallery aur category transitions chalu karein. Static catalog ke liye OFF karein. Device ki reduced-motion preference pehle aayegi."},
+"Choose Warm Ivory above for the cream Liquid Ivory background. For background-only ON/OFF, use Background motion under Design & hero.": {"hindi": "क्रीम Liquid Ivory बैकग्राउंड के लिए ऊपर Warm Ivory चुनें। केवल बैकग्राउंड चालू/बंद करने के लिए Design & hero में Background motion इस्तेमाल करें।", "hinglish": "Cream Liquid Ivory background ke liye upar Warm Ivory chunein. Sirf background ON/OFF karne ke liye Design & hero mein Background motion use karein."},
+
 "Photos": {"hindi": "तस्वीरें", "hinglish": "Photos"},
 "Add photos": {"hindi": "तस्वीरें जोड़ें", "hinglish": "Photos add karo"},
 "Set cover": {"hindi": "कवर बनाएँ", "hinglish": "Cover banao"},

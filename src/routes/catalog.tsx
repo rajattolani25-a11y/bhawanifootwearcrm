@@ -128,7 +128,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
   </section>;
 
   return (
-    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-tone={presentation.category_accents ? (ptype !== "All" ? ptype : filter) : "All"} data-motion={presentation.motion_enabled}>
+    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-palette={presentation.theme ?? "studio"} data-tone={presentation.category_accents ? (ptype !== "All" ? ptype : filter) : "All"} data-motion={presentation.motion_enabled}>
       <header className={styles["header"]}>
         <div className={styles["headerInner"]}>
           <a href="#catalog-collection" className={styles["identity"]} aria-label={shop.name}>

@@ -13,6 +13,8 @@
   font-display: swap;
 }
 .hero {
+  position: relative;
+  isolation: isolate;
   overflow: hidden;
   background:
     radial-gradient(ellipse at 70% 45%, var(--hero-glow) 0%, transparent 64%),
@@ -22,6 +24,7 @@
 }
 .inner {
   position: relative;
+  z-index: 1;
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
@@ -328,6 +331,134 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .hero[data-motion="true"] .spotlight {
+    animation: none;
+  }
+}
+
+/* Warm Ivory: decorative satin layers move; all foreground content stays fixed. */
+.liquidBackground {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: paint;
+}
+.liquidLight {
+  position: absolute;
+  inset: -12%;
+  background:
+    radial-gradient(ellipse at 22% 25%, #fffaf0 0%, transparent 48%),
+    radial-gradient(ellipse at 82% 72%, #d1b99152 0%, transparent 50%),
+    linear-gradient(130deg, #f9f3e8, #ecdec4);
+}
+.liquidWaves {
+  position: absolute;
+  width: calc(100% + 80px);
+  height: calc(100% + 40px);
+  inset: -20px -40px;
+  opacity: 0.7;
+}
+.liquidRear,
+.liquidFront {
+  transform-origin: center;
+}
+.hero[data-palette="ivory"] .inner::after {
+  content: none;
+}
+.hero[data-palette="ivory"] :is(.offer, .stage, .stage img, .heading, .message, .cta),
+.hero[data-palette="ivory"] .stage::before {
+  animation: none;
+  transform: none;
+}
+.hero[data-palette="ivory"] .heading {
+  grid-row: 1;
+}
+.hero[data-palette="ivory"] h1 {
+  margin-top: 0;
+  font-style: italic;
+  font-size: clamp(30px, 3.9vw, 48px);
+  line-height: 1.06;
+}
+.hero[data-palette="ivory"] .offer {
+  grid-row: 2;
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 14px;
+  padding: 6px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: clamp(11px, 1.25vw, 15px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+.hero[data-palette="ivory"] .stage img {
+  filter: drop-shadow(0 12px 9px #493f2926);
+}
+.hero[data-palette="ivory"] .stage::before {
+  height: 14%;
+  opacity: 0.4;
+  background: radial-gradient(ellipse, #71624461 0%, transparent 70%);
+}
+.hero[data-palette="ivory"] .cta {
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px #3a4d2c17;
+}
+.hero[data-motion="true"] .liquidLight {
+  animation: ivory-light 12s ease-in-out infinite;
+}
+.hero[data-motion="true"] .liquidRear {
+  animation: ivory-rear 12s ease-in-out infinite;
+}
+.hero[data-motion="true"] .liquidFront {
+  animation: ivory-front 14s ease-in-out infinite;
+}
+.hero[data-paused="true"] :is(.liquidLight, .liquidRear, .liquidFront) {
+  animation-play-state: paused;
+}
+@keyframes ivory-light {
+  0%,
+  100% {
+    transform: translate(-1.5%, -1%) scale(1);
+  }
+  50% {
+    transform: translate(1.5%, 1%) scale(1.025);
+  }
+}
+@keyframes ivory-rear {
+  0%,
+  100% {
+    transform: translate(-12px, -4px);
+  }
+  50% {
+    transform: translate(12px, 5px);
+  }
+}
+@keyframes ivory-front {
+  0%,
+  100% {
+    transform: translate(9px, 4px);
+  }
+  50% {
+    transform: translate(-9px, -4px);
+  }
+}
+@media (max-width: 767px) {
+  .hero[data-palette="ivory"] h1 {
+    font-size: clamp(24px, 6.2vw, 32px);
+  }
+}
+@container (max-width: 767px) {
+  .hero[data-palette="ivory"] h1 {
+    font-size: clamp(24px, 6.2cqw, 32px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero[data-motion="true"] :is(.liquidLight, .liquidRear, .liquidFront) {
     animation: none;
   }
 }

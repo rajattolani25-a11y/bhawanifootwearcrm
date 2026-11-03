@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { CatalogHero } from "/src/components/CatalogHero.tsx";
 import { InterfaceMotion } from "/src/components/motion/provider.tsx";
 import { HERO_DEFAULTS } from "/src/lib/catalog-hero.ts";
+import { catalogTheme } from "/src/lib/catalog-themes.ts";
 function Demo() {
   const [motion, setMotion] = React.useState(true),
     [opened, setOpened] = React.useState(false);
@@ -14,6 +15,7 @@ function Demo() {
           Sample footwear and offer · no live shop changes
         </p>
         <CatalogHero
+          theme={catalogTheme(new URLSearchParams(location.search).get("theme")).id}
           hero={{
             ...HERO_DEFAULTS,
             motion,

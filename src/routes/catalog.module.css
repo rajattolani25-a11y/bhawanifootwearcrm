@@ -191,3 +191,16 @@
 .store[data-theme="dark"][data-tone="Sports"] { --catalog-accent:#a8cfcc; --catalog-tint:#233a3a; }
 @media(prefers-reduced-motion:reduce) { .store { transition:none; } }
 .store[data-motion="false"], .store[data-motion="false"] * { animation:none !important; transition:none !important; }
+
+/* Owner-selected ivory palette stays warm cream across the whole light storefront. */
+.store[data-palette="ivory"][data-theme="light"] {
+  --catalog-bg: #f4eddf;
+  --catalog-paper: #fffaf1;
+  --catalog-ink: #223c30;
+  --catalog-muted: #626c5b;
+  --catalog-line: #e0d7c5;
+  --catalog-accent: #344e39;
+  --catalog-tint: #e8e6d6;
+  --catalog-image: #f0e8da;
+  background: linear-gradient(145deg, #f8f2e7, #eee2cc);
+}

@@ -11,6 +11,7 @@ import {
 } from "@/lib/catalog-hero";
 import { CatalogHero } from "./CatalogHero";
 import type { CatalogThemeId } from "@/lib/catalog-themes";
+import type { CatalogPresentation } from "@/lib/catalog-presentation";
 import { useLang } from "@/lib/i18n";
 import { HERO_IMAGE_COPY, heroImageError } from "@/lib/hero-image-copy";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,10 @@ const CATEGORIES = ["All", "Gents", "Ladies", "Boys", "Girls", "Kids"];
 export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?: CatalogThemeId }) {
   const qc = useQueryClient();
   const { lang } = useLang();
+  const { data: appearance } = useQuery<CatalogPresentation>({
+    queryKey: ["catalog-presentation-settings"],
+    enabled: false,
+  });
   const copy = HERO_IMAGE_COPY[lang];
   const query = useQuery({
     queryKey: ["catalog-hero-settings"],
@@ -287,7 +292,7 @@ export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?:
               checked={draft.motion}
               onChange={(e) => set("motion", e.target.checked)}
             />{" "}
-            Motion
+            {previewTheme === "ivory" ? "Background motion" : "Motion"}
           </label>
           <Button
             variant="outline"
@@ -301,12 +306,25 @@ export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?:
             Reload saved settings
           </Button>
         </div>
+        {previewTheme === "ivory" && (
+          <p className="mb-3 text-xs text-muted-foreground">
+            {lang === "english"
+              ? "Warm Ivory animates only the cream background; product, text and button stay still. Turn Background motion OFF to keep the artwork static. Catalog animations in Appearance must also be ON."
+              : lang === "hindi"
+                ? "Warm Ivory में केवल क्रीम बैकग्राउंड हिलता है; प्रोडक्ट, टेक्स्ट और बटन स्थिर रहते हैं। इसे रोकने के लिए बैकग्राउंड मोशन बंद करें। Appearance में कैटलॉग एनिमेशन भी चालू होना चाहिए।"
+                : "Warm Ivory mein sirf cream background move hota hai; product, text aur button stable rehte hain. Background motion OFF se artwork static rahega. Appearance mein Catalog animations bhi ON honi chahiye."}
+          </p>
+        )}
         <div className={styles["previewFrame"]} data-mobile={mobile}>
           {draft.enabled && image ? (
             <CatalogHero
               theme={previewTheme}
               key={`${image}-${mobile}`}
-              hero={{ ...draft, image }}
+              hero={{
+                ...draft,
+                image,
+                motion: draft.motion && appearance?.motion_enabled !== false,
+              }}
               fallback={
                 <p className="p-5 text-sm">
                   Could not load this image. Reload saved settings or choose a transparent

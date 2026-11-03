@@ -25,7 +25,7 @@ const fields = [
   [
     "motion_enabled",
     "Catalog animations",
-    "Allow gallery transitions, hero motion and category colour transitions. Reduced-motion preferences still take priority.",
+    "Includes Liquid Ivory background motion, gallery and category transitions. Turn OFF for a still catalog. Reduced-motion preferences take priority.",
   ],
 ] as const;
 /** Owner UI only. Database RLS separately enforces owner-only updates. */
@@ -88,6 +88,11 @@ export function CatalogPresentationSettings() {
       <p className="mt-1 text-xs text-muted-foreground">
         {t(
           "Saved for all customers on their next catalog load. No product, price or stock changes.",
+        )}
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {t(
+          "Choose Warm Ivory above for the cream Liquid Ivory background. For background-only ON/OFF, use Background motion under Design & hero.",
         )}
       </p>
       {query.isPending && (

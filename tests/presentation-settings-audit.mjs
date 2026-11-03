@@ -27,6 +27,7 @@ const productRow = {
   catalog_visible: true,
 };
 const productWrites = [];
+const heroWrites = [];
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "demo@example.invalid",
@@ -141,11 +142,19 @@ await p.route("**/*", async (r) => {
     let data = [];
     if (u.pathname.endsWith("/products")) data = [productRow];
     if (u.pathname.endsWith("/catalog_hero_settings")) {
+      if (r.request().method() === "PATCH") {
+        if (role !== "owner")
+          return r.fulfill({ status: 403, json: { code: "42501", message: "Denied" } });
+        const body = r.request().postDataJSON();
+        heroWrites.push(body);
+        Object.assign(hero, body);
+      }
       const { image: _image, ...settings } = hero;
       data = {
         id: 1,
         ...settings,
         enabled: true,
+        updated_at: "2026-11-03T00:00:00Z",
         image_path: "hero/00000000-0000-4000-8000-000000000001.webp",
       };
     }
@@ -317,6 +326,57 @@ if (
 )
   throw Error("Master motion did not override hero");
 await p.screenshot({ path: out + "/catalog-off-mobile.png", fullPage: true });
+// Use existing persisted fields: independently stop just the Ivory background.
+await p.goto("http://localhost:8080/catalog-studio");
+await p.getByRole("button", { name: "Warm Ivory", exact: true }).click();
+await p.getByRole("button", { name: "Save catalog theme", exact: true }).click();
+await p.getByText("Catalog theme saved", { exact: true }).waitFor();
+await p.getByRole("switch", { name: /Catalog animations/ }).check();
+await p.getByRole("button", { name: "Save appearance", exact: true }).click();
+await p.getByText("Catalog appearance saved", { exact: true }).waitFor();
+await p.getByRole("tab", { name: "Design & hero", exact: true }).click();
+await p.getByRole("checkbox", { name: "Background motion", exact: true }).uncheck();
+await p.getByRole("button", { name: "Save hero", exact: true }).click();
+await p
+  .getByText("Hero saved. Refresh the public catalog to see the update.", { exact: true })
+  .waitFor();
+if (hero.motion !== false || flags.motion_enabled !== true)
+  throw Error("Background switch incorrectly changed master motion");
+await p.reload();
+await p.getByRole("tab", { name: "Design & hero", exact: true }).click();
+if (await p.getByRole("checkbox", { name: "Background motion", exact: true }).isChecked())
+  throw Error("Background OFF did not survive reload");
+await p.goto("http://localhost:8080/presentation-catalog.html");
+const ivoryHero = p.getByRole("region", { name: "Featured collection" });
+await ivoryHero.locator("[data-liquid-ivory]").waitFor();
+if ((await ivoryHero.getAttribute("data-motion")) !== "false")
+  throw Error("Public Ivory ignored its saved OFF setting");
+if (
+  await ivoryHero.evaluate(
+    (el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,
+  )
+)
+  throw Error("Background OFF is still moving");
+await p.screenshot({ path: out + "/ivory-public-off-mobile.png", fullPage: true });
+await p.goto("http://localhost:8080/catalog-studio");
+await p.getByRole("tab", { name: "Design & hero", exact: true }).click();
+await p.getByRole("checkbox", { name: "Background motion", exact: true }).check();
+await p.getByRole("button", { name: "Save hero", exact: true }).click();
+await p
+  .getByText("Hero saved. Refresh the public catalog to see the update.", { exact: true })
+  .waitFor();
+await p.goto("http://localhost:8080/presentation-catalog.html");
+await ivoryHero.locator("[data-liquid-ivory]").waitFor();
+if ((await ivoryHero.getAttribute("data-motion")) !== "true")
+  throw Error("Public Ivory ignored its saved ON setting");
+await p.waitForTimeout(400);
+if (
+  (await ivoryHero.evaluate(
+    (el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,
+  )) !== 3
+)
+  throw Error("Unexpected Ivory animations");
+await p.screenshot({ path: out + "/ivory-public-on-mobile.png", fullPage: true });
 role = "staff";
 await p.goto("http://localhost:8080/settings");
 await p.getByText("Only the Owner can open Settings.", { exact: true }).waitFor();
@@ -365,6 +425,9 @@ const result = {
   publicGalleryHidden: true,
   neutralPalette: true,
   heroMasterMotionOff: true,
+  independentIvoryBackgroundSaveReload: true,
+  ivoryForegroundStatic: true,
+  heroMotionWrites: heroWrites.length,
   staffEditorDenied: true,
   missingStorageBlocksSave: true,
   missingStorageCatalogFallback: true,

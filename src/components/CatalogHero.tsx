@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { heroOfferText, type PublicHero } from "@/lib/catalog-hero";
 import { catalogTheme, type CatalogThemeId } from "@/lib/catalog-themes";
 import styles from "./catalog-hero.module.css";
+import { CatalogIvoryBackground } from "./CatalogIvoryBackground";
 
 /** One image and CSS transforms only; animation pauses off-screen and in background tabs. */
 export function CatalogHero({
@@ -41,6 +42,7 @@ export function CatalogHero({
     };
   }, [hero.image]);
   if (failedImage === hero.image) return <>{fallback}</>;
+  const ivory = theme === "ivory";
   return (
     <section
       ref={root}
@@ -52,8 +54,9 @@ export function CatalogHero({
       data-palette={catalogTheme(theme).id}
       style={catalogTheme(theme).style}
     >
+      {ivory && <CatalogIvoryBackground />}
       <div className={styles["inner"]}>
-        <span className={styles["spotlight"]} aria-hidden="true" />
+        {!ivory && <span className={styles["spotlight"]} aria-hidden="true" />}
         <p className={styles["offer"]}>{heroOfferText(hero)}</p>
         <div className={styles["stage"]}>
           <img
@@ -68,7 +71,11 @@ export function CatalogHero({
             onError={() => setFailedImage(hero.image)}
           />
         </div>
-        <div className={styles["heading"]}><BlurReveal enabled={hero.motion}><h1>{hero.heading}</h1></BlurReveal></div>
+        <div className={styles["heading"]}>
+          <BlurReveal enabled={hero.motion && !ivory}>
+            <h1>{hero.heading}</h1>
+          </BlurReveal>
+        </div>
         {hero.subtitle && <p className={styles["message"]}>{hero.subtitle}</p>}
         {onAction ? (
           <button type="button" onClick={onAction} className={styles["cta"]}>
