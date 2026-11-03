@@ -1,4 +1,5 @@
 import { catalogPresentation } from "@/lib/catalog-presentation";
+import { catalogDescription } from "@/lib/catalog-description";
 import { CouponTicket } from "@/components/CouponTicket";
 import { CatalogSpotlight } from "@/components/CatalogSpotlight";
 import { InterfaceMotion } from "@/components/motion/provider";
@@ -196,6 +197,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
                 <div className={styles["productInfo"]}>
                   <p className={styles["brand"]} data-no-translate>{p.brand}</p>
                   <h3 data-no-translate>{p.article}</h3>
+                  {catalogDescription(p.description) && <p className={styles["productDescription"]} data-no-translate>{catalogDescription(p.description)}</p>}
                   <p className={styles["price"]}><strong>{inr(p.price)}</strong>{off > 0 && <del>{inr(p.mrp)}</del>}</p>
                   <div className={styles["sizeSummary"]}><span>Sizes</span><span className={styles["sizeChips"]} data-no-translate>{available.length ? available.map((size) => <span key={size.id}>{size.size}</span>) : "—"}</span></div>
                   <span className={styles["cardAction"]}><span>{available.length ? "Choose size" : "Out of stock"}</span><ArrowRight aria-hidden="true" /></span>
@@ -352,6 +354,10 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
         {step === "view" && <div className="flex flex-col gap-4">
           <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} />
           <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{product.category}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
+          {catalogDescription(product.description) && <section className="space-y-2 rounded-xl border bg-muted/30 p-4">
+            <h3 className="text-sm font-semibold">Product description</h3>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]" data-no-translate>{catalogDescription(product.description)}</p>
+          </section>}
           <div>
             <p className="mb-2 text-sm font-semibold">Choose size</p>
             <div className="flex flex-wrap gap-2">

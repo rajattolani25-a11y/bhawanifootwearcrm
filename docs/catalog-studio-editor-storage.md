@@ -6,8 +6,11 @@ products, a listing preview, current cover-photo replacement and immediate
 visibility updates. Photos reuse the existing compressed upload flow and are
 shared with Products/POS. Price, stock, sizes and GST are read-only here.
 
-New title overrides, descriptions, galleries, badges, ordering, collections and
-draft/publish are NOT persisted or published by this release. An interactive
+Optional descriptions are implemented separately; see
+[catalog-product-descriptions.md](catalog-product-descriptions.md). The owner approved
+the limited storage update in migration 0030, provided for manual SQL Editor application. New title overrides, badges,
+ordering, collections and draft/publish are NOT persisted or published by this
+release. Galleries now reuse the product-photo flow (migration 0027). An interactive
 design prototype is in previews/catalog-editor.html; it uses sample data only.
 Its Save demo draft is browser-local. The actual app does not mount that demo.
 

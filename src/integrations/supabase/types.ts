@@ -615,6 +615,7 @@ export type Database = {
         Row: {
           article: string
           brand: string
+          catalog_description: string | null
           catalog_visible: boolean
           category: string
           color: string | null
@@ -631,6 +632,7 @@ export type Database = {
         Insert: {
           article: string
           brand?: string
+          catalog_description?: string | null
           catalog_visible?: boolean
           category?: string
           color?: string | null
@@ -647,6 +649,7 @@ export type Database = {
         Update: {
           article?: string
           brand?: string
+          catalog_description?: string | null
           catalog_visible?: boolean
           category?: string
           color?: string | null

@@ -92,6 +92,7 @@
 .brand { color: var(--catalog-muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; overflow-wrap: anywhere; }
 .productInfo h3 { margin-top: 4px; min-height:2.8em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-family: var(--font-sans); font-size: 15px; line-height: 1.4; font-weight: 600; letter-spacing:-.015em; overflow-wrap: anywhere; }
 .price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.productDescription { margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; color: var(--catalog-muted); font-size: 12px; line-height: 1.6; }
 .price strong { color: var(--catalog-ink); font-size: 21px; font-weight: 700; font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
 .price del { color: var(--catalog-muted); font-size: 12px; }
 .sizeSummary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; margin-top: auto; padding-top: 14px; color: var(--catalog-muted); font-size: 11px; }

@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from "react";
+import { useCallback, useDeferredValue, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,12 +8,13 @@ import { addSignedImages } from "@/lib/product-images";
 import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
 import { ProductPhotos } from "./ProductPhotos";
+import { CatalogDescriptionEditor } from "./CatalogDescriptionEditor";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 
-/** Uses existing catalog-visible/photo fields only. Stock, sizes and prices are read-only here. */
+/** Catalog content controls. Stock, sizes and prices are read-only here. */
 export function CatalogProductControls() {
   const { isOwner, loading } = useAuth(),
     { t } = useLang(),
@@ -24,6 +25,16 @@ export function CatalogProductControls() {
     [saving, setSaving] = useState(false),
     [limit, setLimit] = useState(60);
   const search = useDeferredValue(q.trim().toLowerCase());
+  const [descriptions, setDescriptions] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState({ dirty: false, saving: false });
+  const descriptionEditing = useCallback((dirty: boolean, saving: boolean) => {
+    setEditing((current) =>
+      current.dirty === dirty && current.saving === saving ? current : { dirty, saving },
+    );
+  }, []);
+  const previewDescription = useCallback((id: string, value: string) => {
+    setDescriptions((current) => (current[id] === value ? current : { ...current, [id]: value }));
+  }, []);
   const query = useQuery({
     queryKey: ["catalog-studio-products"],
     enabled: !loading && isOwner,
@@ -122,6 +133,13 @@ export function CatalogProductControls() {
                   key={p.id}
                   aria-pressed={p.id === product?.id}
                   onClick={() => {
+                    if (editing.saving) return;
+                    if (
+                      p.id !== product?.id &&
+                      editing.dirty &&
+                      !window.confirm(t("Discard unsaved description changes?"))
+                    )
+                      return;
                     setSelected(p.id);
                     setPanel("preview");
                   }}
@@ -174,6 +192,17 @@ export function CatalogProductControls() {
                   <p className="text-xs" data-no-translate>
                     {product.color}
                   </p>
+                  {descriptions[product.id]?.trim() && (
+                    <section className="border-t pt-3">
+                      <p className="mb-1 text-sm font-semibold">{t("Product description")}</p>
+                      <p
+                        className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]"
+                        data-no-translate
+                      >
+                        {descriptions[product.id]?.trim()}
+                      </p>
+                    </section>
+                  )}
                 </div>
               </article>
             )}
@@ -195,6 +224,12 @@ export function CatalogProductControls() {
                     onCheckedChange={(value) => void visibility(value)}
                   />
                 </label>
+                <CatalogDescriptionEditor
+                  key={`description-${product.id}`}
+                  productId={product.id}
+                  onPreview={previewDescription}
+                  onEditing={descriptionEditing}
+                />
                 <ProductPhotos key={product.id} productId={product.id} />
                 {saving && <p role="status">{t("Saving…")}</p>}
               </fieldset>

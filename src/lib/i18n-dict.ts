@@ -1366,6 +1366,7 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Optional": {english:"Optional",hindi:"वैकल्पिक",hinglish:"Optional"},
   "Refund payment mode not recorded": {"english": "Refund payment mode not recorded", "hindi": "रिफंड का भुगतान माध्यम दर्ज नहीं है", "hinglish": "Refund ka payment mode record nahi hai"},
   "− Refund payouts (mode not recorded)": {"english": "− Refund payouts (mode not recorded)", "hindi": "− रिफंड भुगतान (माध्यम दर्ज नहीं है)", "hinglish": "− Refund payments (mode record nahi hai)"},
   "Refund payouts have no recorded payment mode. Net cash movement cannot be confirmed.": {"english": "Refund payouts have no recorded payment mode. Net cash movement cannot be confirmed.", "hindi": "रिफंड का भुगतान माध्यम दर्ज नहीं है। शुद्ध नकद बदलाव की पुष्टि नहीं हो सकती।", "hinglish": "Refund ka payment mode record nahi hai. Net cash movement confirm nahi kar sakte."},
@@ -1396,6 +1397,20 @@ export const EXTRA: Record<string, { english: string; hindi: string; hinglish: s
   "Purchase cost missing or zero on": {"english": "Purchase cost missing or zero on", "hindi": "इनमें खरीद लागत दर्ज नहीं है या शून्य है:", "hinglish": "Purchase cost missing ya zero hai:"},
   "sale/return records. Profit and margin are unavailable; sales totals remain valid.": {"english": "sale/return records. Profit and margin are unavailable; sales totals remain valid.", "hindi": "बिक्री/वापसी रिकॉर्ड। लाभ और मार्जिन उपलब्ध नहीं हैं; बिक्री के कुल सही हैं।", "hinglish": "sale/return records. Profit aur margin available nahi hain; sales totals sahi hain."},
   "Profit is unavailable when any sale or return has missing or zero historical purchase cost. Current product costs never overwrite old bills.": {"english": "Profit is unavailable when any sale or return has missing or zero historical purchase cost. Current product costs never overwrite old bills.", "hindi": "किसी बिक्री या वापसी की पुरानी खरीद लागत दर्ज नहीं होने या शून्य होने पर लाभ उपलब्ध नहीं है। वर्तमान लागत से पुराने बिल नहीं बदलते।", "hinglish": "Sale ya return ki purani purchase cost missing/zero ho toh profit available nahi hai. Current cost purane bills ko overwrite nahi karti."},
+  "Product description": {english:"Product description",hindi:"प्रोडक्ट का विवरण",hinglish:"Product ki description"},
+  "Product description editor": {english:"Product description editor",hindi:"प्रोडक्ट विवरण संपादक",hinglish:"Product description editor"},
+  "Add material, comfort, fit or care details. Leave blank to hide the description.": {english:"Add material, comfort, fit or care details. Leave blank to hide the description.",hindi:"मटेरियल, आराम, फिट या देखभाल की जानकारी लिखें। विवरण छिपाने के लिए खाली छोड़ें।",hinglish:"Material, comfort, fit ya care ki details likho. Description hide karne ke liye khali chhodo."},
+  "Loading description…": {english:"Loading description…",hindi:"विवरण लोड हो रहा है…",hinglish:"Description load ho rahi hai…"},
+  "Product descriptions need a database update before they can be saved.": {english:"Product descriptions need a database update before they can be saved.",hindi:"प्रोडक्ट विवरण सहेजने के लिए पहले डेटाबेस अपडेट ज़रूरी है।",hinglish:"Product description save karne se pehle database update chahiye."},
+  "Could not load the description. Retry before editing.": {english:"Could not load the description. Retry before editing.",hindi:"विवरण लोड नहीं हुआ। संपादन से पहले फिर कोशिश करें।",hinglish:"Description load nahi hui. Edit karne se pehle retry karo."},
+  "Describe this product for your customers…": {english:"Describe this product for your customers…",hindi:"ग्राहकों के लिए इस प्रोडक्ट का विवरण लिखें…",hinglish:"Customers ke liye is product ki description likho…"},
+  "Unsaved description changes": {english:"Unsaved description changes",hindi:"विवरण में बदलाव अभी सहेजे नहीं हैं",hinglish:"Description ke changes abhi save nahi hue"},
+  "Shown in the public catalog after saving.": {english:"Shown in the public catalog after saving.",hindi:"सहेजने के बाद सार्वजनिक कैटलॉग में दिखेगा।",hinglish:"Save karne ke baad public catalog mein dikhega."},
+  "Save description": {english:"Save description",hindi:"विवरण सहेजें",hinglish:"Description save karo"},
+  "Discard unsaved description changes?": {english:"Discard unsaved description changes?",hindi:"विवरण के बिना सहेजे बदलाव हटा दें?",hinglish:"Description ke unsaved changes hata dein?"},
+  "Product description saved": {english:"Product description saved",hindi:"प्रोडक्ट विवरण सहेज दिया गया",hinglish:"Product description save ho gayi"},
+  "Description save could not be confirmed.": {english:"Description save could not be confirmed.",hindi:"विवरण सहेजे जाने की पुष्टि नहीं हुई।",hinglish:"Description save confirm nahi hui."},
+  "Could not save description. Your changes are still here.": {english:"Could not save description. Your changes are still here.",hindi:"विवरण सहेजा नहीं गया। आपके बदलाव यहीं मौजूद हैं।",hinglish:"Description save nahi hui. Tumhare changes yahin hain."},
   "Choose a look, then preview or save your theme.": {english:"Choose a look, then preview or save your theme.",hindi:"एक रूप चुनें, फिर थीम का पूर्वावलोकन देखें या सहेजें।",hinglish:"Look chuno, phir theme preview dekho ya save karo."},
   "Preview selected theme": {english:"Preview selected theme",hindi:"चुनी हुई थीम का पूर्वावलोकन",hinglish:"Selected theme ka preview dekho"},
   "Edit product": {english:"Edit product",hindi:"प्रोडक्ट संपादित करें",hinglish:"Product edit karo"},
