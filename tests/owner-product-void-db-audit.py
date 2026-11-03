@@ -31,8 +31,12 @@ try:
  CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text,name text,metadata jsonb DEFAULT '{}',updated_at timestamptz DEFAULT now(),UNIQUE(bucket_id,name));
  ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated;
  CREATE PUBLICATION supabase_realtime;""")
+ import sys
+ split_sql='--split-sql' in sys.argv
  for path in sorted((root/'drizzle/migrations').glob('*.sql')):
-  sql(path.read_text())
+  if not split_sql or path.name<'0032_':sql(path.read_text())
+ if split_sql:
+  for part in sorted((root/'docs/sql/owner-update-parts').glob('part-*.sql')):sql(part.read_text())
 
 
  owner='00000000-0000-4000-8000-000000000001';staff='00000000-0000-4000-8000-000000000002';p='10000000-0000-4000-8000-000000000001';v='20000000-0000-4000-8000-000000000001';c='30000000-0000-4000-8000-000000000001'
@@ -113,7 +117,13 @@ try:
  snapshot=call('store_backup_snapshot_v2',{});call('reset_store_data_v2',{'confirmation':'RESET','fingerprint':snapshot['fingerprint']})
  params=json.dumps(snapshot).replace("'","''");as_role('authenticated',owner,"SELECT restore_store_backup_v2('RESTORE','"+params+"'::jsonb);")
  restored=call('store_backup_snapshot_v2',{});assert restored['tables']==snapshot['tables']
- for migration in ['0033_owner_variant_editor.sql','0034_void_incorrect_bills.sql']:sql((root/'drizzle/migrations'/migration).read_text())
- result={'result':'PASS','scope':'Real offline PostgreSQL17, all migrations; no production writes','checks':['owner size add, unused rename/remove, ledgered quantity adjustment','staff and stale size edits denied','new product metadata does not alter old bill names/sizes','owner confirmation and bill cancellation retry safety','stock/due/loyalty reversed exactly once','void sale/line/returns/cost hidden in all normal owner/staff reads','cancelled request cannot recover as a valid bill','owner-only cancelled bill history; hard-delete blocked','coupon redemption released and consumed voucher restored','later collection/prior return block cancellation atomically','new audit fields survive actual backup/reset/restore','0033 and 0034 reapply safely','online order and spent reward guards','legacy reward conflict fully rolls back cancellation','concurrent cancellation restores stock once','void audit notes and physical line count owner-only']}
+ before_reapply=call('store_backup_snapshot_v2',{})
+ if split_sql:
+  for part in sorted((root/'docs/sql/owner-update-parts').glob('part-*.sql')):sql(part.read_text())
+ else:
+  for migration in ['0033_owner_variant_editor.sql','0034_void_incorrect_bills.sql']:sql((root/'drizzle/migrations'/migration).read_text())
+ assert call('store_backup_snapshot_v2',{})==before_reapply,'reapplying SQL changed business rows'
+
+ result={'result':'PASS','splitSql':split_sql,'scope':'Real offline PostgreSQL17, all migrations; no production writes','checks':['owner size add, unused rename/remove, ledgered quantity adjustment','staff and stale size edits denied','new product metadata does not alter old bill names/sizes','owner confirmation and bill cancellation retry safety','stock/due/loyalty reversed exactly once','void sale/line/returns/cost hidden in all normal owner/staff reads','cancelled request cannot recover as a valid bill','owner-only cancelled bill history; hard-delete blocked','coupon redemption released and consumed voucher restored','later collection/prior return block cancellation atomically','new audit fields survive actual backup/reset/restore','0033 and 0034 reapply safely','online order and spent reward guards','legacy reward conflict fully rolls back cancellation','concurrent cancellation restores stock once','void audit notes and physical line count owner-only']}
  out=Path('/tmp/solestack-audit/owner-product-void');out.mkdir(parents=True,exist_ok=True);(out/'checks.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
 finally:run(['docker','rm','-f',container])

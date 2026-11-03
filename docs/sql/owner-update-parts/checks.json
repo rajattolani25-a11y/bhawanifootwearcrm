@@ -1,0 +1,23 @@
+{
+  "result": "PASS",
+  "splitSql": true,
+  "scope": "Real offline PostgreSQL17, all migrations; no production writes",
+  "checks": [
+    "owner size add, unused rename/remove, ledgered quantity adjustment",
+    "staff and stale size edits denied",
+    "new product metadata does not alter old bill names/sizes",
+    "owner confirmation and bill cancellation retry safety",
+    "stock/due/loyalty reversed exactly once",
+    "void sale/line/returns/cost hidden in all normal owner/staff reads",
+    "cancelled request cannot recover as a valid bill",
+    "owner-only cancelled bill history; hard-delete blocked",
+    "coupon redemption released and consumed voucher restored",
+    "later collection/prior return block cancellation atomically",
+    "new audit fields survive actual backup/reset/restore",
+    "0033 and 0034 reapply safely",
+    "online order and spent reward guards",
+    "legacy reward conflict fully rolls back cancellation",
+    "concurrent cancellation restores stock once",
+    "void audit notes and physical line count owner-only"
+  ]
+}
