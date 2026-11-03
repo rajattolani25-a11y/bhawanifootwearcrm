@@ -59,7 +59,7 @@ await page.route("**/*", async (route) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return route.fulfill({
       contentType: "application/javascript",
-      body: `export const getCatalogPhotos=async()=>({images:[],available:true});export const getCatalog=async()=>(${JSON.stringify(data)}); export const checkCoupon=async()=>null; export const createBooking=async()=>{throw Error('No order writes allowed')};export const trackOrder=async()=>null;`,
+      body: `export const getCatalog=async()=>(${JSON.stringify(data)}); export const checkCoupon=async()=>null; export const createBooking=async()=>{throw Error('No order writes allowed')};export const trackOrder=async()=>null;`,
     });
   if (u.pathname === "/catalog-ui.html")
     return route.fulfill({

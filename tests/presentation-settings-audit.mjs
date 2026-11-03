@@ -91,7 +91,7 @@ await p.route("**/*", async (r) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return r.fulfill({
       contentType: "application/javascript",
-      body: `export const getCatalogPhotos=async()=>({images:[],available:true});export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: missing ? undefined : { ...flags, theme: sharedTheme } })});export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('No orders in this fixture')};export const trackOrder=async()=>null;`,
+      body: `export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: missing ? undefined : { ...flags, theme: sharedTheme } })});export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('No orders in this fixture')};export const trackOrder=async()=>null;`,
     });
   if (u.pathname === "/presentation-catalog.html")
     return r.fulfill({

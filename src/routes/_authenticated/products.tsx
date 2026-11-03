@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Download, Images, Plus, Search, Upload } from "lucide-react";
+import { Download, ImagePlus, Plus, Search, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/modules";
-import { ProductPhotos } from "@/components/ProductPhotos";
-import { ProductLifecycle } from "@/components/ProductLifecycle";
+import { uploadProductImage } from "@/lib/product-images";
 import { downloadCsv, parseCsv, sizeSort, useStock } from "@/lib/stock";
 import { QuickAddProduct } from "@/components/QuickAddProduct";
 
@@ -71,12 +70,12 @@ function Products() {
             <div key={p.id} className="overflow-hidden rounded-lg border bg-card">
               <div className="relative h-32 bg-muted">
                 {p.image_src ? <img src={p.image_src} loading="lazy" decoding="async" alt={`${p.brand} ${p.article}`} className="h-full w-full object-contain p-2" /> : <div className="flex h-full items-center justify-center font-display text-3xl text-muted-foreground/30">{p.brand.slice(0, 1)}{p.article.slice(0, 1)}</div>}
-                <Button variant="outline" size="sm" className="absolute bottom-2 right-2 bg-card/95" onClick={() => setSelected(p.id)}><Images className="h-3.5 w-3.5" /> Photos</Button>
+                {isOwner && <label className="absolute bottom-2 right-2 inline-flex cursor-pointer items-center gap-1 rounded-md bg-card/95 px-2 py-1 text-xs font-semibold shadow-sm"><ImagePlus className="h-3.5 w-3.5" /> Photo<input type="file" accept="image/*" hidden onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const up = await uploadProductImage(p.id, file); toast.success(`Product photo saved (${Math.round(up.size / 1024)} KB)`); qc.invalidateQueries({ queryKey: ["stock-all"] }); } catch (err) { toast.error((err as Error).message); } e.target.value = ""; }} /></label>}
               </div>
               <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">{p.brand}{p.status !== "Active" && <span className="ml-2 text-muted-foreground">Archived</span>}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">{p.brand}</p>
                    <Button variant="link" className="h-auto p-0 text-left font-display text-lg font-semibold" onClick={() => setSelected(p.id)}>{p.article}</Button>
                   <p className="text-sm text-muted-foreground">{[p.category, p.color].filter(Boolean).join(" · ")}</p>
                 </div>
@@ -111,7 +110,7 @@ function Products() {
       </div>
 
       <QuickAddProduct open={adding} initialArticle={q} onClose={() => setAdding(false)} />
-      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{p.category} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><ProductPhotos key={p.id} productId={p.id} /><ProductLifecycle id={p.id} name={`${p.brand} ${p.article}`} archived={p.status !== "Active"} onDeleted={() => setSelected(null)} /><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
+      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{p.category} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
     </div>
   );
 }

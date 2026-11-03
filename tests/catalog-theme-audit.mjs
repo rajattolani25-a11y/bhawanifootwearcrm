@@ -64,7 +64,7 @@ await page.route("**/*", async (r) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return r.fulfill({
       contentType: "application/javascript",
-      body: `export const getCatalogPhotos=async()=>({images:[],available:true});export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: { gallery_enabled: true, category_accents: true, motion_enabled: true } })});export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('No demo orders')};export const trackOrder=async()=>null;`,
+      body: `export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: { gallery_enabled: true, category_accents: true, motion_enabled: true } })});export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('No demo orders')};export const trackOrder=async()=>null;`,
     });
   const fixture = {
     "/catalog-themes.html": "catalog-themes.html",

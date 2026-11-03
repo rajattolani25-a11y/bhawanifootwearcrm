@@ -1,0 +1,1 @@
+COMMENT ON SCHEMA public IS 'Pending journal entry 0025_safe_store_reset applied alongside this marker migration';

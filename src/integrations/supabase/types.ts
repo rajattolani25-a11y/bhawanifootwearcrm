@@ -14,19 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      // Optional maintenance API: runtime guards handle an unapplied migration 0025.
-      store_reset_state: {
-        Row: { id: number; installation_id: string; generation: string; reset_at: string | null }
-        Insert: { id?: number; installation_id?: string; generation?: string; reset_at?: string | null }
-        Update: { id?: number; installation_id?: string; generation?: string; reset_at?: string | null }
-        Relationships: []
-      }
-      store_file_cleanup: {
-        Row: { bucket: string; path: string; reason: string; created_at: string }
-        Insert: { bucket: string; path: string; reason: string; created_at?: string }
-        Update: { bucket?: string; path?: string; reason?: string; created_at?: string }
-        Relationships: []
-      }
       catalog_bookings: {
         Row: {
           address: string | null
@@ -1099,6 +1086,48 @@ export type Database = {
           },
         ]
       }
+      store_file_cleanup: {
+        Row: {
+          bucket: string
+          created_at: string
+          path: string
+          reason: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          path: string
+          reason: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          path?: string
+          reason?: string
+        }
+        Relationships: []
+      }
+      store_reset_state: {
+        Row: {
+          generation: string
+          id: number
+          installation_id: string
+          reset_at: string | null
+        }
+        Insert: {
+          generation?: string
+          id?: number
+          installation_id?: string
+          reset_at?: string | null
+        }
+        Update: {
+          generation?: string
+          id?: number
+          installation_id?: string
+          reset_at?: string | null
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           advance_percent: number
@@ -1296,13 +1325,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      public_catalog_photos: { Args: { _product_id: string }; Returns: string[] }
-      store_backup_snapshot_v2: { Args: Record<PropertyKey, never>; Returns: Json }
-      reset_store_data_v2: { Args: { _confirmation: string; _fingerprint: string; _preserve_identity?: boolean; _preserve_design?: boolean; _restart_numbers?: boolean; _preserve_operations?: boolean }; Returns: Json }
-      restore_store_backup_v2: { Args: { _confirmation: string; _snapshot: Json }; Returns: undefined }
-      stage_store_restore_files: { Args: { _assets: Json }; Returns: undefined }
-      ack_store_file_cleanup: { Args: { _bucket: string; _paths: string[] }; Returns: undefined }
-      transfer_store_ownership: { Args: { _email: string; _confirmation: string }; Returns: undefined }
+      ack_store_file_cleanup: {
+        Args: { _bucket: string; _paths: string[] }
+        Returns: undefined
+      }
       backup_sale_items: {
         Args: { _limit?: number; _offset?: number }
         Returns: Json[]
@@ -1385,6 +1411,12 @@ export type Database = {
       is_catalog_image: { Args: { _name: string }; Returns: boolean }
       is_member: { Args: { _user_id: string }; Returns: boolean }
       is_saved_hero_image: { Args: { _name: string }; Returns: boolean }
+      maintenance_business_tables: { Args: never; Returns: string[] }
+      maintenance_file_in_use: {
+        Args: { _bucket: string; _path: string }
+        Returns: boolean
+      }
+      maintenance_lock_store: { Args: never; Returns: undefined }
       process_return: {
         Args: {
           _damaged: boolean
@@ -1423,6 +1455,21 @@ export type Database = {
       }
       remove_team_access: { Args: { _user_id: string }; Returns: undefined }
       reset_store_data: { Args: { _confirmation: string }; Returns: undefined }
+      reset_store_data_v2: {
+        Args: {
+          _confirmation: string
+          _fingerprint: string
+          _preserve_design?: boolean
+          _preserve_identity?: boolean
+          _preserve_operations?: boolean
+          _restart_numbers?: boolean
+        }
+        Returns: Json
+      }
+      restore_store_backup_v2: {
+        Args: { _confirmation: string; _snapshot: Json }
+        Returns: undefined
+      }
       reward_amount: { Args: { _card: string; _m: number }; Returns: number }
       set_team_role: {
         Args: {
@@ -1431,10 +1478,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      stage_store_restore_files: { Args: { _assets: Json }; Returns: undefined }
+      store_backup_snapshot_v2: { Args: never; Returns: Json }
       store_usage: { Args: never; Returns: Json }
       track_catalog_order: {
         Args: { _booking_no: string; _mobile: string }
         Returns: Json
+      }
+      transfer_store_ownership: {
+        Args: { _confirmation: string; _email: string }
+        Returns: undefined
       }
       update_catalog_order_status: {
         Args: { _id: string; _status: string }

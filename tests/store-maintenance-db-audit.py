@@ -24,10 +24,7 @@ try:
  ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY; GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated;
  CREATE PUBLICATION supabase_realtime;
  """)
- for migration in sorted((root/'drizzle/migrations').glob('*.sql')):
-  # Public gallery has no dependency on optional maintenance support (0025).
-  if migration.name.startswith('0025_'):sql((root/'drizzle/migrations/0026_catalog_product_photos.sql').read_text())
-  sql(migration.read_text())
+ for p in sorted((root/'drizzle/migrations').glob('*.sql')):sql(p.read_text())
  owner='00000000-0000-4000-8000-000000000001';staff='00000000-0000-4000-8000-000000000002';pending='00000000-0000-4000-8000-000000000003';new='00000000-0000-4000-8000-000000000004'
  ctx=f"SET request.jwt.claim.sub='{owner}';"
  def check(condition,message):sql(f"DO $$ BEGIN IF NOT ({condition}) THEN RAISE EXCEPTION '{message}'; END IF; END $$;")
@@ -54,27 +51,6 @@ try:
  SELECT create_sale(jsonb_build_object('customer_id','{c}','payment_mode','Cash','paid_amount',999,'total',999),jsonb_build_array(jsonb_build_object('variant_id','{v}','qty',1,'price',999,'size','7')));
  INSERT INTO catalog_bookings(booking_no,variant_id,product_name,size,customer_name,mobile,price,advance,expires_at,sale_id) SELECT 'BK-DEMO','{v}','Demo Article','7','Demo','0000000000',999,100,now()+interval '1 day',id FROM sales LIMIT 1;
  """)
- # Product gallery access and deletion use the real schema and RLS, not backend stubs.
- sql(ctx+f"UPDATE products SET catalog_visible=true WHERE id='{p}';UPDATE store_settings SET catalog_enabled=true; INSERT INTO storage.objects(bucket_id,name) VALUES('product-images','{p}/side.webp'),('product-images','{p}/sole.webp');")
- check(f"public_catalog_photos('{p}')=ARRAY['products/demo.webp','{p}/side.webp','{p}/sole.webp']",'gallery cover/order mismatch')
- gallery_snapshot=json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())
- assert any(asset['bucket']=='product-images' and asset['path']==f'{p}/side.webp' for asset in gallery_snapshot['assets']),'gallery photos missing from backup manifest'
-
- sql("SET ROLE anon;"+f"SELECT public_catalog_photos('{p}');")
- sql(ctx+f"INSERT INTO storage.objects(bucket_id,name) SELECT 'product-images','{p}/extra-'||n||'.webp' FROM generate_series(1,10) n;")
- check(f"cardinality(public_catalog_photos('{p}'))=8 AND (public_catalog_photos('{p}'))[1]='products/demo.webp'",'gallery did not cap at 8 or lost cover')
- sql(f"DELETE FROM storage.objects WHERE name LIKE '{p}/extra-%';")
-
- check(f"is_catalog_image('{p}/sole.webp') AND NOT is_catalog_image('{p}/nested/private.webp') AND NOT is_catalog_image('unknown/sole.webp')",'gallery photo scope incorrect')
- sql(ctx+f"UPDATE products SET catalog_visible=false WHERE id='{p}';")
- check(f"cardinality(public_catalog_photos('{p}'))=0 AND NOT is_catalog_image('{p}/sole.webp')",'hidden product exposed gallery')
- sql(ctx+f"UPDATE products SET catalog_visible=true,status='inactive' WHERE id='{p}';")
- check(f"cardinality(public_catalog_photos('{p}'))=0 AND NOT is_catalog_image('{p}/sole.webp')",'archived product exposed gallery')
- sql(ctx+f"UPDATE products SET catalog_visible=false,status='Active' WHERE id='{p}';UPDATE store_settings SET catalog_enabled=false;DELETE FROM storage.objects WHERE name LIKE '{p}/%';")
- fail("SET ROLE authenticated;"+ctx+f"DELETE FROM products WHERE id='{p}';",'foreign key constraint')
- check(f"EXISTS(SELECT 1 FROM products WHERE id='{p}') AND EXISTS(SELECT 1 FROM product_variants WHERE id='{v}') AND EXISTS(SELECT 1 FROM sales)",'failed product deletion changed history')
- sql(f"SET ROLE authenticated;SET request.jwt.claim.sub='{staff}';DELETE FROM products WHERE id='{p}';")
- check(f"EXISTS(SELECT 1 FROM products WHERE id='{p}')",'staff deleted a product')
  # Populate every business table, not just sales/inventory, for an exact full round trip.
  sql(ctx+f"""INSERT INTO suppliers(name,opening_balance) VALUES('Demo Supplier',250);
  INSERT INTO purchases(supplier_id,variant_id,quantity,purchase_price,total,paid_amount) SELECT id,'{v}',2,500,1000,0 FROM suppliers;
@@ -158,5 +134,5 @@ try:
   queued.wait(timeout=5);err=queued.stderr.read()
   assert queued.returncode and 'Owner access required' in err,err
   check(f"EXISTS(SELECT 1 FROM user_roles WHERE user_id='{pending}' AND role='staff')",'queued old owner modified team after handover')
- print(json.dumps({'scope':'Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.','checks':['first signup owner / subsequent pending','staff, pending and anon blocked','old reset disabled','gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back','stale backup rejected','failed reset atomic','catalog orders cleared before sales/variants','owner preserved, other access revoked, Auth retained','identity/defaults and operational preference preservation; stale offers cleared','storage queue and verified acknowledgements','restore staging','missing photo blocked','corrupt restore rolls back with FK checks','exact full table restore including cost/history','nonempty restore blocked','hero/theme and numbering options','reset never opens public owner signup','atomic verified-email handover','last owner protection','queued role calls recheck ownership after handover'],'result':'PASS'},indent=2))
+ print(json.dumps({'scope':'Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.','checks':['first signup owner / subsequent pending','staff, pending and anon blocked','old reset disabled','stale backup rejected','failed reset atomic','catalog orders cleared before sales/variants','owner preserved, other access revoked, Auth retained','identity/defaults and operational preference preservation; stale offers cleared','storage queue and verified acknowledgements','restore staging','missing photo blocked','corrupt restore rolls back with FK checks','exact full table restore including cost/history','nonempty restore blocked','hero/theme and numbering options','reset never opens public owner signup','atomic verified-email handover','last owner protection','queued role calls recheck ownership after handover'],'result':'PASS'},indent=2))
 finally:run(['docker','rm','-f',name])

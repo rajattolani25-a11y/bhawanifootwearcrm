@@ -4,10 +4,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAll } from "@/lib/fetch-all";
-import { addSignedImages } from "@/lib/product-images";
+import { addSignedImages, uploadProductImage } from "@/lib/product-images";
 import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
-import { ProductPhotos } from "./ProductPhotos";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
@@ -71,6 +70,19 @@ export function CatalogProductControls() {
         throw Error("Product visibility save could not be confirmed.");
       await refresh();
       toast.success(t("Product visibility saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function photo(file?: File) {
+    if (!file || !product || saving || !isOwner) return;
+    setSaving(true);
+    try {
+      await uploadProductImage(product.id, file);
+      await refresh();
+      toast.success(t("Product photo saved"));
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -195,7 +207,23 @@ export function CatalogProductControls() {
                     onCheckedChange={(value) => void visibility(value)}
                   />
                 </label>
-                <ProductPhotos key={product.id} productId={product.id} />
+                <label className="block text-sm">
+                  {t("Cover photo")}
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="mt-2"
+                    onChange={(e) => {
+                      void photo(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "This cover photo is shared with Products and POS. Uploads use existing compression.",
+                  )}
+                </p>
                 {saving && <p role="status">{t("Saving…")}</p>}
               </fieldset>
             )}
