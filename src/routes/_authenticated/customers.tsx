@@ -1,3 +1,4 @@
+import { LOYALTY_MILESTONES, nextLoyaltyReward } from "@/lib/loyalty";
 import { watchVisibleQuery } from "@/lib/inventory-live";
 import { money, refundsBySale } from "@/lib/sales-returns";
 import { createFileRoute } from "@tanstack/react-router";
@@ -586,8 +587,7 @@ function Stat({ k, v }: { k: string; v: string }) {
 // Apple-Wallet style stamp card: Sapphire Blue (Regular), Matte Black & Gold (Premium)
 function StampCard({ kind, count }: { kind: "regular" | "premium"; count: number }) {
   const premium = kind === "premium";
-  const next = [5, 10, 20].find((m) => m > count) ?? 20;
-  const amounts = premium ? { 5: 200, 10: 500, 20: 1200 } : { 5: 100, 10: 250, 20: 600 };
+  const next = nextLoyaltyReward(kind, count);
   return (
     <div
       className="relative overflow-hidden rounded-2xl p-5 shadow-lg"
@@ -613,15 +613,19 @@ function StampCard({ kind, count }: { kind: "regular" | "premium"; count: number
               borderColor: "currentColor",
               background: i < count ? "currentColor" : "transparent",
               opacity: i < count ? 1 : 0.35,
-              outline: [4, 9, 19].includes(i) ? "2px solid currentColor" : undefined,
+              outline: LOYALTY_MILESTONES.some((value) => value === i + 1)
+                ? "2px solid currentColor"
+                : undefined,
               outlineOffset: 1,
             }}
           />
         ))}
       </div>
       <p className="mt-3 text-xs opacity-85">
-        Next: {next} stamps → {inr(amounts[next as 5 | 10 | 20])} off
+        <span>Next reward</span>: {next.milestone} <span>stamps</span> → {inr(next.amount)}{" "}
+        <span>off</span>
       </p>
+      <p className="mt-1 text-xs opacity-80">Fixed reward every 5 eligible visits</p>
     </div>
   );
 }

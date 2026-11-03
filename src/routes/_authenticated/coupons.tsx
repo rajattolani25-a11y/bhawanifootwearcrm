@@ -97,7 +97,7 @@ function Coupons() {
             <thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr><th className="p-2">Customer</th><th className="p-2">Card</th><th className="p-2">Milestone</th><th className="p-2">Status</th><th className="p-2">Valid till</th><th className="p-2 text-right">Amount</th></tr></thead>
             <tbody>{rewards.map((r) => <tr key={r.id} className="border-t"><td className="p-2">{r.customers?.name} <span className="text-xs text-muted-foreground">{r.customers?.mobile}</span></td><td className="p-2 capitalize">{r.card}</td><td className="p-2">{r.milestone} stamps</td><td className="p-2 capitalize">{r.status === "active" && new Date(r.expires_at).getTime() < now ? "expired" : r.status}</td><td className="p-2">{new Date(r.expires_at).toLocaleDateString("en-IN")}</td><td className="p-2 text-right font-semibold">{inr(r.amount)}</td></tr>)}</tbody>
           </table>
-          {!rewards.length && <p className="p-4 text-sm text-muted-foreground">Stamp milestones (5/10/20) par rewards yahan dikhenge.</p>}
+          {!rewards.length && <p className="p-4 text-sm text-muted-foreground">Rewards at 5/10/15/20 eligible visits will appear here.</p>}
         </div>
       )}
       {isOwner && <NewCoupon open={open} onClose={() => setOpen(false)} shopName={shopName} />}

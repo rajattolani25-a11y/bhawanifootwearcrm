@@ -48,7 +48,7 @@ export function beep(ok = true) {
   }
 }
 
-export const REGULAR_MILESTONES = [5, 10, 20];
+export const REGULAR_MILESTONES = [5, 10, 15, 20];
 
 export function waLink(mobile: string, text: string) {
   const m = mobile.replace(/\D/g, "");

@@ -218,6 +218,13 @@
       "when": 1793730315244,
       "tag": "0030_catalog_product_description",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793732377759,
+      "tag": "0031_fixed_loyalty_rewards",
+      "breakpoints": true
     }
   ]
 }

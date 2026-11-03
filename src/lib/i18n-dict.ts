@@ -1366,6 +1366,9 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Next reward": {"english": "Next reward", "hindi": "अगला इनाम", "hinglish": "Agla reward"},
+  "Fixed reward every 5 eligible visits": {"english": "Fixed reward every 5 eligible visits", "hindi": "हर 5 योग्य विज़िट पर तय इनाम", "hinglish": "Har 5 eligible visits par fixed reward"},
+  "Rewards at 5/10/15/20 eligible visits will appear here.": {"english": "Rewards at 5/10/15/20 eligible visits will appear here.", "hindi": "5/10/15/20 योग्य विज़िट पर मिले इनाम यहाँ दिखेंगे।", "hinglish": "5/10/15/20 eligible visits ke rewards yahan dikhenge."},
   "Get this pair": {"english": "Get this pair", "hindi": "यह जोड़ी चुनें", "hinglish": "Yeh pair lo"},
   "Select a size to continue": {"english": "Select a size to continue", "hindi": "आगे बढ़ने के लिए साइज़ चुनें", "hinglish": "Aage badhne ke liye size chuno"},
   "Out of stock": {"english": "Out of stock", "hindi": "स्टॉक में नहीं है", "hinglish": "Stock mein nahi hai"},
