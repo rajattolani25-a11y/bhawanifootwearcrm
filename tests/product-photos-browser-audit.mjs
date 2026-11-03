@@ -174,7 +174,7 @@ await p.route("**/*", async (r) => {
   return r.abort();
 });
 console.log("auth start");
-await p.goto("http://localhost:8080/auth");
+await p.goto("http://127.0.0.1:3000/auth");
 console.log("auth loaded");
 await p.waitForTimeout(1500);
 const token =
@@ -220,7 +220,7 @@ const photo = Buffer.from(
 const upload = (name) => ({ name, mimeType: "image/png", buffer: photo });
 try {
   console.log("products start");
-  await p.goto("http://localhost:8080/products");
+  await p.goto("http://127.0.0.1:3000/products");
   console.log("products loaded");
   await p.getByRole("button", { name: "Photos", exact: true }).click();
   const dialog = p.getByRole("dialog");
@@ -282,6 +282,8 @@ try {
   await inputs.nth(3).fill("999");
   await dialog.locator('input[type="file"]').setInputFiles([upload("one.png"), upload("two.png")]);
   await dialog.getByAltText("Selected photo 2", { exact: true }).waitFor();
+  await dialog.getByRole("button", { name: "Men", exact: true }).click();
+  await dialog.getByLabel("Subcategory (required)", { exact: true }).selectOption("Other");
   await dialog.getByRole("button", { name: "Save & add", exact: true }).click();
   await p.getByText("New Photo Pair", { exact: true }).first().waitFor();
   assert.equal(writes.filter((w) => w.type === "quick-add").length, 1);

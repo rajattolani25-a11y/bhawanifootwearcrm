@@ -1,3 +1,4 @@
+import { categoryLabel, heroCategoryValue } from "@/lib/product-categories";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import styles from "./catalog-hero-preview.module.css";
 
-const CATEGORIES = ["All", "Gents", "Ladies", "Boys", "Girls", "Kids"];
+const CATEGORIES = ["All", "Gents", "Ladies", "Boys", "Kids"];
 /** Mounted only inside owner Settings. Public visitors receive no editor code or settings query. */
 export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?: CatalogThemeId }) {
   const qc = useQueryClient();
@@ -546,11 +547,11 @@ export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?:
               <select
                 id="hero-category"
                 className={styles["select"]}
-                value={draft.category}
+                value={heroCategoryValue(draft.category)}
                 onChange={(e) => set("category", e.target.value)}
               >
                 {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
+                  <option key={c} value={c}>{categoryLabel(c)}</option>
                 ))}
               </select>
             </div>

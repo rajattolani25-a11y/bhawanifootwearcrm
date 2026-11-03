@@ -957,6 +957,11 @@ export type Database = {
       }
       sales: {
         Row: {
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
+          void_refund_mode: string | null
+          void_metadata: Json | null
           client_request_id: string | null
           request_hash: string | null
           request_result: Json | null
@@ -991,6 +996,11 @@ export type Database = {
           total: number
         }
         Insert: {
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+          void_refund_mode?: string | null
+          void_metadata?: Json | null
           client_request_id?: string | null
           request_hash?: string | null
           request_result?: Json | null
@@ -1025,6 +1035,11 @@ export type Database = {
           total?: number
         }
         Update: {
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+          void_refund_mode?: string | null
+          void_metadata?: Json | null
           client_request_id?: string | null
           request_hash?: string | null
           request_result?: Json | null
@@ -1361,6 +1376,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      stored_bill_line_count:{Args:never;Returns:number}
+      void_sale:{Args:{_sale_id:string;_confirmation:string;_reason:string;_payment_settled:boolean;_refund_mode?:string|null};Returns:Json}
+      list_void_sales:{Args:{_offset?:number;_limit?:number};Returns:Json}
+      edit_product_variant: {Args:{_product_id:string;_variant_id:string|null;_size:string;_stock:number;_expected_stock?:number|null;_remove?:boolean;_reason?:string};Returns:Json}
       retail_integrity_version: { Args: never; Returns: number }
       return_cost_reversals: { Args: { _ids: string[] }; Returns: { id: string; cost_reversal: number }[] }
       sale_return_positions: { Args: { _item: string }; Returns: { variant_id: string | null; size: string; qty: number }[] }

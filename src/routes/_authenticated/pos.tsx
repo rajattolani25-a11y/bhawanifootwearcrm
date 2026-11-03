@@ -1,3 +1,4 @@
+import { parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
 import { useAuth } from "@/hooks/use-auth";
 import { requireRetailIntegrity } from "@/lib/retail-integrity";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
@@ -111,15 +112,15 @@ function POS() {
 
   const { data: products = [], error: productsError, isPending: productsPending } = useStock({ activeOnly: true });
 
-  const cats = useMemo(() => ["All", ...new Set(products.map((p) => p.category).filter(Boolean))], [products]);
+  const cats = useMemo(() => ["All", ...new Set(products.map((p) => parseCategory(p.category).department).filter(Boolean))], [products]);
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand).filter(Boolean))], [products]);
   const list = useMemo(() => {
     const s = deferredSearch.toLowerCase().trim();
     return products.filter(
       (p) =>
-        (cat === "All" || p.category === cat) &&
+        (categoryMatches(p.category, cat)) &&
         (brand === "All" || p.brand === brand) &&
-        (!s || [p.brand, p.article, p.color, p.category].some((f) => f?.toLowerCase().includes(s)) || p.product_variants.some((v) => v.sku?.toLowerCase() === s || v.barcode === s)),
+        (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s)) || p.product_variants.some((v) => v.sku?.toLowerCase() === s || v.barcode === s)),
     );
   }, [products, deferredSearch, cat, brand]);
 

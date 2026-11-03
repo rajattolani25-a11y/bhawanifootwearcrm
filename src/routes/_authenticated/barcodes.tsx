@@ -1,3 +1,4 @@
+import { categoryLabel } from "@/lib/product-categories";
 import { LabelSelectionDock } from "@/components/LabelSelectionDock";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -65,7 +66,7 @@ function Barcodes() {
         if (!code) { const r = await supabase.rpc("ensure_variant_code", { _variant_id: v.id }); if (r.error) throw r.error; code = r.data; }
         if (!code) throw new Error("Could not assign a unique scan code");
         const qr = await QRCode.toDataURL(code, { margin: 0, width: 120, errorCorrectionLevel: "M" });
-        const meta = [p.category, p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
+        const meta = [categoryLabel(p.category), p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
         const mrp = Number(p.mrp) > Number(p.selling_price) ? `<s>MRP ${esc(rs(p.mrp))}</s>` : `<small>MRP INCL. OF ALL TAXES</small>`;
         const html = `<div class="label"><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
         for (let i = 0; i < n; i++) labels.push(html);

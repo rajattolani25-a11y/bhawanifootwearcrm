@@ -55,6 +55,7 @@ await page.route("**/*", async (r) => {
   }
   if (u.pathname.includes("/rpc/")) {
     const name = u.pathname.split("/").at(-1);
+    if (name === "stored_bill_line_count") { lineReads++; return r.fulfill({ json: lineCount }); }
     assert(["store_usage", "catalog_hero_storage_usage"].includes(name));
     const fail = name === "store_usage" ? failBase : failHero;
     if (fail)
@@ -68,7 +69,7 @@ await page.route("**/*", async (r) => {
   return r.abort();
 });
 try {
-  await page.goto("http://localhost:8080/storage-meter.html");
+  await page.goto("http://127.0.0.1:3000/storage-meter.html");
   const region = page.getByRole("region", { name: "Storage measurements" });
   await region.getByText("520.00 KB", { exact: true }).waitFor();
   assert.equal(await region.getByText("1.36 MB", { exact: true }).count(), 1);
@@ -81,7 +82,7 @@ try {
     .waitFor();
   assert.equal(
     await region
-      .getByText("Bills", { exact: true })
+      .getByText("Bill records", { exact: true })
       .locator("..")
       .getByText("0", { exact: true })
       .count(),

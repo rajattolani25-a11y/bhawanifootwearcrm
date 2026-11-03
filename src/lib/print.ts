@@ -115,7 +115,7 @@ export async function printBill(billNo: string, designArg?: PrintDesign, duplica
     ),
   ]);
   if (error || !s) {
-    throw new Error("Bill not found");
+    throw new Error("Bill not found or cancelled. Cancelled bills are available in owner history.");
   }
   const sale = s as unknown as Sale;
   const gstBill = sale.bill_type === "gst" && Number(sale.gst_rate) > 0;

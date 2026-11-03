@@ -1,3 +1,4 @@
+import { DEPARTMENTS, SUBCATEGORIES, categoryValue } from "@/lib/product-categories";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -42,15 +43,15 @@ const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i)
 
 /** Indian footwear size chart per category: all sizes + quick 1-tap sets. */
 type Chart = { all: string[]; sets: [string, string[], string][] };
-const SIZE_CHART: Record<"Gents" | "Ladies" | "Boys" | "Girls" | "Kids", Chart> = {
-  Gents: {
+const SIZE_CHART: Record<"Men" | "Women" | "Boys" | "Kids", Chart> = {
+  Men: {
     all: range(6, 12),
     sets: [
       ["6-10", range(6, 10), "Regular"],
       ["11-12", range(11, 12), "Bade size"],
     ],
   },
-  Ladies: {
+  Women: {
     all: range(5, 12),
     sets: [
       ["5-9", range(5, 9), "Regular"],
@@ -58,7 +59,6 @@ const SIZE_CHART: Record<"Gents" | "Ladies" | "Boys" | "Girls" | "Kids", Chart> 
     ],
   },
   Boys: { all: range(1, 5), sets: [["1-5", range(1, 5), "Full set"]] },
-  Girls: { all: range(1, 5), sets: [["1-5", range(1, 5), "Full set"]] },
   Kids: {
     all: range(1, 13),
     sets: [
@@ -88,7 +88,8 @@ export function QuickAddProduct({
   const [f, setF] = useState({
     brand: "",
     article: "",
-    category: "Gents",
+    category: "",
+    subcategory: "",
     color: "",
     mrp: "",
     selling_price: "",
@@ -115,12 +116,13 @@ export function QuickAddProduct({
   useEffect(() => {
     if (open) setF((x) => ({ ...x, article: initialArticle || x.article }));
   }, [open, initialArticle]);
-  const chart: Chart = SIZE_CHART[f.category as keyof typeof SIZE_CHART] ?? SIZE_CHART.Gents;
+  const chart: Chart = SIZE_CHART[f.category as keyof typeof SIZE_CHART] ?? SIZE_CHART.Men;
   const sizes = [...new Set([...picked, ...parseSizes(extraSizes)])].sort(sizeSort);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
   const pickCategory = (c: string) => {
-    setF({ ...f, category: c });
+    setF({ ...f, category: c, subcategory: "" });
+    setExtraSizes("");
     setPicked(SIZE_CHART[c as keyof typeof SIZE_CHART].sets[0]?.[1] ?? []);
   };
   const toggleSet = (list: string[]) =>
@@ -139,6 +141,8 @@ export function QuickAddProduct({
       toast.error("Article name likho");
       return;
     }
+    if (!f.category) { toast.error("Choose a product category"); return; }
+    if (SUBCATEGORIES[f.category] && !SUBCATEGORIES[f.category]!.includes(f.subcategory)) { toast.error("Choose a subcategory, or select Other"); return; }
     if (!(sp > 0)) {
       toast.error("Selling price likho");
       return;
@@ -158,7 +162,7 @@ export function QuickAddProduct({
         _product: {
           brand: f.brand.trim(),
           article: f.article.trim(),
-          category: f.category.trim(),
+          category: categoryValue(f.category, f.subcategory),
           color: f.color.trim(),
           mrp: Number(f.mrp) || sp,
           selling_price: sp,
@@ -198,6 +202,7 @@ export function QuickAddProduct({
         brand: f.brand,
         article: "",
         category: f.category,
+        subcategory: f.subcategory,
         color: "",
         mrp: "",
         selling_price: "",
@@ -255,8 +260,9 @@ export function QuickAddProduct({
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {Object.keys(SIZE_CHART).map((c) => (
+          <Label className="text-xs">Category (required)</Label>
+          <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Product category">
+            {DEPARTMENTS.map((c) => (
               <button
                 key={c}
                 type="button"
@@ -267,6 +273,7 @@ export function QuickAddProduct({
               </button>
             ))}
           </div>
+          {!!SUBCATEGORIES[f.category]?.length && <div className="space-y-1"><Label htmlFor="quick-add-subcategory" className="text-xs">Subcategory (required)</Label><select id="quick-add-subcategory" required value={f.subcategory} onChange={(e) => setF({ ...f, subcategory: e.target.value })} className="h-10 w-full rounded-md border bg-background px-2 text-sm"><option value="" disabled>Choose subcategory</option>{SUBCATEGORIES[f.category]!.map((c) => <option key={c}>{c}</option>)}</select></div>}
           <div className="space-y-1">
             <Label className="text-xs">Quick set</Label>
             <div className="flex gap-1.5">

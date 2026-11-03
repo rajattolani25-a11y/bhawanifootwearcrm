@@ -81,7 +81,7 @@ export function StorageMeter() {
   const counts: [string, number][] = [
     ["Products", data.products],
     ["Sizes", data.variants],
-    ["Bills", data.bills],
+    ["Bill records", data.bills],
     ["Customers", data.customers],
     ["Suppliers", data.suppliers],
     [photos.complete ? "Photos" : "Product photos", photos.count],

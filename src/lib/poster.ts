@@ -1,3 +1,4 @@
+import { categoryLabel } from "@/lib/product-categories";
 import type { Product } from "./stock";
 
 export const POSTER_THEMES = [
@@ -328,7 +329,7 @@ export async function drawPoster(
     if (visible.article) text(p.article, x, y + 75, 936, 65, color, bold, 800, align);
     if (visible.details)
       text(
-        [p.category, p.color].filter(Boolean).join(" / "),
+        [categoryLabel(p.category), p.color].filter(Boolean).join(" / "),
         x,
         y + 122,
         936,
@@ -445,7 +446,7 @@ export async function drawPoster(
     if (visible.article) text(p.article, 540, 1104, 868, 58, ink, bold, 800, "center");
     if (visible.details)
       text(
-        [p.category, p.color].filter(Boolean).join(" / "),
+        [categoryLabel(p.category), p.color].filter(Boolean).join(" / "),
         540,
         1150,
         868,

@@ -1,3 +1,7 @@
+import { ProductDetailsEditor } from "@/components/ProductDetailsEditor";
+import { ProductSizesEditor } from "@/components/ProductSizesEditor";
+import { categoryLabel } from "@/lib/product-categories";
+import { ProductCategoryEditor } from "@/components/ProductCategoryEditor";
 import { integrityError } from "@/lib/retail-integrity";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { createFileRoute } from "@tanstack/react-router";
@@ -44,7 +48,7 @@ function Products() {
     const s = deferredSearch.toLowerCase().trim();
     if (!s) return products;
     return products.filter((p) =>
-      [p.brand, p.article, p.category, p.color].some((f) => f?.toLowerCase().includes(s)) ||
+      [p.brand, p.article, p.category, categoryLabel(p.category), p.color].some((f) => f?.toLowerCase().includes(s)) ||
       p.product_variants.some((v) => v.barcode === s),
     );
   }, [products, deferredSearch]);
@@ -79,7 +83,7 @@ function Products() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-primary">{p.brand}{p.status !== "Active" && <span className="ml-2 text-muted-foreground">Archived</span>}</p>
                    <Button variant="link" className="h-auto p-0 text-left font-display text-lg font-semibold" onClick={() => setSelected(p.id)}>{p.article}</Button>
-                  <p className="text-sm text-muted-foreground">{[p.category, p.color].filter(Boolean).join(" · ")}</p>
+                  <p className="text-sm text-muted-foreground">{[categoryLabel(p.category), p.color].filter(Boolean).join(" · ")}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-display font-semibold">{inr(p.selling_price)}</p>
@@ -112,7 +116,7 @@ function Products() {
       </div>
 
       <QuickAddProduct open={adding} initialArticle={q} onClose={() => setAdding(false)} />
-      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{p.category} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><ProductPhotos key={p.id} productId={p.id} /><ProductLifecycle id={p.id} name={`${p.brand} ${p.article}`} archived={p.status !== "Active"} onDeleted={() => setSelected(null)} /><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
+      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{categoryLabel(p.category)} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><ProductDetailsEditor key={`${p.id}:${p.article}:${p.brand}`} id={p.id} article={p.article} brand={p.brand} /><ProductCategoryEditor key={`${p.id}:${p.category}`} id={p.id} category={p.category} /><ProductPhotos key={p.id} productId={p.id} /><ProductLifecycle id={p.id} name={`${p.brand} ${p.article}`} archived={p.status !== "Active"} onDeleted={() => setSelected(null)} /><ProductSizesEditor id={p.id} variants={p.product_variants} /><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
     </div>
   );
 }

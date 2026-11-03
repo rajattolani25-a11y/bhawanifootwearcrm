@@ -1,3 +1,5 @@
+import { catalogProductLink, catalogShareText } from "@/lib/catalog-share";
+import { DEPARTMENTS, SUBCATEGORIES, parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
 import { catalogPresentation } from "@/lib/catalog-presentation";
 import { catalogDescription } from "@/lib/catalog-description";
 import { CouponTicket } from "@/components/CouponTicket";
@@ -6,7 +8,7 @@ import { InterfaceMotion } from "@/components/motion/provider";
 import { BlurReveal } from "@/components/motion/blur-reveal";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { CatalogProductGallery } from "@/components/CatalogProductGallery";
@@ -33,7 +35,7 @@ export const Route = createFileRoute("/catalog")({
   component: () => <InterfaceMotion><LanguageProvider><Catalog /></LanguageProvider></InterfaceMotion>,
 });
 
-const FILTERS = ["All", "Gents", "Ladies", "Boys", "Girls", "Kids"] as const;
+const FILTERS = ["All", ...DEPARTMENTS] as const;
 const waNum = (p?: string | null) => { const m = (p ?? "").replace(/\D/g, ""); return m.length === 10 ? `91${m}` : m; };
 const waTo = (phone: string | null, text: string) => (phone ? `https://wa.me/${waNum(phone)}?text=${encodeURIComponent(text)}` : null);
 
@@ -81,14 +83,29 @@ export function CatalogView({ data }: { data: CatalogData }) {
   const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
+  const sharedProductHandled = useRef("");
+  const [sharedUnavailable, setSharedUnavailable] = useState(false);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("product");
+    if (!id || sharedProductHandled.current === id) return;
+    sharedProductHandled.current = id;
+    const found = products.find((p) => p.id === id);
+    if (found) setOpen(found); else setSharedUnavailable(true);
+  }, [products]);
+  const closeProduct = () => {
+    setOpen(null);
+    const link = new URL(window.location.href);
+    link.searchParams.delete("product"); link.searchParams.delete("size");
+    window.history.replaceState(window.history.state,"",link.toString());
+  };
   const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand))], [products]);
-  const types = useMemo(() => ["All", ...TYPE_RULES.map(([t]) => t).filter((t) => products.some((p) => p.ptype === t))], [products]);
-  const sizeList = useMemo(() => ["All", ...[...new Set(products.filter((p) => filter === "All" || p.category === filter).flatMap((p) => p.sizes.filter((s) => s.available).map((s) => s.size)))].sort((a, b) => (parseFloat(a) || 99) - (parseFloat(b) || 99) || a.localeCompare(b))], [products, filter]);
+  const types = useMemo(() => ["All", ...new Set(filter === "All" ? Object.values(SUBCATEGORIES).flat() : SUBCATEGORIES[filter] ?? TYPE_RULES.map(([t]) => t).filter((t) => products.some((p) => categoryMatches(p.category, filter) && p.ptype === t)))], [products, filter]);
+  const sizeList = useMemo(() => ["All", ...[...new Set(products.filter((p) => categoryMatches(p.category, filter)).flatMap((p) => p.sizes.filter((s) => s.available).map((s) => s.size)))].sort((a, b) => (parseFloat(a) || 99) - (parseFloat(b) || 99) || a.localeCompare(b))], [products, filter]);
   const list = useMemo(() => {
     const s = q.toLowerCase().trim();
-    return products.filter((p) => (filter === "All" || p.category === filter) && (brand === "All" || p.brand === brand) &&
-      (ptype === "All" || p.ptype === ptype) && (fsize === "All" || p.sizes.some((x) => x.size === fsize && x.available)) &&
-      (!s || [p.brand, p.article, p.color, p.category].some((f) => f?.toLowerCase().includes(s))));
+    return products.filter((p) => (categoryMatches(p.category, filter)) && (brand === "All" || p.brand === brand) &&
+      (ptype === "All" || (filter === "All" || SUBCATEGORIES[filter] ? parseCategory(p.category).subcategory === ptype : p.ptype === ptype)) && (fsize === "All" || p.sizes.some((x) => x.size === fsize && x.available)) &&
+      (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s))));
   }, [products, q, filter, brand, ptype, fsize]);
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
@@ -110,7 +127,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
       if (product) { setOpen(product); return; }
     }
     resetFilters();
-    if (hero.action === "category" && FILTERS.some((f) => f === hero.category)) setFilter(hero.category as (typeof FILTERS)[number]);
+    if (hero.action === "category") { const dept = parseCategory(hero.category).department; if (FILTERS.some((f) => f === dept)) setFilter(dept as (typeof FILTERS)[number]); }
     document.getElementById("catalog-collection")?.scrollIntoView({ block: "start" });
   };
   const introduction = <section className={styles["welcome"]}>
@@ -159,7 +176,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
             <button type="button" onClick={() => setPhoto(true)} aria-label="Ask about a photo" title={copy.photo}><Camera aria-hidden="true" /></button>
           </div>
           <nav className={styles["categories"]} aria-label={copy.categories}>
-            {FILTERS.map((f) => <button key={f} onClick={() => setFilter(f)} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
+            {FILTERS.map((f) => <button key={f} onClick={() => { setFilter(f); setPtype("All"); setFsize("All"); }} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
               {f === "All" && <ShoppingBag aria-hidden="true" />}<span>{f}</span>
             </button>)}
           </nav>
@@ -167,11 +184,12 @@ export function CatalogView({ data }: { data: CatalogData }) {
       </div>
       <PhotoSearch open={photo} onClose={() => setPhoto(false)} products={products} shopName={shop.name} lang={lang} waLink={(text) => waTo(shop.phone, text)} onPick={(p) => setOpen(p)} />
 
+      {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
         <div className={styles["collectionHeader"]}>
           <div><h2>Shop the collection</h2><p>{list.length} <span>designs</span></p></div>
           <div className={styles["filters"]}>
-            {([["Type", types, ptype, setPtype], ["Brand", brands, brand, setBrand], ["Size", sizeList, fsize, setFsize]] as [string, string[], string, (v: string) => void][]).filter(([, opts]) => opts.length > 1).map(([label, opts, val, setVal]) => (
+            {([[filter === "All" || SUBCATEGORIES[filter] ? "Subcategory" : "Type", types, ptype, setPtype], ["Brand", brands, brand, setBrand], ["Size", sizeList, fsize, setFsize]] as [string, string[], string, (v: string) => void][]).filter(([, opts]) => opts.length > 1).map(([label, opts, val, setVal]) => (
               <label key={label} className={styles["filter"]}>
                 <span>{label}</span>
                 <select aria-label={label} value={val} onChange={(e) => setVal(e.target.value)}>
@@ -229,7 +247,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
           <Button variant="secondary" className="h-12" onClick={() => { setHelp(false); setTrack(""); }}><Package className="h-4 w-4" /><span>Track order</span></Button>
         </DialogContent>
       </Dialog>
-      <ProductDialog key={open?.id ?? "none"} dark={dark} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
+      <ProductDialog key={open?.id ?? "none"} dark={dark} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={closeProduct} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
@@ -285,7 +303,7 @@ const TYPE_WORDS = ["sneaker", "running", "sports", "loafer", "sandal", "slipper
 function similarTo(p: CatalogProduct, all: CatalogProduct[]) {
   const words = TYPE_WORDS.filter((w) => p.article.toLowerCase().includes(w));
   return all
-    .filter((x) => x.id !== p.id && x.category === p.category && (!p.gender || !x.gender || x.gender === p.gender) && x.sizes.some((s) => s.available) && x.price >= p.price * 0.7 && x.price <= p.price * 1.3)
+    .filter((x) => x.id !== p.id && categoryMatches(x.category, parseCategory(p.category).department) && (!p.gender || !x.gender || x.gender === p.gender) && x.sizes.some((s) => s.available) && x.price >= p.price * 0.7 && x.price <= p.price * 1.3)
     .map((x) => ({ x, score: (words.some((w) => x.article.toLowerCase().includes(w)) ? 50 : 0) + (x.brand === p.brand ? 30 : 0) + (p.color && x.color === p.color ? 10 : 0) - Math.abs(x.price - p.price) / Math.max(p.price, 1) * 10 }))
     .sort((a, b) => b.score - a.score).slice(0, 4).map((r) => r.x);
 }
@@ -294,7 +312,12 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   const { lang, t } = useLang();
   const sizesRef = useRef<HTMLElement>(null);
   const [needsSize, setNeedsSize] = useState(false);
-  const [size, setSize] = useState<string | null>(null);
+  const [size, setSize] = useState<string | null>(() => {
+    if (!product || typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("product") !== product.id) return null;
+    return product.sizes.find((s) => s.available && s.size === params.get("size"))?.id ?? null;
+  });
   const [step, setStep] = useState<"view" | "method" | "form" | "done">("view");
   const [method, setMethod] = useState<Fulfillment>("pickup");
   const [name, setName] = useState("");
@@ -313,6 +336,9 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   if (!product) return null;
   const chosen = product.sizes.find((s) => s.id === size);
   const label = `${product.brand} ${product.article}`;
+  const shareUrl = typeof window === "undefined" ? "" : catalogProductLink(window.location.origin, product.id, chosen?.size);
+  const shareText = catalogShareText({ shop: shop.name, brand: product.brand, article: product.article, price: product.price, url: shareUrl, ...(chosen ? { size: chosen.size } : {}), language: lang });
+
   const wa = waTo(shop.phone, enquiryText(lang, shop.name, label, chosen?.size ?? ""));
   const canOrder = shop.booking || shop.local || shop.outside;
   const hasStock = product.sizes.some(s => s.available);
@@ -363,14 +389,14 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent data-product-theme={dark ? "dark" : "light"} className={`${styles["dialog"]} ${styles["productModal"]} ${step === "view" ? styles["productDialog"] : "max-h-[92vh] overflow-y-auto sm:max-w-lg"}`}>
-        <DialogHeader className={step === "view" ? styles["productHeader"] : undefined}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
+        <DialogHeader className={step === "view" ? styles["productHeader"] : undefined}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}{step === "view" && <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className={styles["productShare"]} aria-label={t("Share product on WhatsApp")} title={t("Share product on WhatsApp")}><Share2 aria-hidden="true" className="h-5 w-5" /></a>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
         {step === "view" && <div className={styles["productBody"]} role="region" aria-label={t("Product information")} tabIndex={0}>
           <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} imageClassName={styles["detailPhoto"] ?? ""} />
           <div className={styles["detailHeading"]}>
             <p className={styles["detailBrand"]} data-no-translate>{product.brand}</p>
             <h3 data-no-translate>{product.article}</h3>
           </div>
-          <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{product.category}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
+          <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{categoryLabel(product.category)}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
           <section ref={sizesRef} tabIndex={-1} className={styles["detailSizes"]} data-attention={needsSize && !chosen} aria-label={t("Choose size")}>
             <p className="mb-2 text-sm font-semibold">Choose size</p>
             <div className="flex flex-wrap gap-2">

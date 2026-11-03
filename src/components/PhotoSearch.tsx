@@ -1,3 +1,4 @@
+import { categoryMatches, parseCategory } from "@/lib/product-categories";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, ImagePlus, MessageCircle, RotateCcw } from "lucide-react";
 import type { CatalogProduct } from "@/lib/catalog.functions";
@@ -10,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
  * picks section + size, and opens WhatsApp to the store with a prefilled message; the photo is attached there.
  */
 type P = CatalogProduct & { ptype: string };
-const SECTIONS = ["Gents", "Ladies", "Kids"] as const;
+const SECTIONS = ["Men", "Women", "Kids"] as const;
 
 const TXT = {
   english: {
@@ -40,7 +41,7 @@ export function PhotoSearch({ open, onClose, products, shopName, waLink, lang }:
   const [size, setSize] = useState("");
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
-  const sizes = useMemo(() => [...new Set(products.filter((p) => !section || (section === "Kids" ? ["Kids", "Boys", "Girls"].includes(p.category) : p.category === section)).flatMap((p) => p.sizes.map((s) => s.size)))]
+  const sizes = useMemo(() => [...new Set(products.filter((p) => !section || (section === "Kids" ? ["Kids", "Boys"].includes(parseCategory(p.category).department) : categoryMatches(p.category, section))).flatMap((p) => p.sizes.map((s) => s.size)))]
     .sort((a, b) => (parseFloat(a) || 99) - (parseFloat(b) || 99)), [products, section]);
 
   const wa = waLink(t.msg(shopName, section, size));

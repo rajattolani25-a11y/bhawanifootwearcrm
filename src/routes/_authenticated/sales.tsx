@@ -1,3 +1,4 @@
+import { VoidSaleButton, VoidedBills } from "@/components/VoidBillControls";
 import type { Database } from "@/integrations/supabase/types";
 import { requireRetailIntegrity, integrityError } from "@/lib/retail-integrity";
 import { money, refundsBySale } from "@/lib/sales-returns";
@@ -145,6 +146,7 @@ function Sales() {
           />
         }
       />
+      <VoidedBills />
       {returnsError && (
         <p role="alert" className="mb-3 text-destructive">
           Return history could not be loaded. Please retry.
@@ -277,6 +279,7 @@ function Sales() {
                     >
                       <Undo2 className="h-3.5 w-3.5" />
                     </Button>
+                    <VoidSaleButton id={x.id} billNo={x.bill_no} total={x.total} />
                   </div>
                 </td>
               </tr>

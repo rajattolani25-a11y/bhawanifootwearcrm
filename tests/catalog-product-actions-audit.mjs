@@ -93,7 +93,7 @@ const dialog = () => page.getByRole("dialog");
 const footer = () => dialog().getByRole("contentinfo", { name: "Product actions", exact: true });
 const body = () => dialog().getByRole("region", { name: "Product information", exact: true });
 async function open() {
-  await page.goto("http://localhost:8080/catalog-actions.html");
+  await page.goto("http://127.0.0.1:3000/catalog-actions.html");
   await page.getByRole("button", { name: "LAKHANI FLYO Sports Shoe", exact: true }).click();
   await body().waitFor();
 }
@@ -103,7 +103,7 @@ const rect = (locator) =>
     return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
   });
 try {
-  await page.goto("http://localhost:8080/catalog-actions.html");
+  await page.goto("http://127.0.0.1:3000/catalog-actions.html");
   const card = page.getByRole("button", { name: "LAKHANI FLYO Sports Shoe", exact: true });
   await card.waitFor();
   assert(!(await card.innerText()).includes("Select your preferred size"));
@@ -213,7 +213,7 @@ try {
   );
   products[0].sizes[0].available = true;
   products[0].description = description;
-  await page.goto("http://localhost:8080/catalog-actions.html");
+  await page.goto("http://127.0.0.1:3000/catalog-actions.html");
   await page.getByRole("button", { name: "Switch theme", exact: true }).click();
   await page.getByRole("button", { name: "LAKHANI FLYO Sports Shoe", exact: true }).click();
   assert.equal(await dialog().getAttribute("data-product-theme"), "dark");

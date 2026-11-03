@@ -50,6 +50,12 @@ export function StorageEstimates({
     retry: false,
     staleTime: 60000,
     queryFn: async () => {
+      const stored=await supabase.rpc("stored_bill_line_count");
+      if (!stored.error) {
+        if (!Number.isSafeInteger(stored.data) || Number(stored.data)<0) throw Error("Bill item count unavailable");
+        return Number(stored.data);
+      }
+      if (stored.error.code!=="PGRST202") throw stored.error;
       const { count, error } = await supabase
         .from("sale_items")
         .select("id", { head: true, count: "exact" });

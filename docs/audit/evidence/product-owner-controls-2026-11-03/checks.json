@@ -1,0 +1,156 @@
+{
+  "database": {
+    "result": "PASS",
+    "scope": "Real offline PostgreSQL17, all migrations; no production writes",
+    "checks": [
+      "owner size add, unused rename/remove, ledgered quantity adjustment",
+      "staff and stale size edits denied",
+      "new product metadata does not alter old bill names/sizes",
+      "owner confirmation and bill cancellation retry safety",
+      "stock/due/loyalty reversed exactly once",
+      "void sale/line/returns/cost hidden in all normal owner/staff reads",
+      "cancelled request cannot recover as a valid bill",
+      "owner-only cancelled bill history; hard-delete blocked",
+      "coupon redemption released and consumed voucher restored",
+      "later collection/prior return block cancellation atomically",
+      "new audit fields survive actual backup/reset/restore",
+      "0033 and 0034 reapply safely",
+      "online order and spent reward guards",
+      "legacy reward conflict fully rolls back cancellation",
+      "concurrent cancellation restores stock once",
+      "void audit notes and physical line count owner-only"
+    ]
+  },
+  "browser": {
+    "result": "PASS",
+    "checks": [
+      "category required on new product",
+      "subcategory required for Men/Women",
+      "sixth Other saved with department",
+      "owner category edit and reload persistence",
+      "staff category edit hidden",
+      "legacy Ladies/Girls in Women and Gents in Men",
+      "six subcategories in dropdown for each adult department",
+      "filters reset when switching department",
+      "mobile owner and catalog layout",
+      "owner name, description and size editing",
+      "owner cancellation confirmation and separate audit history",
+      "professional WhatsApp share link and selected-size deep link",
+      "unavailable shared product falls back safely"
+    ],
+    "productionWrites": 0
+  },
+  "photos": {
+    "result": "PASS",
+    "scope": "Mocked HTTP/Storage, real UI and compression. No live writes.",
+    "checks": [
+      "multi upload",
+      "cover retention",
+      "failed replacement retains original",
+      "replace/delete cover",
+      "FK failure retains files",
+      "archive/restore",
+      "mobile overflow",
+      "quick add with two photos",
+      "delete unused product then files"
+    ],
+    "writes": 16
+  },
+  "storage": {
+    "result": "PASS",
+    "scope": "Mocked read-only RPCs; actual StorageMeter UI; no production requests",
+    "checks": [
+      "bytes/SI units",
+      "0 bills retains allocation",
+      "labelled planning ranges, editable limits survive reload, real bill-line count adapts",
+      "hero totals and failed refresh excludes old data",
+      "small files and actual zero hero",
+      "refresh/retry",
+      "malformed response fails closed",
+      "Hindi",
+      "320/390/768/1440px fit"
+    ]
+  },
+  "catalogDialog": {
+    "result": "PASS",
+    "scope": "Real UI; fixture product/price and mocked order. No live messages/payments/writes.",
+    "checks": [
+      "description only after product open",
+      "pinned header/footer across 5 viewport sizes",
+      "44px touch targets and no overlapping content",
+      "size-required focus prompt",
+      "sold-out sizes blocked",
+      "WhatsApp carries chosen size",
+      "pickup flow keeps chosen variant",
+      "delivery-only default works",
+      "owner ordering-off hides purchase button",
+      "blank description hidden",
+      "dark theme in product portal"
+    ],
+    "screenshots": "/workspace/review/catalog-product-actions",
+    "errors": [],
+    "liveWrites": 0
+  },
+  "financialPDF": {
+    "result": "PASS",
+    "scope": "Synthetic HTTP data, real screens; no live database access",
+    "checks": [
+      "2200 sale / 1400 cost = 800 profit",
+      "return via Sales History -> net zero / profit zero",
+      "Reports and Accounting net zero",
+      "CSV includes negative return transaction",
+      "customer lifetime spend excludes returns",
+      "missing cost does not show revenue as profit",
+      "accounting PDF carries missing-cost status",
+      "partial 1100 return -> net 1100 / profit 400",
+      "mobile dashboard overflow",
+      "bill reprint return summary in Thermal / A4 / Premium",
+      "downloaded A4 PDF is valid",
+      "khata return/refund rows in CSV and PDF",
+      "customer directory PDF uses net spend",
+      "WhatsApp return lines retain Hindi translation",
+      "old bill returned today yields negative current-period sales"
+    ],
+    "errors": [],
+    "liveWrites": 0
+  },
+  "maintenance": {
+    "scope": "Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.",
+    "checks": [
+      "first signup owner / subsequent pending",
+      "staff, pending and anon blocked",
+      "old reset disabled",
+      "0029 definition-only/idempotent; actual business allocation reclaimed; unknown FK RESTRICT rolls back; preserved hero version advances",
+      "gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back",
+      "stale backup rejected",
+      "failed reset atomic",
+      "catalog orders cleared before sales/variants",
+      "owner preserved, other access revoked, Auth retained",
+      "identity/defaults and operational preference preservation; stale offers cleared",
+      "storage queue and verified acknowledgements",
+      "restore staging",
+      "missing photo blocked",
+      "corrupt restore rolls back with FK checks",
+      "exact full table restore including cost/history",
+      "nonempty restore blocked",
+      "hero/theme and numbering options",
+      "reset never opens public owner signup",
+      "atomic verified-email handover",
+      "last owner protection",
+      "queued role calls recheck ownership after handover"
+    ],
+    "allocationReclaimedBytes": 3006464,
+    "safeupdateGuard": false,
+    "guardRegression": "not loaded",
+    "result": "PASS"
+  },
+  "productionWrites": 0,
+  "unitTests": {
+    "passed": 23,
+    "failed": 0
+  },
+  "typescript": "PASS",
+  "productionBuild": "PASS",
+  "lint": "No errors in changed components/helpers (existing mixed-style formatting rule disabled)",
+  "scope": "Real isolated PostgreSQL with all migrations; real browser UI with synthetic API/Storage. Production migration/deployment not performed."
+}

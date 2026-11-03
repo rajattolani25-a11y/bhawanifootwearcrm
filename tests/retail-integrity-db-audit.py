@@ -32,7 +32,7 @@ try:
  ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated;
  CREATE PUBLICATION supabase_realtime;""")
  for path in sorted((root/'drizzle/migrations').glob('*.sql')):
-  if not path.name.startswith('0032_'):sql(path.read_text())
+  if path.name<'0032_':sql(path.read_text())
 
  owner='00000000-0000-4000-8000-000000000001'; staff='00000000-0000-4000-8000-000000000002'; outsider='00000000-0000-4000-8000-000000000003'
  product='10000000-0000-4000-8000-000000000001'; old='20000000-0000-4000-8000-000000000001'; new='20000000-0000-4000-8000-000000000002'; customer='30000000-0000-4000-8000-000000000001'
@@ -179,7 +179,7 @@ try:
  assert failed.returncode!=0 and 'Unexpected create_sale definition' in failed.stderr
  check("has_column_privilege('authenticated','public.sale_returns','cost_reversal','SELECT')",'failed migration partially committed a privilege change')
  sql(billing_definition+";\nREVOKE SELECT(cost_reversal) ON public.sale_returns FROM authenticated;")
- result={'result':'PASS','scope':'Disposable offline PostgreSQL17; actual checked-in migrations and RPCs; no live writes','checks':['same and concurrent billing retry returns one bill','payload mismatch rejected','size swap atomic and no duplicate revenue/profit','return replacement size once; over-return blocked','staff operational access retained / cost column and owner RPC denied','CSV add/replace + preserved identifiers + scan codes','CSV preview read-only / bad row rolls everything back','CSV retries do not duplicate stock','full return removes one stamp and unspent fifth-visit reward','used reward flagged without automatic charge; legacy voucher preserved','three separate returns reconcile exact pennies and UPI method','damaged return increments damaged stock','repeat migration preserves backup fingerprint','20-stamp reversal and premium partial/full return rules','non-null integrity fields survive actual backup/reset/restore','stale CSV preview cannot overwrite concurrent stock changes','unknown billing definition fails with full transaction rollback']}
+ result={'result':'PASS','scope':'Disposable offline PostgreSQL17; checked-in migrations through 0032 and genuine RPCs; later features tested separately; no live writes','checks':['same and concurrent billing retry returns one bill','payload mismatch rejected','size swap atomic and no duplicate revenue/profit','return replacement size once; over-return blocked','staff operational access retained / cost column and owner RPC denied','CSV add/replace + preserved identifiers + scan codes','CSV preview read-only / bad row rolls everything back','CSV retries do not duplicate stock','full return removes one stamp and unspent fifth-visit reward','used reward flagged without automatic charge; legacy voucher preserved','three separate returns reconcile exact pennies and UPI method','damaged return increments damaged stock','repeat migration preserves backup fingerprint','20-stamp reversal and premium partial/full return rules','non-null integrity fields survive actual backup/reset/restore','stale CSV preview cannot overwrite concurrent stock changes','unknown billing definition fails with full transaction rollback']}
  out=Path('/tmp/solestack-audit/retail-integrity');out.mkdir(parents=True,exist_ok=True);(out/'checks.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
 finally:
  run(['docker','rm','-f',container])
