@@ -163,7 +163,15 @@ await page.route("**/*", async (route) => {
     empty = true;
     state = { ...state, generation: "generation-2", reset_at: "2026-11-02T00:00:00Z" };
     cleanup = [{ ...asset, reason: "reset" }];
-    return route.fulfill({ json: { state, pending_files: 1 } });
+    return route.fulfill({
+      json: {
+        state,
+        pending_files: 1,
+        database_bytes_before: 24000000,
+        database_bytes_after: 500000,
+        database_bytes_reclaimed: 23500000,
+      },
+    });
   }
   if (name === "ack_store_file_cleanup") {
     if (!fileExists) cleanup = [];
@@ -309,6 +317,8 @@ try {
   await page.getByRole("button", { name: "Permanently reset this store", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Photo cleanup pending" }).first().waitFor();
   assert.equal(resetCalls, 1);
+  await page.getByText("Last reset: database allocation", { exact: true }).waitFor();
+  await page.getByText("24.00 MB → 500.00 KB", { exact: true }).waitFor();
   assert.equal(
     await page
       .getByRole("button", { name: "Permanently reset this store", exact: true })
@@ -414,6 +424,7 @@ try {
           "saved file verified before reset",
           "correct reset policy sent, preserving billing and catalog operational preferences",
           "cleanup failure is explicit and retryable",
+          "server-measured reset allocation summary remains visible after cleanup failure",
           "no repeated reset after cleanup failure",
           "WHERE-guard error clears stale progress; failed RPC does not mutate fixture state",
           "drafts cleared; auth/theme/language retained",

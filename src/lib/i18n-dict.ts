@@ -1,5 +1,14 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Last reset: database allocation": {"hindi": "पिछला रीसेट: डेटाबेस की आवंटित जगह", "hinglish": "Pichla reset: database allocation"},
+"Reclaimed allocation:": {"hindi": "वापस खाली की गई जगह:", "hinglish": "Reclaim hui jagah:"},
+"Base tables, saved setup and maintenance records still use some space. Photo cleanup is reported separately.": {"hindi": "बुनियादी टेबल, सेव सेटअप और रखरखाव रिकॉर्ड कुछ जगह इस्तेमाल करते हैं। फोटो सफाई की स्थिति अलग दिखाई जाती है।", "hinglish": "Base tables, saved setup aur maintenance records kuch jagah use karte hain. Photo cleanup ka status alag dikhaya jata hai."},
+
+"Stored bills": {"hindi": "सेव किए हुए बिल", "hinglish": "Save hue bills"},
+"Space held by app tables, indexes and saved settings, including space PostgreSQL may reuse. This is not a measurement of active bill data.": {"hindi": "ऐप की टेबल, इंडेक्स और सेटिंग्स के लिए रखी जगह; इसमें दोबारा इस्तेमाल हो सकने वाली जगह भी शामिल है। यह केवल मौजूद बिलों का आकार नहीं है।", "hinglish": "App tables, indexes aur settings ke liye rakhi jagah; ismein dobara use ho sakne wali jagah bhi shamil hai. Yeh sirf abhi ke bills ka size nahi hai."},
+"No bills are stored. Database allocation can still stay the same after reset.": {"hindi": "कोई बिल सेव नहीं है। रीसेट के बाद भी डेटाबेस की आवंटित जगह उतनी रह सकती है।", "hinglish": "Koi bill save nahi hai. Reset ke baad bhi database ki allocated jagah utni reh sakti hai."},
+"New records may reuse existing allocation. Active data and reusable space are not measured separately here.": {"hindi": "नए रिकॉर्ड पहले से आवंटित जगह दोबारा इस्तेमाल कर सकते हैं। यहाँ मौजूदा डेटा और दोबारा इस्तेमाल होने वाली जगह अलग से नहीं मापी जाती।", "hinglish": "Naye records pehle se allocated jagah dobara use kar sakte hain. Yahan active data aur reusable jagah alag se measure nahi hoti."},
+
 "Estimated remaining capacity": {"hindi": "बची क्षमता का अनुमान", "hinglish": "Bachi capacity ka estimate"},
 "Assumed limits:": {"hindi": "मानी गई सीमाएँ:", "hinglish": "Maani gayi limits:"},
 "database": {"hindi": "डेटाबेस", "hinglish": "database"},

@@ -121,8 +121,21 @@ export function StorageMeter() {
             <span data-no-translate>{number(data.db_bytes)}</span> <span>bytes</span>
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Includes app tables, indexes, saved settings and allocated space that PostgreSQL can
-            reuse after deletion. Reset does not make this zero.
+            Space held by app tables, indexes and saved settings, including space PostgreSQL may
+            reuse. This is not a measurement of active bill data.
+          </p>
+          <div className="flex items-center justify-between gap-2 border-t pt-2 text-sm">
+            <span>Stored bills</span>
+            <strong data-no-translate>{number(data.bills)}</strong>
+          </div>
+          {data.bills === 0 && (
+            <p role="status" className="text-xs font-medium text-primary">
+              No bills are stored. Database allocation can still stay the same after reset.
+            </p>
+          )}
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            New records may reuse existing allocation. Active data and reusable space are not
+            measured separately here.
           </p>
         </div>
         <div className="space-y-1.5 rounded-lg border p-3" aria-label="Photo file storage">

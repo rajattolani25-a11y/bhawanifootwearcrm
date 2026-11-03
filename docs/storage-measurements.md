@@ -3,6 +3,7 @@
 The meter uses the existing owner-only `store_usage` and `catalog_hero_storage_usage` read RPCs. This change adds no migration, backend function, upload or data mutation.
 
 - **Database allocation** is the existing server sum of `pg_total_relation_size` for public tables. It includes their indexes, TOAST storage and allocated pages that can be reused after deletion. It is not the sum of active bills and does not need to become zero after reset. It does not measure Auth, Storage metadata or every other project schema.
+- The allocation card also shows the live **Stored bills** count and an explicit no-bills message at zero, so unchanged allocation after reset is not mistaken for retained sales. Current readings do not separate active data/reusable MB; the interface says so rather than displaying an invented free-space figure.
 - **Photo files** sums the existing product and hero bucket metadata byte counts exactly once. Extra angles and files awaiting cleanup count while their objects remain. Hero read failures do not reuse a stale hero total or report unknown usage as zero: the meter explicitly shows product files only.
 - Sizes use decimal SI units (1 MB = 1,000,000 bytes), two display decimals and an exact byte count alongside. Small files remain visible in B/KB. Counts come directly from the RPC, never from a guessed record size.
 - Actual hosting-plan limits are not available from these RPCs. The Cloud dashboard remains the source for complete project usage and remaining quota; the meter does not declare Safe/full or verified free space.

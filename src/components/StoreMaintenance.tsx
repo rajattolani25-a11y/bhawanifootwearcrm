@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { readBackupFile, type StoreBackup } from "@/lib/store-backup-format";
+import { storageBytes } from "@/lib/storage-usage";
 import {
   cleanupStoreFiles,
   createStoreBackup,
@@ -22,6 +23,11 @@ export function StoreMaintenance() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [issue, setIssue] = useState("");
+  const [resetAllocation, setResetAllocation] = useState<{
+    before: number;
+    after: number;
+    reclaimed: number;
+  } | null>(null);
   const [downloadChecksum, setDownloadChecksum] = useState("");
   const [verified, setVerified] = useState<StoreBackup | null>(null);
   const [restore, setRestore] = useState<StoreBackup | null>(null);
@@ -93,8 +99,9 @@ export function StoreMaintenance() {
   }
   async function reset() {
     if (!verified || confirmation !== "RESET") return;
+    setResetAllocation(null);
     setStatus("Resetting business data in one database transaction…");
-    const { error } = await supabase.rpc("reset_store_data_v2", {
+    const { data: result, error } = await supabase.rpc("reset_store_data_v2", {
       _confirmation: confirmation,
       _fingerprint: verified.snapshot.fingerprint,
       _preserve_identity: keepIdentity,
@@ -103,6 +110,19 @@ export function StoreMaintenance() {
       _preserve_operations: keepOperations,
     });
     if (error) throw maintenanceError(error);
+    if (result && typeof result === "object" && !Array.isArray(result)) {
+      const before = result["database_bytes_before"],
+        after = result["database_bytes_after"],
+        reclaimed = result["database_bytes_reclaimed"];
+      if (
+        typeof before === "number" &&
+        typeof after === "number" &&
+        typeof reclaimed === "number" &&
+        [before, after, reclaimed].every((n) => Number.isSafeInteger(n) && n >= 0) &&
+        reclaimed === Math.max(0, before - after)
+      )
+        setResetAllocation({ before, after, reclaimed });
+    }
     setVerified(null);
     setDownloadChecksum("");
     setConfirmation("");
@@ -192,6 +212,22 @@ export function StoreMaintenance() {
           {busy ? "Working… " : ""}
           {status}
         </p>
+      )}
+      {resetAllocation && (
+        <div role="status" className="space-y-1 rounded-lg border p-3 text-sm">
+          <p className="font-semibold">Last reset: database allocation</p>
+          <p data-no-translate>
+            {storageBytes(resetAllocation.before)} → {storageBytes(resetAllocation.after)}
+          </p>
+          <p>
+            <span>Reclaimed allocation:</span>{" "}
+            <b data-no-translate>{storageBytes(resetAllocation.reclaimed)}</b>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Base tables, saved setup and maintenance records still use some space. Photo cleanup is
+            reported separately.
+          </p>
+        </div>
       )}
       {issue && (
         <p role="alert" className="text-sm text-destructive">

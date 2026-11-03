@@ -74,6 +74,11 @@ try {
   assert.equal(await region.getByText("1.36 MB", { exact: true }).count(), 1);
   assert.equal(await region.getByText("13,62,944", { exact: true }).count(), 1);
   assert.equal(await region.getByText("Product & hero photos", { exact: true }).count(), 1);
+  await region
+    .getByText("No bills are stored. Database allocation can still stay the same after reset.", {
+      exact: true,
+    })
+    .waitFor();
   assert.equal(
     await region
       .getByText("Bills", { exact: true })
@@ -96,6 +101,14 @@ try {
   product = { ...product, bills: 4 };
   await region.getByRole("button", { name: "Refresh storage usage" }).click();
   await estimates.getByText("Based on your average:", { exact: true }).waitFor();
+  assert.equal(
+    await region
+      .getByText("No bills are stored. Database allocation can still stay the same after reset.", {
+        exact: true,
+      })
+      .count(),
+    0,
+  );
   assert(lineReads > 0);
   assert.equal(await estimates.getByText("3", { exact: true }).count(), 1);
   lineCount = 32;

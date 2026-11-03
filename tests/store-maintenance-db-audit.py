@@ -33,6 +33,7 @@ try:
  for migration in sorted((root/'drizzle/migrations').glob('*.sql')):
   # Public gallery has no dependency on optional maintenance support (0025).
   if migration.name.startswith('0025_'):sql((root/'drizzle/migrations/0027_catalog_product_photos.sql').read_text())
+  if migration.name.startswith("0029_"):continue
   if guard_binary and migration.name.startswith("0028_"):continue
   sql(migration.read_text())
  owner='00000000-0000-4000-8000-000000000001';staff='00000000-0000-4000-8000-000000000002';pending='00000000-0000-4000-8000-000000000003';new='00000000-0000-4000-8000-000000000004'
@@ -96,6 +97,8 @@ try:
  INSERT INTO catalog_bookings(booking_no,variant_id,product_name,size,customer_name,mobile,price,advance,expires_at) VALUES('BK-UNBILLED','{v}','Demo Article','7','Demo','0000000000',999,100,now()+interval '1 day');
  UPDATE customers SET opening_balance=500 WHERE id='{c}';
  """)
+ # Make a real business table allocate >2 MB so reclaim is measurable.
+ sql("INSERT INTO expenses(amount,note) SELECT 1,repeat(md5(i::text),32) FROM generate_series(1,2000) i;")
  # Storage RLS rejects deleting a photo used by an existing product.
  sql("SET ROLE authenticated;"+ctx+"DELETE FROM storage.objects WHERE bucket_id='product-images';")
  check("EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='product-images')",'referenced photo could be removed')
@@ -112,6 +115,19 @@ try:
   sql(patch);sql(patch)
   assert sql("SELECT proowner::text,proacl::text,prosecdef,proconfig::text FROM pg_proc WHERE oid='public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure;").stdout==privileges,'patch changed ownership/grants/security'
   assert json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())==before,'applying patch mutated business data'
+ # Installing the allocation-reclaim definition must not itself reset the shop.
+ before_reclaim_patch=json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())
+ privileges_before_reclaim=sql("SELECT proowner::text,proacl::text,prosecdef,proconfig::text FROM pg_proc WHERE oid='public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure;").stdout
+ reclaim_patch=(root/'drizzle/migrations/0029_reset_reclaim_allocation.sql').read_text()
+ sql(reclaim_patch);sql(reclaim_patch)
+ assert json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())==before_reclaim_patch,'reclaim migration changed business records'
+ assert sql("SELECT proowner::text,proacl::text,prosecdef,proconfig::text FROM pg_proc WHERE oid='public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure;").stdout==privileges_before_reclaim,'reclaim migration changed owner/grants/security'
+ # RESTRICT must reject future/unlisted referencing tables, without touching data.
+ sql(f"CREATE TABLE public.future_reference(product_id uuid REFERENCES public.products(id));INSERT INTO public.future_reference VALUES('{p}');")
+ before_fk_guard=json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())
+ fail(ctx+f"SELECT reset_store_data_v2('RESET','{before_fk_guard['fingerprint']}');",'cannot truncate a table referenced in a foreign key constraint')
+ assert json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())==before_fk_guard,'FK RESTRICT did not roll back'
+ sql('DROP TABLE public.future_reference;')
  snap=json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip());fp=snap['fingerprint'];assert all(snap['tables'][t] for t in snap['tables']), 'fixture must exercise every backed-up table';snapshot=json.dumps(snap).replace("'","''")
  fail(ctx+"SELECT reset_store_data_v2('RESET','stale');",'Store changed since backup')
  check('(SELECT count(*)=2 FROM catalog_bookings)','stale backup changed data')
@@ -122,6 +138,8 @@ try:
  sql('DROP TRIGGER reset_failure ON store_settings;')
  result=json.loads(sql("SET ROLE authenticated;"+ctx+f"SELECT reset_store_data_v2('RESET','{fp}',true,false,false,false);").stdout.strip())
  check("(SELECT count(*)=0 FROM products) AND (SELECT count(*)=0 FROM sales) AND (SELECT count(*)=0 FROM catalog_bookings)",'business deletion incomplete')
+ assert result['database_bytes_before']-result['database_bytes_after']>1_000_000,'old business allocation was not reclaimed'
+ assert result['database_bytes_reclaimed']==result['database_bytes_before']-result['database_bytes_after'],'reported reclaim does not match physical sizes'
  check(f"(SELECT count(*)=1 FROM user_roles) AND (SELECT role='owner' FROM user_roles WHERE user_id='{owner}') AND (SELECT count(*)=3 FROM auth.users)",'owner/auth preservation failed')
  check("(SELECT business_name='Keep Shop' AND daily_target=15000 AND bill_design='Thermal' AND upi_id='demo@upi' FROM store_settings) AND (SELECT NOT enabled AND image_path IS NULL FROM catalog_hero_settings) AND (SELECT theme='studio' AND motion_enabled FROM catalog_presentation_settings)",'defaults or identity incorrect')
  check('(SELECT count(*)=2 FROM store_file_cleanup) AND (SELECT count(*)=2 FROM storage.objects)','SQL must queue files without deleting storage metadata')
@@ -145,6 +163,7 @@ try:
  fail(ctx+f"SELECT restore_store_backup_v2('RESTORE','{snapshot}');",'empty store')
  # Reset with explicit design preservation; product pointer is cleared, hero file excluded.
  fp=actual['fingerprint'];sql(ctx+f"SELECT reset_store_data_v2('RESET','{fp}',false,true,true);")
+ check("(SELECT updated_at>('"+actual['tables']['catalog_hero_settings'][0]['updated_at']+"')::timestamptz FROM catalog_hero_settings)",'preserved hero version did not advance')
  check("(SELECT theme='midnight' FROM catalog_presentation_settings) AND (SELECT enabled AND product_id IS NULL FROM catalog_hero_settings) AND (SELECT count(*)=1 FROM store_file_cleanup)",'preserve hero/theme or photo exclusion failed')
  check("(SELECT business_name='BHAWANI FOOTWEAR' FROM store_settings) AND (SELECT last_value=1 AND NOT is_called FROM bill_seq)",'reset identity/counter option failed')
  check("(SELECT bill_design='A4' AND daily_target=12345 AND delivery_enabled AND local_charge=75 AND advance_percent=30 AND NOT offer_enabled AND offer_title IS NULL AND offer_coupon IS NULL FROM store_settings)",'necessary operations not preserved or stale offers retained')
@@ -178,5 +197,5 @@ try:
   queued.wait(timeout=5);err=queued.stderr.read()
   assert queued.returncode and 'Owner access required' in err,err
   check(f"EXISTS(SELECT 1 FROM user_roles WHERE user_id='{pending}' AND role='staff')",'queued old owner modified team after handover')
- print(json.dumps({'scope':'Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.','checks':['first signup owner / subsequent pending','staff, pending and anon blocked','old reset disabled','gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back','stale backup rejected','failed reset atomic','catalog orders cleared before sales/variants','owner preserved, other access revoked, Auth retained','identity/defaults and operational preference preservation; stale offers cleared','storage queue and verified acknowledgements','restore staging','missing photo blocked','corrupt restore rolls back with FK checks','exact full table restore including cost/history','nonempty restore blocked','hero/theme and numbering options','reset never opens public owner signup','atomic verified-email handover','last owner protection','queued role calls recheck ownership after handover'],'safeupdateGuard':bool(guard_binary),'guardRegression':'original 0025 fails/rolls back; 0028 applies twice without data/grant changes; reset and restore remain guarded' if guard_binary else 'not loaded','result':'PASS'},indent=2))
+ print(json.dumps({'scope':'Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.','checks':['first signup owner / subsequent pending','staff, pending and anon blocked','old reset disabled','0029 definition-only/idempotent; actual business allocation reclaimed; unknown FK RESTRICT rolls back; preserved hero version advances','gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back','stale backup rejected','failed reset atomic','catalog orders cleared before sales/variants','owner preserved, other access revoked, Auth retained','identity/defaults and operational preference preservation; stale offers cleared','storage queue and verified acknowledgements','restore staging','missing photo blocked','corrupt restore rolls back with FK checks','exact full table restore including cost/history','nonempty restore blocked','hero/theme and numbering options','reset never opens public owner signup','atomic verified-email handover','last owner protection','queued role calls recheck ownership after handover'],'allocationReclaimedBytes':result['database_bytes_reclaimed'],'safeupdateGuard':bool(guard_binary),'guardRegression':'original 0025 fails/rolls back; 0028 applies twice without data/grant changes; reset and restore remain guarded' if guard_binary else 'not loaded','result':'PASS'},indent=2))
 finally:run(['docker','rm','-f',name])
