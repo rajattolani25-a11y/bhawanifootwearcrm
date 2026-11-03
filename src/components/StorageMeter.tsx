@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HardDrive, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,11 +9,13 @@ import {
   type PhotoUsage,
 } from "@/lib/storage-usage";
 import { Button } from "@/components/ui/button";
+import { StorageEstimates } from "./StorageEstimates";
 
 const number = (value: number) => value.toLocaleString("en-IN");
 
-/** Server measurements, not inferred hosting quotas or fixed per-bill estimates. */
+/** Server measurements remain distinct from explicitly assumed planning estimates. */
 export function StorageMeter() {
+  const queryClient = useQueryClient();
   const hero = useQuery({
     queryKey: ["hero-storage-usage"],
     retry: false,
@@ -34,7 +36,14 @@ export function StorageMeter() {
   });
   const refreshing = usage.isFetching || hero.isFetching;
   const refresh = () => {
-    void Promise.all([usage.refetch(), hero.refetch()]);
+    void Promise.all([
+      usage.refetch(),
+      hero.refetch(),
+      queryClient.refetchQueries({
+        queryKey: ["storage-bill-line-count"],
+        type: "active",
+      }),
+    ]);
   };
   if (usage.isPending)
     return (
@@ -149,6 +158,13 @@ export function StorageMeter() {
           </div>
         ))}
       </div>
+      <StorageEstimates
+        databaseBytes={data.db_bytes}
+        bills={data.bills}
+        photoBytes={photos.bytes}
+        photos={photos.count}
+        photosComplete={photos.complete}
+      />
       <p className="text-xs leading-relaxed text-muted-foreground">
         Hosting plan limits are not provided by these readings. Check your Cloud dashboard for total
         project usage and remaining quota.
