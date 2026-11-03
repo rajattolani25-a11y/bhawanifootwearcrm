@@ -1,5 +1,18 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Refresh": {"hindi": "ताज़ा करें", "hinglish": "Refresh karo"},
+"Database allocation": {"hindi": "डेटाबेस के लिए आवंटित जगह", "hinglish": "Database ki allocated jagah"},
+"Measured shop database allocation and photo file sizes.": {"hindi": "दुकान के डेटाबेस की आवंटित जगह और फोटो फ़ाइलों का मापा गया आकार।", "hinglish": "Dukaan ke database ki allocated jagah aur photo files ka measured size."},
+"Includes app tables, indexes, saved settings and allocated space that PostgreSQL can reuse after deletion. Reset does not make this zero.": {"hindi": "इसमें ऐप की टेबल, इंडेक्स, सेव सेटिंग्स और हटाने के बाद दोबारा इस्तेमाल होने वाली जगह शामिल है। रीसेट से यह शून्य नहीं होती।", "hinglish": "Ismein app tables, indexes, saved settings aur delete ke baad dobara use hone wali jagah shamil hai. Reset se yeh zero nahi hoti."},
+"Includes uploaded files, including extra product angles and files awaiting cleanup.": {"hindi": "इसमें अपलोड की गई फ़ाइलें, प्रोडक्ट की अतिरिक्त तस्वीरें और सफाई के लिए बाकी फ़ाइलें शामिल हैं।", "hinglish": "Ismein uploaded files, product ke extra angles aur cleanup ke liye baaki files shamil hain."},
+"Hero photo size is loading. Showing product photos only.": {"hindi": "हीरो फोटो का आकार लोड हो रहा है। अभी केवल प्रोडक्ट की तस्वीरें दिखाई जा रही हैं।", "hinglish": "Hero photo ka size load ho raha hai. Abhi sirf product photos dikh rahi hain."},
+"Hero photo size is unavailable. Showing product photos only; refresh to retry.": {"hindi": "हीरो फोटो का आकार उपलब्ध नहीं है। अभी केवल प्रोडक्ट की तस्वीरें दिख रही हैं; दोबारा जाँचने के लिए रिफ्रेश करें।", "hinglish": "Hero photo ka size nahi mil raha. Abhi sirf product photos dikh rahi hain; dobara check karne ke liye Refresh karo."},
+"Hosting plan limits are not provided by these readings. Check your Cloud dashboard for total project usage and remaining quota.": {"hindi": "इन आँकड़ों में होस्टिंग प्लान की सीमा उपलब्ध नहीं है। पूरे प्रोजेक्ट के इस्तेमाल और बची सीमा के लिए Cloud dashboard देखें।", "hinglish": "In readings mein hosting plan ki limit nahi milti. Poore project ka usage aur bachi limit Cloud dashboard par dekhein."},
+"Last checked:": {"hindi": "आखिरी जाँच:", "hinglish": "Aakhri check:"},
+"Product & hero photos": {"hindi": "प्रोडक्ट और हीरो की तस्वीरें", "hinglish": "Product aur hero photos"},
+"Refreshing…": {"hindi": "फिर जाँच रहे हैं…", "hinglish": "Dobara check ho raha hai…"},
+"bytes": {"hindi": "बाइट", "hinglish": "bytes"},
+
 "Background motion": {"hindi": "बैकग्राउंड मोशन", "hinglish": "Background motion"},
 "Includes Liquid Ivory background motion, gallery and category transitions. Turn OFF for a still catalog. Reduced-motion preferences take priority.": {"hindi": "Liquid Ivory बैकग्राउंड, गैलरी और श्रेणी के बदलाव की एनिमेशन चालू करें। स्थिर कैटलॉग के लिए बंद करें। डिवाइस की कम मोशन पसंद को प्राथमिकता मिलेगी।", "hinglish": "Liquid Ivory background, gallery aur category transitions chalu karein. Static catalog ke liye OFF karein. Device ki reduced-motion preference pehle aayegi."},
 "Choose Warm Ivory above for the cream Liquid Ivory background. For background-only ON/OFF, use Background motion under Design & hero.": {"hindi": "क्रीम Liquid Ivory बैकग्राउंड के लिए ऊपर Warm Ivory चुनें। केवल बैकग्राउंड चालू/बंद करने के लिए Design & hero में Background motion इस्तेमाल करें।", "hinglish": "Cream Liquid Ivory background ke liye upar Warm Ivory chunein. Sirf background ON/OFF karne ke liye Design & hero mein Background motion use karein."},
