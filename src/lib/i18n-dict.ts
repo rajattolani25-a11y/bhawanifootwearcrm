@@ -1,5 +1,23 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Photos": {"hindi": "तस्वीरें", "hinglish": "Photos"},
+"Add photos": {"hindi": "तस्वीरें जोड़ें", "hinglish": "Photos add karo"},
+"Set cover": {"hindi": "कवर बनाएँ", "hinglish": "Cover banao"},
+"Replace": {"hindi": "बदलें", "hinglish": "Badlo"},
+"Archive product": {"hindi": "प्रोडक्ट संग्रहित करें", "hinglish": "Product archive karo"},
+"Restore product": {"hindi": "प्रोडक्ट वापस लाएँ", "hinglish": "Product wapas lao"},
+"Delete product": {"hindi": "प्रोडक्ट हटाएँ", "hinglish": "Product delete karo"},
+"Archived": {"hindi": "संग्रहित", "hinglish": "Archived"},
+"Product photos saved": {"hindi": "प्रोडक्ट की तस्वीरें सहेजी गईं", "hinglish": "Product ki photos save ho gayi"},
+"Loading photos…": {"hindi": "तस्वीरें लोड हो रही हैं…", "hinglish": "Photos load ho rahi hain…"},
+"Loading more photos…": {"hindi": "और तस्वीरें लोड हो रही हैं…", "hinglish": "Aur photos load ho rahi hain…"},
+"Retry photos": {"hindi": "तस्वीरें फिर लोड करें", "hinglish": "Photos dobara load karo"},
+"Showing available product photo.": {"hindi": "उपलब्ध प्रोडक्ट तस्वीर दिखाई जा रही है।", "hinglish": "Available product photo dikh rahi hai."},
+"Could not load photos.": {"hindi": "तस्वीरें लोड नहीं हुईं।", "hinglish": "Photos load nahi hui."},
+"No photos yet. Add a side, front, back or sole view.": {"hindi": "अभी तस्वीरें नहीं हैं। साइड, सामने, पीछे या तलवे की तस्वीर जोड़ें।", "hinglish": "Abhi photos nahi hain. Side, front, back ya sole ki photo add karo."},
+"JPG, PNG or WebP · up to 5 MB each · compressed automatically. Cover is used in POS and the public catalog. Customers can view extra angles by opening the product in the catalog.": {"hindi": "JPG, PNG या WebP · हर तस्वीर अधिकतम 5 MB · अपने आप संपीड़ित होगी। कवर POS और सार्वजनिक कैटलॉग में दिखेगा। ग्राहक प्रोडक्ट खोलकर बाकी तस्वीरें देख सकते हैं।", "hinglish": "JPG, PNG ya WebP · har photo 5 MB tak · automatic compress hogi. Cover POS aur public catalog mein dikhega. Product kholkar customer baaki angles dekh sakte hain."},
+"First photo becomes the cover. JPG, PNG or WebP, up to 5 MB each; photos are compressed automatically. You can change the cover later.": {"hindi": "पहली तस्वीर कवर बनेगी। JPG, PNG या WebP, हर तस्वीर अधिकतम 5 MB; अपने आप संपीड़ित होगी। कवर बाद में बदल सकते हैं।", "hinglish": "Pehli photo cover banegi. JPG, PNG ya WebP, har photo 5 MB tak; automatic compress hogi. Cover baad mein badal sakte ho."},
+
 "Waiting for owner approval": {"hindi": "मालिक की मंज़ूरी का इंतज़ार", "hinglish": "Owner approval ka intezaar"},
 "Your account is created. The shop owner must approve it in Settings before you can open the app.": {"hindi": "आपका अकाउंट बन गया है। ऐप खोलने से पहले दुकान मालिक को Settings में इसे मंज़ूरी देनी होगी।", "hinglish": "Aapka account ban gaya hai. App kholne se pehle shop owner ko Settings mein approve karna hoga."},
 "Accounting": {

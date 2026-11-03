@@ -69,6 +69,21 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;
 
+/** Extra angles are fetched only when a customer opens a product. Cover fallback on older DBs. */
+export const getCatalogPhotos = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({ productId: z.string().uuid() }).parse(input))
+  .handler(async ({ data: input }): Promise<{ images: string[]; available: boolean }> => {
+    const sb = await publicClient();
+    const { data, error } = await sb.rpc("public_catalog_photos", { _product_id: input.productId });
+    if (error) return { images: [], available: false };
+    const paths = z.array(z.string()).max(8).safeParse(data);
+    if (!paths.success || !paths.data.length) return { images: [], available: true };
+    const { data: signed, error: signingError } = await sb.storage.from("product-images").createSignedUrls(paths.data, 3600);
+    if (signingError) return { images: [], available: false };
+    const images = (signed ?? []).flatMap(row => row.signedUrl ? [row.signedUrl] : []);
+    return { images, available: images.length === paths.data.length };
+  });
+
 export const createBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({

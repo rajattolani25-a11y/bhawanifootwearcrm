@@ -97,7 +97,7 @@ await page.route("**/*", async (r) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return r.fulfill({
       contentType: "application/javascript",
-      body: `export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: { gallery_enabled: true, category_accents: true, motion_enabled: motionEnabled } })}); export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('Orders disabled in fixture')};export const trackOrder=async()=>null;`,
+      body: `export const getCatalogPhotos=async()=>({images:[],available:true});export const getCatalog=async()=>(${JSON.stringify({ enabled: true, shop, products, hero, presentation: { gallery_enabled: true, category_accents: true, motion_enabled: motionEnabled } })}); export const checkCoupon=async()=>null;export const createBooking=async()=>{throw Error('Orders disabled in fixture')};export const trackOrder=async()=>null;`,
     });
   if (u.pathname === "/presentation-catalog.html")
     return r.fulfill({

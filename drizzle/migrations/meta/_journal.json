@@ -190,6 +190,13 @@
       "when": 1793681831672,
       "tag": "0026_safe_store_reset_marker",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793682221799,
+      "tag": "0027_catalog_product_photos",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
+import { CatalogProductGallery } from "@/components/CatalogProductGallery";
 import { CatalogHero } from "@/components/CatalogHero";
 import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type CatalogData, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
@@ -349,7 +350,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
       <DialogContent className={`${styles["dialog"]} max-h-[92vh] overflow-y-auto sm:max-w-lg`}>
         <DialogHeader><DialogTitle><span data-no-translate>{label}</span></DialogTitle></DialogHeader>
         {step === "view" && <div className="flex flex-col gap-4">
-          <div className="aspect-square overflow-hidden rounded-lg bg-muted">{product.image ? <img src={product.image} alt={label} className="h-full w-full object-contain p-3" /> : null}</div>
+          <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} />
           <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{product.category}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
           <div>
             <p className="mb-2 text-sm font-semibold">Choose size</p>
