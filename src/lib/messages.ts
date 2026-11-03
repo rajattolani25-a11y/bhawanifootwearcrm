@@ -1,8 +1,16 @@
 import { inr } from "@/lib/modules";
 
 type BillMessage = {
-  shop: string; name?: string; billNo: string; total: number; paid?: number; due?: number;
-  stamp?: boolean; rewards?: { amount: number }[]; exchangePolicy?: string;
+  shop: string;
+  name?: string;
+  billNo: string;
+  total: number;
+  paid?: number;
+  due?: number;
+  returned?: number;
+  stamp?: boolean;
+  rewards?: { amount: number }[];
+  exchangePolicy?: string;
 };
 
 export function billMessage(x: BillMessage) {
@@ -13,15 +21,32 @@ export function billMessage(x: BillMessage) {
     `Bill: ${x.billNo}`,
     `Total: ${inr(x.total)}`,
   ];
+  if (x.returned && x.returned > 0)
+    lines.push(
+      `Returned amount: ${inr(x.returned)}`,
+      `Net after returns: ${inr(Math.round((x.total - x.returned) * 100) / 100)}`,
+    );
   if (x.paid !== undefined) lines.push(`Paid: ${inr(x.paid)}`);
   if (x.due) lines.push(`Balance due: ${inr(x.due)}`);
   if (x.stamp) lines.push("Your loyalty stamp has been added.");
-  if (x.rewards?.length) lines.push(`Reward unlocked: ${x.rewards.map((r) => `${inr(r.amount)} off`).join(" + ")} on your next bill.`);
-  lines.push("", x.exchangePolicy || "Size exchange is available within 7 days with this bill.", "We look forward to serving you again.");
+  if (x.rewards?.length)
+    lines.push(
+      `Reward unlocked: ${x.rewards.map((r) => `${inr(r.amount)} off`).join(" + ")} on your next bill.`,
+    );
+  lines.push(
+    "",
+    x.exchangePolicy || "Size exchange is available within 7 days with this bill.",
+    "We look forward to serving you again.",
+  );
   return lines.join("\n");
 }
 
-export function arrivalMessage(shop: string, p: { brand: string; article: string; color?: string | null; selling_price: number }, sizes: string[], phone?: string | null) {
+export function arrivalMessage(
+  shop: string,
+  p: { brand: string; article: string; color?: string | null; selling_price: number },
+  sizes: string[],
+  phone?: string | null,
+) {
   return [
     `*${shop} | New in store*`,
     "",
@@ -33,7 +58,9 @@ export function arrivalMessage(shop: string, p: { brand: string; article: string
     "Interested? Reply with your size and we'll confirm availability.",
     phone ? `Call / WhatsApp: ${phone}` : "",
     "Visit us in store to try your pair.",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function dueMessage(shop: string, name: string, billNo: string, due: number) {

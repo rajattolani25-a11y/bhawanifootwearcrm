@@ -1,6 +1,14 @@
+import { watchVisibleQuery } from "@/lib/inventory-live";
+import {
+  financialReturns,
+  hasRecordedCosts,
+  hasReturnCost,
+  money,
+  returnSummary,
+} from "@/lib/sales-returns";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -12,27 +20,84 @@ import { requireOwnerRoute } from "@/lib/owner-route";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   beforeLoad: requireOwnerRoute,
-  head: () => ({ meta: [{ title: "Reports — SoleStack POS" }, { name: "description", content: "Sales, GST, profit, brand and size reports." }, { property: "og:title", content: "Reports — SoleStack POS" }, { property: "og:description", content: "Sales, tax and footwear performance reports." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  head: () => ({
+    meta: [
+      { title: "Reports — SoleStack POS" },
+      { name: "description", content: "Sales, GST, profit, brand and size reports." },
+      { property: "og:title", content: "Reports — SoleStack POS" },
+      { property: "og:description", content: "Sales, tax and footwear performance reports." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Reports,
 });
 
 const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function Reports() {
+  const qc = useQueryClient();
+  useEffect(
+    () => watchVisibleQuery(qc, ["report"], ["sales", "sale_returns", "expenses"], "report-live"),
+    [qc],
+  );
   const [from, setFrom] = useState(day(new Date(Date.now() - 29 * 864e5)));
   const [to, setTo] = useState(day(new Date()));
-  const { data, error } = useQuery({
+  const { data, error, isPending } = useQuery({
     queryKey: ["report", from, to],
     queryFn: async () => {
       const a = new Date(from + "T00:00:00+05:30").toISOString();
       const b = new Date(new Date(to + "T00:00:00+05:30").getTime() + 864e5).toISOString();
       const [sales, returns, expenses] = await Promise.all([
-        fetchAll((x, y) => supabase.from("sales").select("id,sale_date,payment_mode,total,taxable,gst_amount,gst_rate,discount,due_amount,sale_items(product_name,size,qty,price,discount),sale_costs(total_cost)").gte("sale_date", a).lt("sale_date", b).order("sale_date").order("id").range(x, y)),
-        fetchAll((x, y) => supabase.from("sale_returns").select("refund,kind,gst_reversal,cost_reversal,created_at").gte("created_at", a).lt("created_at", b).order("id").range(x, y)),
-        fetchAll((x, y) => supabase.from("expenses").select("amount").gte("spent_on", from).lte("spent_on", to).range(x, y)),
+        fetchAll((x, y) =>
+          supabase
+            .from("sales")
+            .select(
+              "id,bill_no,sale_date,payment_mode,total,taxable,gst_amount,gst_rate,discount,due_amount,sale_items(product_name,size,qty,price,discount,sale_item_costs(unit_cost)),sale_costs(total_cost)",
+            )
+            .gte("sale_date", a)
+            .lt("sale_date", b)
+            .order("sale_date")
+            .order("id")
+            .range(x, y),
+        ),
+        fetchAll((x, y) =>
+          supabase
+            .from("sale_returns")
+            .select(
+              "sale_id,product_name,size,qty,refund,kind,taxable_reversal,gst_reversal,cost_reversal,created_at,sales(bill_no,payment_mode,gst_rate),sale_items(price,qty,discount,sale_item_costs(unit_cost))",
+            )
+            .gte("created_at", a)
+            .lt("created_at", b)
+            .order("id")
+            .range(x, y),
+        ),
+        fetchAll((x, y) =>
+          supabase
+            .from("expenses")
+            .select("amount")
+            .gte("spent_on", from)
+            .lte("spent_on", to)
+            .range(x, y),
+        ),
       ]);
-      const costs = new Map(sales.map((s) => [s.id, { total_cost: Number(one(s.sale_costs as { total_cost: number } | { total_cost: number }[] | null)?.total_cost ?? 0) }]));
-      return { sales, costs, returns: returns.filter((x) => x.kind !== "exchange"), expense: expenses.reduce((t, x) => t + Number(x.amount), 0) };
+      const costs = new Map(
+        sales.map((s) => [
+          s.id,
+          {
+            total_cost: Number(
+              one(s.sale_costs as { total_cost: number } | { total_cost: number }[] | null)
+                ?.total_cost ?? 0,
+            ),
+          },
+        ]),
+      );
+      return {
+        sales,
+        costs,
+        returns: financialReturns(returns),
+        expense: expenses.reduce((t, x) => t + Number(x.amount), 0),
+      };
     },
   });
   const sales = data?.sales ?? [];
@@ -41,59 +106,278 @@ function Reports() {
   const refunds = (data?.returns ?? []).reduce((a, x) => a + Number(x.refund), 0);
   const gstReversed = (data?.returns ?? []).reduce((a, x) => a + Number(x.gst_reversal), 0);
   const costReversed = (data?.returns ?? []).reduce((a, x) => a + Number(x.cost_reversal), 0);
-  const profit = tot - gst - refunds + gstReversed - sales.reduce((a,s) => a + Number(data?.costs.get(s.id)?.total_cost ?? 0),0) + costReversed;
+  const net = money(tot - refunds);
+  const missingCosts =
+    sales.filter((s) => !hasRecordedCosts(s.sale_items) || !one(s.sale_costs)).length +
+    (data?.returns ?? []).filter((r) => !hasReturnCost(r)).length;
+  const profit =
+    tot -
+    gst -
+    refunds +
+    gstReversed -
+    sales.reduce((a, s) => a + Number(data?.costs.get(s.id)?.total_cost ?? 0), 0) +
+    costReversed;
+  const profitText = (value: number) =>
+    isPending || error ? "—" : missingCosts ? "Purchase cost missing" : inr(money(value));
   const expense = data?.expense ?? 0;
   const discount = sales.reduce((a, s) => a + Number(s.discount), 0);
   const udhar = sales.reduce((a, s) => a + Number(s.due_amount), 0);
-  const pairs = sales.reduce((a, s) => a + s.sale_items.reduce((b, i) => b + i.qty, 0), 0);
-  const group = (f: (s: (typeof sales)[number]) => string) => Object.entries(sales.reduce<Record<string, number>>((m, s) => ({ ...m, [f(s)]: (m[f(s)] ?? 0) + Number(s.total) }), {})).sort((a, b) => b[1] - a[1]);
-  const byDay = group((s) => day(new Date(s.sale_date))).sort((a, b) => a[0].localeCompare(b[0]));
-  const byPay = group((s) => s.payment_mode);
+  const pairs =
+    sales.reduce((a, s) => a + s.sale_items.reduce((b, i) => b + i.qty, 0), 0) -
+    returnSummary(data?.returns ?? []).pairs;
+  const group = (field: "day" | "mode") => {
+    const result = new Map<string, number>();
+    for (const sale of sales) {
+      const key = field === "day" ? day(new Date(sale.sale_date)) : sale.payment_mode;
+      result.set(key, (result.get(key) ?? 0) + Number(sale.total));
+    }
+    for (const row of data?.returns ?? []) {
+      const key =
+        field === "day"
+          ? day(new Date(row.created_at))
+          : (one(row.sales)?.payment_mode ?? "Unassigned returns");
+      result.set(key, (result.get(key) ?? 0) - Number(row.refund));
+    }
+    return [...result]
+      .map(([key, value]) => [key, money(value)] as [string, number])
+      .sort((a, b) => b[1] - a[1]);
+  };
+  const byDay = group("day").sort((a, b) => a[0].localeCompare(b[0]));
+  const byPay = group("mode");
   const items = sales.flatMap((s) => s.sale_items);
-  const top = Object.entries(items.reduce<Record<string, number>>((m, i) => ({ ...m, [i.product_name]: (m[i.product_name] ?? 0) + i.qty }), {})).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const topValue = Object.entries(items.reduce<Record<string, number>>((m, i) => ({ ...m, [i.product_name]: (m[i.product_name] ?? 0) + Number(i.price) * i.qty - Number(i.discount ?? 0) }), {})).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const bySize = Object.entries(items.reduce<Record<string, number>>((m, i) => ({ ...m, [i.size]: (m[i.size] ?? 0) + i.qty }), {})).sort((a, b) => Number(a[0]) - Number(b[0]));
-  const gstBy = Object.entries(sales.filter((s) => Number(s.gst_rate) > 0).reduce<Record<string, [number, number]>>((m, s) => { const k = `${s.gst_rate}%`; const v = m[k] ?? [0, 0]; return { ...m, [k]: [v[0] + Number(s.taxable), v[1] + Number(s.gst_amount)] }; }, {}));
-  const max = Math.max(1, ...byDay.map((d) => d[1]));
+  const itemGroup = (field: "product_name" | "size", value: "qty" | "amount") => {
+    const result = new Map<string, number>();
+    for (const item of items)
+      result.set(
+        item[field],
+        (result.get(item[field]) ?? 0) +
+          (value === "qty" ? item.qty : Number(item.price) * item.qty - Number(item.discount ?? 0)),
+      );
+    for (const row of data?.returns ?? [])
+      result.set(
+        row[field],
+        (result.get(row[field]) ?? 0) -
+          (value === "qty"
+            ? row.qty
+            : row.qty * Number(one(row.sale_items)?.price ?? 0) -
+              (Number(one(row.sale_items)?.discount ?? 0) * row.qty) /
+                Math.max(1, Number(one(row.sale_items)?.qty ?? row.qty))),
+      );
+    return [...result]
+      .map(([key, value]) => [key, money(value)] as [string, number])
+      .sort((a, b) => b[1] - a[1]);
+  };
+  const top = itemGroup("product_name", "qty").slice(0, 10);
+  const topValue = itemGroup("product_name", "amount").slice(0, 10);
+  const bySize = itemGroup("size", "qty").sort((a, b) => Number(a[0]) - Number(b[0]));
+  const gstGroups = new Map<string, [number, number]>();
+  for (const sale of sales)
+    if (Number(sale.gst_rate) > 0) {
+      const key = `${sale.gst_rate}%`,
+        old = gstGroups.get(key) ?? [0, 0];
+      gstGroups.set(key, [old[0] + Number(sale.taxable), old[1] + Number(sale.gst_amount)]);
+    }
+  for (const row of data?.returns ?? [])
+    if (Number(row.gst_reversal) > 0) {
+      const rate = one(row.sales)?.gst_rate;
+      const key = rate ? `${rate}%` : "Unassigned returns",
+        old = gstGroups.get(key) ?? [0, 0];
+      gstGroups.set(key, [
+        old[0] - Number(row.taxable_reversal),
+        old[1] - Number(row.gst_reversal),
+      ]);
+    }
+  const gstBy = [...gstGroups];
+  const csvRows = [
+    ...sales.map((s) => [
+      "sale",
+      s.sale_date,
+      s.bill_no,
+      s.payment_mode,
+      s.total,
+      0,
+      s.total,
+      s.taxable,
+      s.gst_amount,
+      s.discount,
+      s.due_amount,
+      hasRecordedCosts(s.sale_items) && one(s.sale_costs)
+        ? money(
+            Number(s.total) - Number(s.gst_amount) - Number(data?.costs.get(s.id)?.total_cost ?? 0),
+          )
+        : "",
+      hasRecordedCosts(s.sale_items) && one(s.sale_costs) ? "Recorded" : "Purchase cost missing",
+    ]),
+    ...(data?.returns ?? []).map((r) => [
+      "return",
+      r.created_at,
+      one(r.sales)?.bill_no ?? "",
+      one(r.sales)?.payment_mode ?? "",
+      0,
+      r.refund,
+      -Number(r.refund),
+      -Number(r.taxable_reversal),
+      -Number(r.gst_reversal),
+      0,
+      "",
+      hasReturnCost(r)
+        ? money(-Number(r.refund) + Number(r.gst_reversal) + Number(r.cost_reversal))
+        : "",
+      hasReturnCost(r) ? "Recorded" : "Purchase cost missing",
+    ]),
+  ];
+  const max = Math.max(1, ...byDay.map((d) => Math.abs(d[1])));
   const dayMap = new Map(byDay);
   const days: [string, number][] = [];
-  for (let t = new Date(from + "T12:00:00+05:30").getTime(), end = new Date(to + "T12:00:00+05:30").getTime(); t <= end && days.length < 400; t += 864e5) { const k = day(new Date(t)); days.push([k, dayMap.get(k) ?? 0]); }
+  for (
+    let t = new Date(from + "T12:00:00+05:30").getTime(),
+      end = new Date(to + "T12:00:00+05:30").getTime();
+    t <= end && days.length < 400;
+    t += 864e5
+  ) {
+    const k = day(new Date(t));
+    days.push([k, dayMap.get(k) ?? 0]);
+  }
 
   return (
     <div>
-      <PageHeader title="Reports" subtitle="Pick dates — everything updates." actions={
-        <div className="flex gap-2">
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
-           <Button variant="outline" onClick={() => downloadCsv(`sales-${from}-${to}.csv`, [["date", "mode", "total", "taxable", "gst", "discount", "due", "gross_profit_before_returns"], ...sales.map((s) => [s.sale_date, s.payment_mode, s.total, s.taxable, s.gst_amount, s.discount, s.due_amount, Number(s.total)-Number(s.gst_amount)-Number(data?.costs.get(s.id)?.total_cost ?? 0)])])}>CSV</Button>
-        </div>
-      } />
-       {error && <p role="alert" className="text-destructive">Unable to load reports: {error.message}</p>}
-       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-         {[["Sales", inr(tot)], ["Bills", sales.length], ["Pairs", pairs], ["Average bill", inr(sales.length ? tot / sales.length : 0)], ["Gross profit after returns", inr(profit)], ["Expenses", inr(expense)], ["Net profit", inr(profit - expense)], ["GST net of returns", inr(gst-gstReversed)], ["Refunds", inr(refunds)], ["Discount given", inr(discount)], ["Udhar still pending", inr(udhar)], ["Margin", `${tot - gst - refunds + gstReversed > 0 ? ((profit / (tot - gst - refunds + gstReversed)) * 100).toFixed(1) : "0"}%`]].map(([k, v]) => (
-          <div key={k} className="rounded-xl border bg-card p-3"><p className="text-xs text-muted-foreground">{k}</p><p className="font-display text-xl font-bold">{v}</p></div>
+      <PageHeader
+        title="Reports"
+        subtitle="Pick dates — everything updates."
+        actions={
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="h-10"
+            />
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="h-10"
+            />
+            <Button
+              variant="outline"
+              disabled={isPending || !!error}
+              onClick={() =>
+                downloadCsv(`sales-${from}-${to}.csv`, [
+                  [
+                    "type",
+                    "date",
+                    "bill_no",
+                    "mode",
+                    "gross_sales",
+                    "returns",
+                    "net_sales",
+                    "taxable",
+                    "gst",
+                    "discount",
+                    "due",
+                    "gross_profit",
+                    "profit_status",
+                  ],
+                  ...csvRows,
+                ])
+              }
+            >
+              CSV
+            </Button>
+          </div>
+        }
+      />
+      {error && (
+        <p role="alert" className="text-destructive">
+          Unable to load reports: {error.message}
+        </p>
+      )}
+      <p className="mb-3 text-sm text-muted-foreground">
+        Returns reduce sales on the return date. Original bills remain unchanged.
+      </p>
+      {missingCosts > 0 && (
+        <p role="alert" className="mb-3 text-sm text-warning-foreground">
+          Purchase cost missing or zero on {missingCosts} sale/return records. Profit and margin are
+          unavailable; sales totals remain valid.
+        </p>
+      )}
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          ["Net sales", inr(net)],
+          ["Gross sales", inr(tot)],
+          ["Bills", sales.length],
+          ["Net pairs", pairs],
+          ["Average bill before returns", inr(sales.length ? tot / sales.length : 0)],
+          ["Gross profit after returns", profitText(profit)],
+          ["Expenses", inr(expense)],
+          ["Net profit", profitText(profit - expense)],
+          ["GST net of returns", inr(gst - gstReversed)],
+          ["Refunds", inr(refunds)],
+          ["Discount given", inr(discount)],
+          ["Udhar still pending", inr(udhar)],
+          [
+            "Margin",
+            missingCosts
+              ? "Purchase cost missing"
+              : `${tot - gst - refunds + gstReversed > 0 ? ((profit / (tot - gst - refunds + gstReversed)) * 100).toFixed(1) : "0"}%`,
+          ],
+        ].map(([k, v]) => (
+          <div key={k} className="rounded-xl border bg-card p-3">
+            <p className="text-xs text-muted-foreground">{k}</p>
+            <p className="font-display text-xl font-bold">{v}</p>
+          </div>
         ))}
       </div>
       <div className="mt-4 rounded-xl border bg-card p-4">
-        <div className="mb-3 flex items-baseline justify-between"><p className="font-semibold">Daily sales</p><p className="text-xs text-muted-foreground">Best day: {inr(max === 1 && !tot ? 0 : max)}</p></div>
+        <div className="mb-3 flex items-baseline justify-between">
+          <p className="font-semibold">Daily net sales</p>
+          <p className="text-xs text-muted-foreground">
+            Largest daily movement: {inr(Math.max(0, ...byDay.map((d) => Math.abs(d[1]))))}
+          </p>
+        </div>
         <div className="overflow-x-auto">
-          <div className="flex h-48 items-stretch gap-1" style={{ minWidth: `${Math.max(days.length * 22, 280)}px` }}>
+          <div
+            className="flex h-48 items-stretch gap-1"
+            style={{ minWidth: `${Math.max(days.length * 22, 280)}px` }}
+          >
             {days.map(([d, v]) => (
-              <div key={d} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${d}: ${inr(v)}`}>
-                <div className="flex w-full flex-1 items-end"><div className="w-full rounded-t bg-primary" style={{ height: v ? `${Math.max((v / max) * 100, 3)}%` : "2px", opacity: v ? 1 : 0.25 }} /></div>
+              <div
+                key={d}
+                className="flex flex-1 flex-col items-center justify-end gap-1"
+                title={`${d}: ${inr(v)}`}
+              >
+                <div className="flex w-full flex-1 items-end">
+                  <div
+                    className={`w-full rounded-t ${v < 0 ? "bg-destructive" : "bg-primary"}`}
+                    style={{
+                      height: v ? `${Math.max((Math.abs(v) / max) * 100, 3)}%` : "2px",
+                      opacity: v ? 1 : 0.25,
+                    }}
+                  />
+                </div>
                 <span className="text-[10px] leading-none text-muted-foreground">{d.slice(8)}</span>
               </div>
             ))}
           </div>
         </div>
-        {!tot && <p className="mt-2 text-sm text-muted-foreground">In dates mein koi sale nahi hai.</p>}
+        {!sales.length && !data?.returns?.length && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            No sales or returns in this date range.
+          </p>
+        )}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Box title="Payment mode" rows={byPay.map(([k, v]) => [k, inr(v)])} />
-        <Box title="Top articles (₹ value)" rows={topValue.map(([k, v]) => [k, inr(v)])} />
-        <Box title="Top articles (pairs)" rows={top.map(([k, v]) => [k, String(v)])} />
-        <Box title="Size-wise pairs" rows={bySize.map(([k, v]) => [`Size ${k}`, String(v)])} />
-        <Box title="GST summary (taxable / tax)" rows={gstBy.map(([k, [t, g]]) => [k, `${inr(t)} / ${inr(g)}`])} />
+        <Box title="Net sales by original payment mode" rows={byPay.map(([k, v]) => [k, inr(v)])} />
+        <Box
+          title="Net article value before bill adjustments (₹)"
+          rows={topValue.map(([k, v]) => [k, inr(v)])}
+        />
+        <Box title="Top articles (net pairs)" rows={top.map(([k, v]) => [k, String(v)])} />
+        <Box title="Size-wise net pairs" rows={bySize.map(([k, v]) => [`Size ${k}`, String(v)])} />
+        <Box
+          title="GST net of returns (taxable / tax)"
+          rows={gstBy.map(([k, [t, g]]) => [k, `${inr(t)} / ${inr(g)}`])}
+        />
       </div>
     </div>
   );
@@ -103,7 +387,12 @@ function Box({ title, rows }: { title: string; rows: string[][] }) {
   return (
     <div className="rounded-xl border bg-card p-4">
       <p className="mb-2 font-semibold">{title}</p>
-      {rows.map(([k, v]) => <div key={k} className="flex justify-between border-t py-1 text-sm"><span className="truncate">{k}</span><b>{v}</b></div>)}
+      {rows.map(([k, v]) => (
+        <div key={k} className="flex justify-between border-t py-1 text-sm">
+          <span className="truncate">{k}</span>
+          <b>{v}</b>
+        </div>
+      ))}
       {!rows.length && <p className="text-sm text-muted-foreground">No data</p>}
     </div>
   );

@@ -21,6 +21,8 @@ const RULES: Rule[] = [
   r(/^Reward unlocked: (.+) on your next bill\.$/, (m) => `Reward unlocked: ${m[1]} on your next bill.`, (m) => `इनाम मिला: अगले बिल पर ${(m[1] ?? "").replace(/ off/g, " की छूट")}।`, (m) => `Reward mila: agle bill pe ${(m[1] ?? "").replace(/ off/g, " ki chhoot")}.`),
   r(/^Size exchange is available within 7 days with this bill\.$/, () => "Size exchange is available within 7 days with this bill.", () => "इस बिल के साथ 7 दिनों के अंदर साइज़ बदला जा सकता है।", () => "Is bill ke saath 7 din ke andar size exchange ho sakta hai."),
   r(/^We look forward to serving you again\.$/, () => "We look forward to serving you again.", () => "आपकी दोबारा सेवा का इंतज़ार रहेगा।", () => "Aapki dobara seva ka intezaar rahega."),
+  r(/^Returned amount: (.+)$/, m=>`Returned amount: ${m[1]}`, m=>`वापस की गई राशि: ${m[1]}`, m=>`Return ki raashi: ${m[1]}`),
+  r(/^Net after returns: (.+)$/, m=>`Net after returns: ${m[1]}`, m=>`वापसी के बाद कुल: ${m[1]}`, m=>`Return ke baad net: ${m[1]}`),
   // Due reminders
   r(/^This is a gentle payment reminder from (.+)\.$/, (m) => `This is a gentle payment reminder from ${m[1]}.`, (m) => `${m[1]} की ओर से भुगतान की विनम्र याद।`, (m) => `${m[1]} ki taraf se payment ka chhota sa reminder.`),
   r(/^This is a gentle reminder from (.+)\. Your outstanding balance is (.+)\.$/, (m) => `This is a gentle reminder from ${m[1]}. Your outstanding balance is ${m[2]}.`, (m) => `${m[1]} की ओर से विनम्र याद। आपका बकाया ${m[2]} है।`, (m) => `${m[1]} ki taraf se reminder. Aapka baaki ${m[2]} hai.`),

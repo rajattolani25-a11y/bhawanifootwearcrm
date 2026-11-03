@@ -1,14 +1,42 @@
+import { financialReturns, netSales, returnSummary } from "@/lib/sales-returns";
+import { fetchAll } from "@/lib/fetch-all";
 import { previewDocument } from "@/lib/print-preview";
 import { supabase } from "@/integrations/supabase/client";
 
 export type PrintDesign = "Thermal" | "A4" | "Premium";
-const money = (n: number) => "Rs " + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
-const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+const money = (n: number) =>
+  "Rs " + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+const esc = (s: unknown) =>
+  String(s ?? "").replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!,
+  );
 
 type Sale = {
-  bill_no: string; sale_date: string; customer_name: string | null; payment_mode: string; bill_type: string; tax_mode: string;
-  subtotal: number; discount: number; taxable: number; gst_rate: number; gst_amount: number; total: number; paid_amount: number; due_amount: number;
-  reward_amount: number; coupon_code: string | null; coupon_amount: number; sale_items: { product_name: string; size: string; sku: string | null; price: number; qty: number }[];
+  bill_no: string;
+  sale_date: string;
+  customer_name: string | null;
+  payment_mode: string;
+  bill_type: string;
+  tax_mode: string;
+  subtotal: number;
+  discount: number;
+  taxable: number;
+  gst_rate: number;
+  gst_amount: number;
+  total: number;
+  paid_amount: number;
+  due_amount: number;
+  reward_amount: number;
+  coupon_code: string | null;
+  coupon_amount: number;
+  sale_items: {
+    product_name: string;
+    size: string;
+    sku: string | null;
+    price: number;
+    qty: number;
+  }[];
 };
 
 // Same line split as old app: discount spread by value, last line absorbs rounding.
@@ -17,18 +45,30 @@ function lines(s: Sale) {
   const sub = items.reduce((a, i) => a + i.qty * i.price, 0) || 1;
   const rate = Number(s.gst_rate);
   const gstBill = s.bill_type === "gst" && rate > 0;
-  let aD = 0, aT = 0, aG = 0, aA = 0;
+  let aD = 0,
+    aT = 0,
+    aG = 0,
+    aA = 0;
   return items.map((it, idx) => {
     const last = idx === items.length - 1;
     const gross = it.qty * it.price;
     const d = last ? Number(s.discount) - aD : Math.round((gross / sub) * Number(s.discount));
     aD += d;
     const net = Math.max(gross - d, 0);
-    let taxable = net, gst = 0, amount = net;
-    if (gstBill && s.tax_mode === "inclusive") { taxable = last ? Number(s.taxable) - aT : Math.round(net / (1 + rate / 100)); gst = amount - taxable; }
-    else if (gstBill) { gst = last ? Number(s.gst_amount) - aG : Math.round((net * rate) / 100); amount = net + gst; }
+    let taxable = net,
+      gst = 0,
+      amount = net;
+    if (gstBill && s.tax_mode === "inclusive") {
+      taxable = last ? Number(s.taxable) - aT : Math.round(net / (1 + rate / 100));
+      gst = amount - taxable;
+    } else if (gstBill) {
+      gst = last ? Number(s.gst_amount) - aG : Math.round((net * rate) / 100);
+      amount = net + gst;
+    }
     if (last) amount = Number(s.total) - aA;
-    aT += taxable; aG += gst; aA += amount;
+    aT += taxable;
+    aG += gst;
+    aA += amount;
     return { it, d, taxable, gst, amount };
   });
 }
@@ -53,22 +93,50 @@ td:not(:first-child),th:not(:first-child){text-align:right}
 `;
 
 export async function printBill(billNo: string, designArg?: PrintDesign, duplicate = false) {
-  const [{ data: s, error }, { data: st }] = await Promise.all([
-    supabase.from("sales").select("bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,coupon_code,coupon_amount,sale_items(product_name,size,sku,price,qty)").eq("bill_no", billNo).maybeSingle(),
+  const [{ data: s, error }, { data: st }, returns] = await Promise.all([
+    supabase
+      .from("sales")
+      .select(
+        "bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,coupon_code,coupon_amount,sale_items(product_name,size,sku,price,qty)",
+      )
+      .eq("bill_no", billNo)
+      .maybeSingle(),
     supabase.from("store_settings").select("*").eq("id", 1).maybeSingle(),
+    fetchAll((a, b) =>
+      supabase
+        .from("sale_returns")
+        .select(
+          "product_name,size,qty,refund,kind,gst_reversal,cash_refund,created_at,sales!inner(bill_no)",
+        )
+        .eq("sales.bill_no", billNo)
+        .order("created_at")
+        .order("id")
+        .range(a, b),
+    ),
   ]);
-  if (error || !s) { throw new Error("Bill not found"); }
+  if (error || !s) {
+    throw new Error("Bill not found");
+  }
   const sale = s as unknown as Sale;
+  const gstBill = sale.bill_type === "gst" && Number(sale.gst_rate) > 0;
+  const returned = returnSummary(returns);
+  const returnNote = returns.length
+    ? `<section style="margin-top:12px;border:1px solid #999;padding:8px;break-inside:avoid"><strong>Recorded returns / exchanges</strong><p><small>Original invoice above is unchanged. Summary as of ${esc(new Date().toLocaleString("en-IN"))}.</small></p>${returns.map((r) => `<p style="font-size:11px">${esc(new Date(r.created_at).toLocaleDateString("en-IN"))} · ${esc(r.product_name)} · ${esc(r.size)} ×${r.qty} · ${esc(r.kind)} · ${money(r.refund)}</p>`).join("")}<div class="t"><span>Original bill amount</span><strong>${money(sale.total)}</strong></div><div class="t"><span>Returned amount</span><strong>−${money(returned.refunded)}</strong></div><div class="t g"><span>Net after returns</span><strong>${money(netSales(Number(sale.total), returns))}</strong></div>${gstBill ? `<div class="t"><span>GST net of returns</span><strong>${money(Number(sale.gst_amount) - returned.gst)}</strong></div>` : ""}<div class="t"><span>Refund paid (recorded)</span><strong>${money(financialReturns(returns).reduce((n, r) => n + Number(r.cash_refund), 0))}</strong></div></section>`
+    : "";
   const design: PrintDesign = designArg ?? ((st?.bill_design as PrintDesign) || "Thermal");
   const narrow = design === "Thermal" && st?.thermal_width === "58";
-  const gstBill = sale.bill_type === "gst" && Number(sale.gst_rate) > 0;
-  const rows = lines(sale).map(({ it, d, taxable, gst, amount }) => {
-    const name = `<td><strong>${esc(it.product_name)}</strong><br><small>${esc(it.sku ?? "")} | Size ${esc(it.size)}${d ? ` | Disc ${money(d)}` : ""}</small></td>`;
-    return gstBill
-      ? `<tr>${name}<td>${it.qty}</td><td>${money(it.price)}</td>${design === "Thermal" ? "" : `<td>${money(taxable)}</td><td>${money(gst)}</td>`}<td>${money(amount)}</td></tr>`
-      : `<tr>${name}<td>${it.qty}</td><td>${money(it.price)}</td><td>${money(amount)}</td></tr>`;
-  }).join("");
-  const head = gstBill && design !== "Thermal" ? "<th>Item</th><th>Qty</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Amount</th>" : "<th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th>";
+  const rows = lines(sale)
+    .map(({ it, d, taxable, gst, amount }) => {
+      const name = `<td><strong>${esc(it.product_name)}</strong><br><small>${esc(it.sku ?? "")} | Size ${esc(it.size)}${d ? ` | Disc ${money(d)}` : ""}</small></td>`;
+      return gstBill
+        ? `<tr>${name}<td>${it.qty}</td><td>${money(it.price)}</td>${design === "Thermal" ? "" : `<td>${money(taxable)}</td><td>${money(gst)}</td>`}<td>${money(amount)}</td></tr>`
+        : `<tr>${name}<td>${it.qty}</td><td>${money(it.price)}</td><td>${money(amount)}</td></tr>`;
+    })
+    .join("");
+  const head =
+    gstBill && design !== "Thermal"
+      ? "<th>Item</th><th>Qty</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Amount</th>"
+      : "<th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th>";
   const change = Math.max(Number(sale.paid_amount) - Number(sale.total), 0);
   const footer = st?.bill_footer ?? "";
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(sale.bill_no)}</title><style>${CSS}${narrow ? ".thermal{width:54mm;padding:3px}.thermal table,.thermal .t{font-size:11px}.thermal .t.g{font-size:15px}" : ""}${design === "Thermal" ? `@page{size:${narrow ? "58mm" : "80mm"} auto;margin:2mm}` : ""}</style></head><body>
@@ -88,14 +156,18 @@ export async function printBill(billNo: string, designArg?: PrintDesign, duplica
     ${Number(sale.paid_amount) > 0 ? `<div class="t"><span>Received</span><strong>${money(sale.paid_amount)}</strong></div>` : ""}
     ${Number(sale.due_amount) > 0 ? `<div class="t"><span>Due</span><strong>${money(sale.due_amount)}</strong></div>` : ""}
     ${change > 0 ? `<div class="t"><span>Change</span><strong>${money(change)}</strong></div>` : ""}
+    ${returnNote}
     <div class="foot"><div><strong>Exchange Policy</strong><span>${esc(footer)}</span></div><div><strong>Ref</strong><code>${esc(sale.bill_no)}</code></div></div>
     <p style="text-align:center;margin-top:8px;font-size:12px">Thank you! Visit again.</p>
-  </section><script>window.onload=function(){window.focus();window.print();}<\/script></body></html>`;
+  </section></body></html>`;
   previewDocument(sale.bill_no, html);
 }
 
 export function printHtml(title: string, body: string, css = "") {
-  previewDocument(title, `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{margin:0;font-family:Arial,sans-serif}${css}</style></head><body>${body}</body></html>`);
+  previewDocument(
+    title,
+    `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{margin:0;font-family:Arial,sans-serif}${css}</style></head><body>${body}</body></html>`,
+  );
 }
 
 export const PDF_CSS = `.w{padding:20px;width:760px;color:#111}h1{margin:0;font-size:22px}h2{font-size:15px;margin:12px 0 4px;text-transform:uppercase;letter-spacing:1px;color:#555}.m{color:#666;font-size:12px;margin:2px 0}table{width:100%;border-collapse:collapse;font-size:11px;margin-top:10px}th,td{border-bottom:1px solid #ddd;padding:5px;text-align:left;vertical-align:top}th{background:#f3f3f3}.r{text-align:right}.t td{font-weight:bold;border-top:2px solid #111}.b{font-size:14px;font-weight:bold;margin-top:12px;text-align:right}`;
