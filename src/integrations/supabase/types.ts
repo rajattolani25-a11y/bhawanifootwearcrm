@@ -1325,8 +1325,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      // Optional public-gallery API; the catalog keeps its cover fallback until 0027 is applied.
-      public_catalog_photos: { Args: { _product_id: string }; Returns: string[] }
       ack_store_file_cleanup: {
         Args: { _bucket: string; _paths: string[] }
         Returns: undefined
