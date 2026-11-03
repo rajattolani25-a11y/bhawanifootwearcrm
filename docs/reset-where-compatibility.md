@@ -1,0 +1,13 @@
+# Reset WHERE compatibility fix (0028)
+
+The installed 0025 reset function used `EXECUTE format('DELETE FROM public.%I',t)` for its fixed business-table allowlist. A database with `pg-safeupdate` enabled rejects that statement with `DELETE requires a WHERE clause`. The function call transaction rolls back, including earlier settings and file-cleanup queue changes.
+
+Migration **0028_reset_where_compatibility.sql** changes only that dynamic statement in the installed function definition. It adds a WHERE predicate on each table's non-null primary key (`product_id`, `sale_id`, `sale_item_id`, or `id`). Owner checks, exact RESET, verified fresh backup, shared locks, delete order, preserve options, bill numbering, Security Definer, function owner and grants remain intact. The safety extension stays enabled. No old migrations need replaying.
+
+Applying this patch does **not** call reset/restore or delete business records. It fails closed if 0025 is missing or its body differs from the expected statement, tolerates whitespace formatting of that statement, and can be applied again safely. Copy its exact SQL into the existing SQL editor; Lovable AI is not required. A ready transactional copy with read-only verification is supplied as `/workspace/review/apply-0028-reset-fix-only.sql`. Success shows `reset_fix_applied = true`. A new store reset still requires the owner to follow the application's backup/verify/confirmation flow.
+
+The frontend also clears old progress text when a maintenance action errors, so a failed RPC no longer leaves “Resetting business data in one database transaction…” visible. Publish the frontend update to receive that UI fix; the SQL compatibility fix takes effect when applied.
+
+Validation uses disposable, network-isolated PostgreSQL 17. The actual upstream `eradman/pg-safeupdate` extension was built against the container's PostgreSQL headers and loaded for reset/restore calls. The original function reproduced the error and rolled back the complete snapshot; the patch applied twice without changing records or grants; full reset/restore, preserve settings, photo manifest, stock/history, roles and restart-at-1 tests passed with the guard enabled. Browser fixtures additionally reproduce the RPC error and verify that stale progress clears and no cleanup starts after the failed call. No live store reset was executed.
+
+Optional guarded DB audit: `SAFEUPDATE_EXTENSION_PATH=/path/to/safeupdate.so python tests/store-maintenance-db-audit.py`. The binary must match the test PostgreSQL image and be readable by its postgres user. The normal audit runs without that optional extension as well.

@@ -23,6 +23,8 @@ const user = {
   created_at: "2026-01-01T00:00:00Z",
 };
 let ownerRole = true;
+let blockResetOnce = true,
+  resetGuardErrors = 0;
 let legacyWrites = 0;
 let supported = false,
   cleanup = [],
@@ -142,7 +144,6 @@ await page.route("**/*", async (route) => {
     });
   if (name === "store_backup_snapshot_v2") return route.fulfill({ json: snapshot() });
   if (name === "reset_store_data_v2") {
-    resetCalls++;
     const body = req.postDataJSON();
     assert.equal(body._confirmation, "RESET");
     assert.equal(body._fingerprint, "before-reset");
@@ -150,6 +151,15 @@ await page.route("**/*", async (route) => {
     assert.equal(body._preserve_design, false);
     assert.equal(body._restart_numbers, false);
     assert.equal(body._preserve_operations, true);
+    if (blockResetOnce) {
+      blockResetOnce = false;
+      resetGuardErrors++;
+      return route.fulfill({
+        status: 400,
+        json: { code: "21000", message: "DELETE requires a WHERE clause" },
+      });
+    }
+    resetCalls++;
     empty = true;
     state = { ...state, generation: "generation-2", reset_at: "2026-11-02T00:00:00Z" };
     cleanup = [{ ...asset, reason: "reset" }];
@@ -280,6 +290,23 @@ try {
   await page.getByLabel("Verify downloaded backup", { exact: true }).setInputFiles(out);
   await page.getByText("Saved backup verified ✓", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Permanently reset this store", exact: true }).click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "DELETE requires a WHERE clause" })
+    .first()
+    .waitFor();
+  assert.equal(resetCalls, 0);
+  assert.equal(empty, false);
+  assert.equal(cleanup.length, 0);
+  assert.equal(
+    await page
+      .getByText("Resetting business data in one database transaction…", { exact: true })
+      .count(),
+    0,
+    "Failed RPC left a stale in-progress message",
+  );
+  // The mocked SQL fix is now installed; the same verified backup can retry.
+  await page.getByRole("button", { name: "Permanently reset this store", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "Photo cleanup pending" }).first().waitFor();
   assert.equal(resetCalls, 1);
   assert.equal(
@@ -388,6 +415,7 @@ try {
           "correct reset policy sent, preserving billing and catalog operational preferences",
           "cleanup failure is explicit and retryable",
           "no repeated reset after cleanup failure",
+          "WHERE-guard error clears stale progress; failed RPC does not mutate fixture state",
           "drafts cleared; auth/theme/language retained",
           "same-backend restore uploads photos and restores rows",
           "mobile has no horizontal overflow",
@@ -397,6 +425,7 @@ try {
           "remote reset clears drafts and revoked user sees approval screen",
         ],
         resetCalls,
+        resetGuardErrors,
         restoreCalls,
         transferCalls,
         errors,

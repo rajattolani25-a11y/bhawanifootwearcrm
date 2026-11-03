@@ -1,10 +1,12 @@
 """Runs checked-in migrations on disposable PostgreSQL; NEVER uses app env/DB."""
 from pathlib import Path
-import subprocess, time, json, uuid
+import subprocess, time, json, uuid, os, re
 root=Path(__file__).resolve().parents[1]
 name='solestack-maintenance-'+uuid.uuid4().hex[:8]
+guard_binary=os.environ.get('SAFEUPDATE_EXTENSION_PATH')
 def run(args,sql=None): return subprocess.run(args,input=sql,text=True,capture_output=True)
 def sql(s,ok=True):
+ if guard_binary and re.search(r'SELECT\s+(?:public\.)?(?:reset_store_data_v2|restore_store_backup_v2)\s*\(',s,re.I):s="LOAD 'safeupdate';"+s
  r=run(['docker','exec','-i',name,'psql','-U','postgres','-X','-v','ON_ERROR_STOP=1','-qAt'],s)
  if ok and r.returncode: raise RuntimeError(r.stderr)
  return r
@@ -16,6 +18,10 @@ try:
   if (logs.stdout+logs.stderr).count('database system is ready to accept connections')>=2 and sql('SELECT 1',False).returncode==0:break
   time.sleep(.1)
  else:raise RuntimeError('Postgres startup timed out')
+ if guard_binary:
+  copied=run(['docker','cp',guard_binary,name+':/usr/local/lib/postgresql/safeupdate.so'])
+  if copied.returncode:raise RuntimeError(copied.stderr)
+  sql("LOAD 'safeupdate'; SELECT current_setting('safeupdate.enabled');")
  sql("""CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
  CREATE SCHEMA auth; CREATE SCHEMA storage; GRANT USAGE ON SCHEMA auth,storage,public TO anon,authenticated;
  CREATE TABLE auth.users(id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz DEFAULT now(), deleted_at timestamptz, banned_until timestamptz, raw_user_meta_data jsonb DEFAULT '{}');
@@ -27,6 +33,7 @@ try:
  for migration in sorted((root/'drizzle/migrations').glob('*.sql')):
   # Public gallery has no dependency on optional maintenance support (0025).
   if migration.name.startswith('0025_'):sql((root/'drizzle/migrations/0027_catalog_product_photos.sql').read_text())
+  if guard_binary and migration.name.startswith("0028_"):continue
   sql(migration.read_text())
  owner='00000000-0000-4000-8000-000000000001';staff='00000000-0000-4000-8000-000000000002';pending='00000000-0000-4000-8000-000000000003';new='00000000-0000-4000-8000-000000000004'
  ctx=f"SET request.jwt.claim.sub='{owner}';"
@@ -92,6 +99,19 @@ try:
  # Storage RLS rejects deleting a photo used by an existing product.
  sql("SET ROLE authenticated;"+ctx+"DELETE FROM storage.objects WHERE bucket_id='product-images';")
  check("EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='product-images')",'referenced photo could be removed')
+ if guard_binary:
+  before=json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())
+  privileges=sql("SELECT proowner::text,proacl::text,prosecdef,proconfig::text FROM pg_proc WHERE oid='public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure;").stdout
+  fail(ctx+f"SELECT reset_store_data_v2('RESET','{before['fingerprint']}',true,false,true,false);",'DELETE requires a WHERE clause')
+  assert json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())==before,'guard failure did not roll back business/settings/team/assets'
+  check('(SELECT count(*)=0 FROM store_file_cleanup)','guard failure left cleanup work')
+  # Lovable may format the installed function body; harmless whitespace must still patch.
+  old_definition=sql("SELECT pg_get_functiondef('public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure);").stdout
+  sql(old_definition.replace("EXECUTE format('DELETE FROM public.%I',t);", "EXECUTE\n    format( 'DELETE FROM public.%I', t );"))
+  patch=(root/'drizzle/migrations/0028_reset_where_compatibility.sql').read_text()
+  sql(patch);sql(patch)
+  assert sql("SELECT proowner::text,proacl::text,prosecdef,proconfig::text FROM pg_proc WHERE oid='public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure;").stdout==privileges,'patch changed ownership/grants/security'
+  assert json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip())==before,'applying patch mutated business data'
  snap=json.loads(sql(ctx+"SELECT store_backup_snapshot_v2();").stdout.strip());fp=snap['fingerprint'];assert all(snap['tables'][t] for t in snap['tables']), 'fixture must exercise every backed-up table';snapshot=json.dumps(snap).replace("'","''")
  fail(ctx+"SELECT reset_store_data_v2('RESET','stale');",'Store changed since backup')
  check('(SELECT count(*)=2 FROM catalog_bookings)','stale backup changed data')
@@ -158,5 +178,5 @@ try:
   queued.wait(timeout=5);err=queued.stderr.read()
   assert queued.returncode and 'Owner access required' in err,err
   check(f"EXISTS(SELECT 1 FROM user_roles WHERE user_id='{pending}' AND role='staff')",'queued old owner modified team after handover')
- print(json.dumps({'scope':'Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.','checks':['first signup owner / subsequent pending','staff, pending and anon blocked','old reset disabled','gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back','stale backup rejected','failed reset atomic','catalog orders cleared before sales/variants','owner preserved, other access revoked, Auth retained','identity/defaults and operational preference preservation; stale offers cleared','storage queue and verified acknowledgements','restore staging','missing photo blocked','corrupt restore rolls back with FK checks','exact full table restore including cost/history','nonempty restore blocked','hero/theme and numbering options','reset never opens public owner signup','atomic verified-email handover','last owner protection','queued role calls recheck ownership after handover'],'result':'PASS'},indent=2))
+ print(json.dumps({'scope':'Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.','checks':['first signup owner / subsequent pending','staff, pending and anon blocked','old reset disabled','gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back','stale backup rejected','failed reset atomic','catalog orders cleared before sales/variants','owner preserved, other access revoked, Auth retained','identity/defaults and operational preference preservation; stale offers cleared','storage queue and verified acknowledgements','restore staging','missing photo blocked','corrupt restore rolls back with FK checks','exact full table restore including cost/history','nonempty restore blocked','hero/theme and numbering options','reset never opens public owner signup','atomic verified-email handover','last owner protection','queued role calls recheck ownership after handover'],'safeupdateGuard':bool(guard_binary),'guardRegression':'original 0025 fails/rolls back; 0028 applies twice without data/grant changes; reset and restore remain guarded' if guard_binary else 'not loaded','result':'PASS'},indent=2))
 finally:run(['docker','rm','-f',name])

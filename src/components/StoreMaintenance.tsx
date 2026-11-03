@@ -45,6 +45,7 @@ export function StoreMaintenance() {
       await action();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Maintenance failed. Please retry.";
+      setStatus("");
       setIssue(message);
       toast.error(message);
     } finally {
