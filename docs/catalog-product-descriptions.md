@@ -6,8 +6,9 @@ characters, live preview, save/discard feedback and saved-value verification.
 Empty or whitespace-only content saves as null and hides both public description
 areas. Descriptions are optional; product creation and checkout do not require them.
 
-The public product card shows at most two lines below the article name. Opening
-the product shows the full description below the photo/price, before sizes.
+Public product cards do not show descriptions. Opening the product shows the full
+optional description below the photo, price and sizes. Header and WhatsApp/order
+actions stay outside the scrolling detail content; checkout steps keep their existing flow.
 Owner-entered text is rendered as plain text, preserves line breaks and language,
 and is excluded from automatic UI translation. Editor instructions support
 English, Hindi and Hinglish. Existing photo, visibility, pricing and order flows

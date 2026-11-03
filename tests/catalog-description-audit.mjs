@@ -360,7 +360,7 @@ try {
       "discard changes",
       "cancel product switch preserves draft",
       "mobile layout at 320/390/768/1440",
-      "public two-line summary and full detail",
+      "public description only after opening product",
       "literal HTML is inert",
       "Hindi content preserved",
       "unchanged size selection",

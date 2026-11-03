@@ -6,10 +6,12 @@ export function CatalogProductGallery({
   productId,
   cover,
   label,
+  imageClassName,
 }: {
   productId: string;
   cover: string | null;
   label: string;
+  imageClassName?: string;
 }) {
   const [images, setImages] = useState<string[]>(cover ? [cover] : []);
   const [index, setIndex] = useState(0);
@@ -40,7 +42,9 @@ export function CatalogProductGallery({
   }, [productId, cover, attempt]);
   return (
     <div className="space-y-2" aria-label="Product photo gallery">
-      <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+      <div
+        className={`relative aspect-square overflow-hidden rounded-lg bg-muted ${imageClassName ?? ""}`}
+      >
         {images[index] && (
           <img
             src={images[index]}

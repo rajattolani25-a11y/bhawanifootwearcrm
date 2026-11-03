@@ -1366,6 +1366,15 @@ export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
 
 // Strings that also need an English form (Hinglish-sourced) plus newer screen text.
 export const EXTRA: Record<string, { english: string; hindi: string; hinglish: string }> = {
+  "Get this pair": {"english": "Get this pair", "hindi": "यह जोड़ी चुनें", "hinglish": "Yeh pair lo"},
+  "Select a size to continue": {"english": "Select a size to continue", "hindi": "आगे बढ़ने के लिए साइज़ चुनें", "hinglish": "Aage badhne ke liye size chuno"},
+  "Out of stock": {"english": "Out of stock", "hindi": "स्टॉक में नहीं है", "hinglish": "Stock mein nahi hai"},
+  "Product details": {"english": "Product details", "hindi": "प्रोडक्ट की जानकारी", "hinglish": "Product ki details"},
+  "Product information": {"english": "Product information", "hindi": "प्रोडक्ट का विवरण क्षेत्र", "hinglish": "Product ki jaankari"},
+  "Product actions": {"english": "Product actions", "hindi": "प्रोडक्ट के विकल्प", "hinglish": "Product ke actions"},
+  "Back to catalog": {"english": "Back to catalog", "hindi": "कैटलॉग पर वापस जाएँ", "hinglish": "Catalog par wapas jao"},
+  "selected": {"english": "selected", "hindi": "चुना गया", "hinglish": "selected"},
+  "Choose a size (optional)": {"english": "Choose a size (optional)", "hindi": "साइज़ चुनें (वैकल्पिक)", "hinglish": "Size chuno (optional)"},
   "Optional": {english:"Optional",hindi:"वैकल्पिक",hinglish:"Optional"},
   "Refund payment mode not recorded": {"english": "Refund payment mode not recorded", "hindi": "रिफंड का भुगतान माध्यम दर्ज नहीं है", "hinglish": "Refund ka payment mode record nahi hai"},
   "− Refund payouts (mode not recorded)": {"english": "− Refund payouts (mode not recorded)", "hindi": "− रिफंड भुगतान (माध्यम दर्ज नहीं है)", "hinglish": "− Refund payments (mode record nahi hai)"},

@@ -6,7 +6,7 @@ import { InterfaceMotion } from "@/components/motion/provider";
 import { BlurReveal } from "@/components/motion/blur-reveal";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { CatalogProductGallery } from "@/components/CatalogProductGallery";
@@ -197,7 +197,6 @@ export function CatalogView({ data }: { data: CatalogData }) {
                 <div className={styles["productInfo"]}>
                   <p className={styles["brand"]} data-no-translate>{p.brand}</p>
                   <h3 data-no-translate>{p.article}</h3>
-                  {catalogDescription(p.description) && <p className={styles["productDescription"]} data-no-translate>{catalogDescription(p.description)}</p>}
                   <p className={styles["price"]}><strong>{inr(p.price)}</strong>{off > 0 && <del>{inr(p.mrp)}</del>}</p>
                   <div className={styles["sizeSummary"]}><span>Sizes</span><span className={styles["sizeChips"]} data-no-translate>{available.length ? available.map((size) => <span key={size.id}>{size.size}</span>) : "—"}</span></div>
                   <span className={styles["cardAction"]}><span>{available.length ? "Choose size" : "Out of stock"}</span><ArrowRight aria-hidden="true" /></span>
@@ -230,7 +229,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
           <Button variant="secondary" className="h-12" onClick={() => { setHelp(false); setTrack(""); }}><Package className="h-4 w-4" /><span>Track order</span></Button>
         </DialogContent>
       </Dialog>
-      <ProductDialog key={open?.id ?? "none"} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
+      <ProductDialog key={open?.id ?? "none"} dark={dark} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={() => setOpen(null)} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
@@ -291,8 +290,10 @@ function similarTo(p: CatalogProduct, all: CatalogProduct[]) {
     .sort((a, b) => b.score - a.score).slice(0, 4).map((r) => r.x);
 }
 
-export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode }: { product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
-  const { lang } = useLang();
+export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode, dark = false }: { dark?: boolean; product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
+  const { lang, t } = useLang();
+  const sizesRef = useRef<HTMLElement>(null);
+  const [needsSize, setNeedsSize] = useState(false);
   const [size, setSize] = useState<string | null>(null);
   const [step, setStep] = useState<"view" | "method" | "form" | "done">("view");
   const [method, setMethod] = useState<Fulfillment>("pickup");
@@ -314,6 +315,18 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   const label = `${product.brand} ${product.article}`;
   const wa = waTo(shop.phone, enquiryText(lang, shop.name, label, chosen?.size ?? ""));
   const canOrder = shop.booking || shop.local || shop.outside;
+  const hasStock = product.sizes.some(s => s.available);
+  function startOrder() {
+    if (!canOrder || !hasStock) return;
+    if (!chosen) {
+      setNeedsSize(true);
+      sizesRef.current?.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      sizesRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");
+    setStep("method");
+  }
   const charge = (f: Fulfillment) => (f === "pickup" ? 0 : f === "local" ? (shop.free_delivery_above != null && product.price >= shop.free_delivery_above ? 0 : shop.local_charge) : shop.outside_charge);
   const net = product.price - (disc?.amount ?? 0);
   const payNow = method === "pickup" ? Math.ceil(net * shop.advance_percent / 100) : net + (method === "local" && shop.free_delivery_above != null && net >= shop.free_delivery_above ? 0 : charge(method));
@@ -349,25 +362,26 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className={`${styles["dialog"]} max-h-[92vh] overflow-y-auto sm:max-w-lg`}>
-        <DialogHeader><DialogTitle><span data-no-translate>{label}</span></DialogTitle></DialogHeader>
-        {step === "view" && <div className="flex flex-col gap-4">
-          <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} />
+      <DialogContent data-product-theme={dark ? "dark" : "light"} className={`${styles["dialog"]} ${styles["productModal"]} ${step === "view" ? styles["productDialog"] : "max-h-[92vh] overflow-y-auto sm:max-w-lg"}`}>
+        <DialogHeader className={step === "view" ? styles["productHeader"] : undefined}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
+        {step === "view" && <div className={styles["productBody"]} role="region" aria-label={t("Product information")} tabIndex={0}>
+          <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} imageClassName={styles["detailPhoto"] ?? ""} />
+          <div className={styles["detailHeading"]}>
+            <p className={styles["detailBrand"]} data-no-translate>{product.brand}</p>
+            <h3 data-no-translate>{product.article}</h3>
+          </div>
           <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{product.category}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
+          <section ref={sizesRef} tabIndex={-1} className={styles["detailSizes"]} data-attention={needsSize && !chosen} aria-label={t("Choose size")}>
+            <p className="mb-2 text-sm font-semibold">Choose size</p>
+            <div className="flex flex-wrap gap-2">
+              {product.sizes.map((s) => <button key={s.id} disabled={!s.available} aria-pressed={size === s.id} onClick={() => { setSize(s.id); setNeedsSize(false); }} className={`min-w-12 rounded-md border px-3 py-2 text-sm font-semibold ${!s.available ? "cursor-not-allowed text-muted-foreground/40 line-through" : size === s.id ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{s.size}</button>)}
+            </div>
+          </section>
           {catalogDescription(product.description) && <section className="space-y-2 rounded-xl border bg-muted/30 p-4">
             <h3 className="text-sm font-semibold">Product description</h3>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]" data-no-translate>{catalogDescription(product.description)}</p>
           </section>}
-          <div>
-            <p className="mb-2 text-sm font-semibold">Choose size</p>
-            <div className="flex flex-wrap gap-2">
-              {product.sizes.map((s) => <button key={s.id} disabled={!s.available} aria-pressed={size === s.id} onClick={() => setSize(s.id)} className={`min-w-12 rounded-md border px-3 py-2 text-sm font-semibold ${!s.available ? "cursor-not-allowed text-muted-foreground/40 line-through" : size === s.id ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{s.size}</button>)}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            {wa && <Button asChild variant={canOrder ? "outline" : "default"} className="h-12 w-full"><a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Ask on WhatsApp & visit store</a></Button>}
-            {canOrder && <Button disabled={!chosen} onClick={() => setStep("method")} className="h-12 w-full">{chosen ? "Get this pair" : "Select a size to continue"}</Button>}
-          </div>
+
           <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p><b className="block">Exchange policy</b><span className="text-muted-foreground">No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</span></p></div>
           {(() => { const sim = similarTo(product, all); return sim.length > 0 && <div>
             <p className="mb-2 text-sm font-semibold">Similar pairs you might like</p>
@@ -380,6 +394,16 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
             </div>
           </div>; })()}
         </div>}
+        {step === "view" && (wa || canOrder) && <footer className={styles["productActions"]} aria-label={t("Product actions")}>
+          <div className={styles["actionSummary"]}>
+            <strong>{inr(product.price)}</strong>
+            <span role="status">{!hasStock ? t("Out of stock") : chosen ? <><span>{t("Size")}</span> <span data-no-translate>{chosen.size}</span> <span>{t("selected")}</span></> : t(canOrder ? "Select a size to continue" : "Choose a size (optional)")}</span>
+          </div>
+          <div className={styles["actionButtons"]}>
+            {wa && <Button asChild variant="outline" className={styles["whatsappAction"]}><a href={wa} target="_blank" rel="noreferrer" aria-label={t("Ask on WhatsApp & visit store")}><MessageCircle aria-hidden="true" /><span>WhatsApp</span></a></Button>}
+            {canOrder && <Button type="button" disabled={!hasStock} onClick={startOrder} className={styles["orderAction"]}><span>{t(hasStock ? "Get this pair" : "Out of stock")}</span><ArrowRight aria-hidden="true" /></Button>}
+          </div>
+        </footer>}
         {step === "method" && chosen && <div className="space-y-3">
           <p className="text-sm font-semibold">How do you want it?</p>
           {shop.booking && <Opt f="pickup" icon={<Store className="h-5 w-5" />} title="Pickup from store" sub="Pay a small advance now, rest at the store" price="Free" />}
