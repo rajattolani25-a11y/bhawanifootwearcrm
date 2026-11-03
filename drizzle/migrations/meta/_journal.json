@@ -183,6 +183,13 @@
       "when": 1793592727751,
       "tag": "0025_safe_store_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793681831672,
+      "tag": "0026_safe_store_reset_marker",
+      "breakpoints": true
     }
   ]
 }
