@@ -486,6 +486,8 @@ export type Database = {
       }
       loyalty_rewards: {
         Row: {
+          earned_sale_id: string | null
+          earned_visit_number: number | null
           amount: number
           card: string
           created_at: string
@@ -498,6 +500,8 @@ export type Database = {
           used_sale_id: string | null
         }
         Insert: {
+          earned_sale_id?: string | null
+          earned_visit_number?: number | null
           amount: number
           card: string
           created_at?: string
@@ -510,6 +514,8 @@ export type Database = {
           used_sale_id?: string | null
         }
         Update: {
+          earned_sale_id?: string | null
+          earned_visit_number?: number | null
           amount?: number
           card?: string
           created_at?: string
@@ -857,6 +863,10 @@ export type Database = {
       }
       sale_returns: {
         Row: {
+          replacement_variant_id: string | null
+          replacement_size: string | null
+          refund_mode: string | null
+          operation_id: string | null
           cash_refund: number
           cost_reversal: number
           created_at: string
@@ -876,6 +886,10 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
+          replacement_variant_id?: string | null
+          replacement_size?: string | null
+          refund_mode?: string | null
+          operation_id?: string | null
           cash_refund?: number
           cost_reversal?: number
           created_at?: string
@@ -895,6 +909,10 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
+          replacement_variant_id?: string | null
+          replacement_size?: string | null
+          refund_mode?: string | null
+          operation_id?: string | null
           cash_refund?: number
           cost_reversal?: number
           created_at?: string
@@ -939,6 +957,11 @@ export type Database = {
       }
       sales: {
         Row: {
+          client_request_id: string | null
+          request_hash: string | null
+          request_result: Json | null
+          stamp_regular_reversed: boolean | null
+          stamp_premium_reversed: boolean | null
           bill_no: string
           bill_type: string
           coupon_amount: number
@@ -968,6 +991,11 @@ export type Database = {
           total: number
         }
         Insert: {
+          client_request_id?: string | null
+          request_hash?: string | null
+          request_result?: Json | null
+          stamp_regular_reversed?: boolean | null
+          stamp_premium_reversed?: boolean | null
           bill_no: string
           bill_type?: string
           coupon_amount?: number
@@ -997,6 +1025,11 @@ export type Database = {
           total?: number
         }
         Update: {
+          client_request_id?: string | null
+          request_hash?: string | null
+          request_result?: Json | null
+          stamp_regular_reversed?: boolean | null
+          stamp_premium_reversed?: boolean | null
           bill_no?: string
           bill_type?: string
           coupon_amount?: number
@@ -1328,6 +1361,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      retail_integrity_version: { Args: never; Returns: number }
+      return_cost_reversals: { Args: { _ids: string[] }; Returns: { id: string; cost_reversal: number }[] }
+      sale_return_positions: { Args: { _item: string }; Returns: { variant_id: string | null; size: string; qty: number }[] }
+      process_sale_return: { Args: { _sale_item_id: string; _variant_id: string | null; _qty: number; _damaged: boolean; _kind: string; _note?: string; _refund_mode?: string | null; _replacement_variant_id?: string | null; _operation_id?: string }; Returns: Json }
+      import_stock_csv: { Args: { _rows: Json; _mode: string; _preview?: boolean; _operation_id?: string; _expected?: Json }; Returns: Json }
       ack_store_file_cleanup: {
         Args: { _bucket: string; _paths: string[] }
         Returns: undefined

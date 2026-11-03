@@ -1,10 +1,12 @@
+import type { Database } from "@/integrations/supabase/types";
+import { requireRetailIntegrity, integrityError } from "@/lib/retail-integrity";
 import { money, refundsBySale } from "@/lib/sales-returns";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { fetchAll } from "@/lib/fetch-all";
 import { useShop } from "@/hooks/use-shop";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Printer, MessageCircle, Undo2, IndianRupee } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,14 +100,14 @@ function Sales() {
       fetchAll((a, b) =>
         supabase
           .from("sale_returns")
-          .select("sale_id,sale_item_id,qty,refund,kind")
+          .select("sale_id,sale_item_id,qty,refund,kind,replacement_variant_id")
           .order("id")
           .range(a, b),
       ),
   });
   const refunded = refundsBySale(returns);
   const returned = (id: string) =>
-    returns.filter((r) => r.sale_item_id === id).reduce((a, r) => a + r.qty, 0);
+    returns.filter((r) => r.sale_item_id === id && (r.kind !== "exchange" || !r.replacement_variant_id)).reduce((a, r) => a + r.qty, 0);
   const list = data?.rows ?? [];
   const reprint = (b: string, d: PrintDesign) =>
     printBill(b, d).catch((e) => toast.error(e.message));
@@ -352,92 +354,95 @@ function Sales() {
   );
 }
 
-function ReturnDialog({
-  sale,
-  onClose,
-  returned,
-  onDone,
-}: {
-  sale: SaleRow | null;
-  onClose: () => void;
-  returned: (id: string) => number;
-  onDone: () => void;
-}) {
+type ReturnArgs = Database["public"]["Functions"]["process_sale_return"]["Args"];
+function ReturnDialog({ sale, onClose, onDone }: { sale: SaleRow | null; onClose: () => void; returned: (id: string) => number; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState("Cash");
+  const [confirmed, setConfirmed] = useState(false);
+  const [chosen, setChosen] = useState<Record<string, string>>({});
+  const pending = useRef<ReturnArgs | null>(null);
+  const [recover, setRecover] = useState(false);
+  const inFlight = useRef(false);
+  const returnStorageKey = "solestack-pending-return-v1";
   const days = sale ? (Date.now() - new Date(sale.sale_date).getTime()) / 864e5 : 0;
-  async function go(itemId: string, damaged: boolean, kind: string) {
-    setBusy(true);
-    const { data, error } = await supabase.rpc("process_return", {
-      _sale_item_id: itemId,
-      _qty: 1,
-      _damaged: damaged,
-      _kind: kind,
-      _note: `${kind} from ${sale?.bill_no}`,
-    });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(
-      kind === "exchange"
-        ? "Pair back in stock — now bill the new size in POS (₹0 difference if same price)"
-        : `Returned. Refund ${inr(Number(data))}`,
-    );
-    onDone();
+  const positions = useQuery({
+    queryKey: ["return-positions", sale?.id], enabled: !!sale,
+    queryFn: async () => {
+      await requireRetailIntegrity();
+      const entries = await Promise.all(sale!.sale_items.map(async (i) => {
+        const { data, error } = await supabase.rpc("sale_return_positions", { _item: i.id });
+        if (error) throw integrityError(error);
+        return { item: i, positions: data ?? [] };
+      }));
+      const ids = entries.flatMap((e) => e.positions.map((p) => p.variant_id).filter((id): id is string => !!id));
+      const base = ids.length ? await supabase.from("product_variants").select("id,product_id").in("id", ids) : { data: [], error: null };
+      if (base.error) throw base.error;
+      const productIds = [...new Set((base.data ?? []).map((v) => v.product_id))];
+      const sizes = productIds.length ? await supabase.from("product_variants").select("id,product_id,size,stock").in("product_id", productIds).gt("stock", 0).order("size") : { data: [], error: null };
+      if (sizes.error) throw sizes.error;
+      return { entries, sizes: sizes.data ?? [], base: base.data ?? [] };
+    },
+  });
+  useEffect(() => {
+    setChosen({}); setConfirmed(false); setRecover(false); pending.current = null;
+    if (!sale?.id) return;
+    try {
+      const saved=JSON.parse(sessionStorage.getItem(returnStorageKey) ?? "null");
+      if(saved?._operation_id && saved?._sale_item_id) { pending.current=saved; setRecover(true); }
+    } catch { toast.error("Could not read pending return recovery. Check the return history before retrying."); }
+  }, [sale?.id]);
+  async function execute(args: ReturnArgs) {
+    if (inFlight.current) return;
+    inFlight.current=true; setBusy(true);
+    try { sessionStorage.setItem(returnStorageKey,JSON.stringify(args)); } catch { inFlight.current=false; setBusy(false); toast.error("Recovery storage is unavailable. No return submitted."); return; }
+    pending.current = args;
+    try {
+      const { data, error } = await supabase.rpc("process_sale_return", args);
+      if (error) {
+        if (/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST")) { pending.current = null; sessionStorage.removeItem(returnStorageKey); setRecover(false); }
+        else setRecover(true);
+        throw integrityError(error);
+      }
+      pending.current = null; sessionStorage.removeItem(returnStorageKey); setRecover(false); setConfirmed(false);
+      const result = data as { refund: number; payout: number; loyalty_review?: boolean; replacement_size?: string };
+      toast.success(args._kind === "exchange" ? `Size exchanged to ${result.replacement_size}. Original bill retained; no extra payment or sale.` : `Return saved. ${inr(result.refund)} reversed · ${inr(result.payout)} refunded.`);
+      if (result.loyalty_review) toast.warning("A reward from this purchase has already been used. Owner review is required; no automatic charge was made.");
+      onDone(); await positions.refetch();
+    } catch (error) {
+      if (pending.current) setRecover(true);
+      toast.error((error as Error).message);
+    } finally { inFlight.current=false; setBusy(false); }
   }
-  return (
-    <Dialog open={!!sale} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Return / Exchange · {sale?.bill_no}</DialogTitle>
-        </DialogHeader>
-        {days > 7 && (
-          <p className="rounded-lg bg-warning/20 p-2 text-sm">
-            ⚠ Bill is {Math.floor(days)} days old (policy is 7 days).
-          </p>
-        )}
-        <div className="space-y-2">
-          {sale?.sale_items.map((i) => {
-            const left = i.qty - returned(i.id);
-            return (
-              <div key={i.id} className="rounded-lg border p-2 text-sm">
-                <p className="font-semibold">
-                  {i.product_name} · Size {i.size} · {inr(i.price)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {left} of {i.qty} returnable (1 pair per tap)
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Button
-                    size="sm"
-                    disabled={!left || busy}
-                    onClick={() => go(i.id, false, "exchange")}
-                  >
-                    Size exchange
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!left || busy}
-                    onClick={() => go(i.id, false, "return")}
-                  >
-                    Return (good)
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={!left || busy}
-                    onClick={() => go(i.id, true, "defect")}
-                  >
-                    Defect → damaged
-                  </Button>
-                </div>
-              </div>
-            );
+  const go = (item: string, variant: string | null, kind: string) => {
+    const replacement = chosen[`${item}:${variant}`];
+    void execute({ _sale_item_id: item, _variant_id: variant, _qty: 1, _damaged: kind === "defect", _kind: kind, _note: `${kind} from ${sale?.bill_no}`, _refund_mode: kind === "exchange" ? null : mode, _replacement_variant_id: kind === "exchange" ? replacement ?? null : null, _operation_id: crypto.randomUUID() });
+  };
+  return <Dialog open={!!sale} onOpenChange={(o) => !o && !busy && !recover && onClose()}>
+    <DialogContent className="max-h-[90dvh] overflow-y-auto" onEscapeKeyDown={(e) => { if (busy || recover) e.preventDefault(); }} onPointerDownOutside={(e) => { if (busy || recover) e.preventDefault(); }}>
+      <DialogHeader><DialogTitle>Return / Exchange · {sale?.bill_no}</DialogTitle></DialogHeader>
+      {days > 7 && <p className="rounded-lg bg-warning/20 p-2 text-sm">Bill is {Math.floor(days)} days old (policy is 7 days).</p>}
+      <p className="text-sm text-muted-foreground">Size exchange swaps one pair within the same article. Keep the original bill; do not make another sale.</p>
+      {positions.isPending && <p role="status">Loading returnable sizes…</p>}
+      {positions.error && <div role="alert"><p>{positions.error.message}</p><Button variant="outline" onClick={() => void positions.refetch()}>Retry</Button></div>}
+      {recover && <div role="alert" className="rounded-lg border p-3"><p>The connection interrupted this operation. Recover the same request before starting another return.</p><Button disabled={busy} onClick={() => pending.current && void execute(pending.current)}>Retry / recover return</Button></div>}
+      <fieldset disabled={busy || recover} className="space-y-3">
+        <label className="block text-sm">Actual refund method<select className="ml-2 rounded-md border bg-background p-2" value={mode} onChange={(e) => { setMode(e.target.value); setConfirmed(false); }}>{["Cash","UPI","Card","Bank"].map((m) => <option key={m}>{m}</option>)}</select></label>
+        <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />I confirm the refund payout uses this method. Any unpaid bill balance is adjusted first.</label>
+        {positions.data?.entries.map(({ item, positions: current }) => <div key={item.id} className="space-y-2 rounded-lg border p-3 text-sm">
+          <p className="font-semibold">{item.product_name} · {inr(item.price)} / pair</p>
+          {!current.length && <p>No pairs remain returnable.</p>}
+          {current.map((p) => {
+            const key = `${item.id}:${p.variant_id}`;
+            const product = positions.data.base.find((v) => v.id === p.variant_id)?.product_id;
+            const alternatives = positions.data.sizes.filter((v) => v.product_id === product && v.id !== p.variant_id);
+            return <div key={key} className="space-y-2 border-t pt-2">
+              <p>Current size {p.size} · {p.qty} returnable (one pair per action)</p>
+              <div className="flex flex-wrap gap-2"><select aria-label={`Replacement size for ${item.product_name} size ${p.size}`} className="min-w-0 rounded-md border bg-background p-2" value={chosen[key] ?? ""} onChange={(e) => setChosen((c) => ({ ...c, [key]: e.target.value }))}><option value="">Choose replacement size</option>{alternatives.map((v) => <option key={v.id} value={v.id}>Size {v.size} · {v.stock} in stock</option>)}</select><Button size="sm" disabled={!chosen[key]} onClick={() => go(item.id, p.variant_id, "exchange")}>Exchange size</Button></div>
+              <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={!confirmed} onClick={() => go(item.id,p.variant_id,"return")}>Return (good)</Button><Button size="sm" variant="outline" disabled={!confirmed} onClick={() => go(item.id,p.variant_id,"defect")}>Defect → damaged</Button></div>
+            </div>;
           })}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+        </div>)}
+      </fieldset>
+    </DialogContent>
+  </Dialog>;
 }

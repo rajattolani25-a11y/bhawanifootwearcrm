@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/use-auth";
+import { requireRetailIntegrity } from "@/lib/retail-integrity";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { CouponTicket } from "@/components/CouponTicket";
 import { m, useReducedMotion } from "motion/react";
@@ -36,6 +38,7 @@ const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/
 
 function POS() {
   const shop = useShop();
+  const { user } = useAuth();
   const reduceMotion = useReducedMotion();
   const { lang, t } = useLang();
   const [mobilePane, setMobilePane] = useState<"products" | "cart">("products");
@@ -71,6 +74,19 @@ function POS() {
   const [received, setReceived] = useState("");
   const [busy, setBusy] = useState(false);
   const submittingRef = useRef(false);
+  const pendingSaleRef = useRef<null | { sale: Record<string, string | number | boolean>; items: { variant_id: string; product_name: string; size: string; sku: string | null; price: number; qty: number; discount: number }[] }>(null);
+  const [retryPending, setRetryPending] = useState(false);
+  const requestStorageKey = "solestack-pending-billing-v1";
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(requestStorageKey) ?? "null");
+      if (saved?.userId === user.id && saved.payload?.sale?.request_id && Array.isArray(saved.payload.items)) {
+        pendingSaleRef.current = saved.payload;
+        setRetryPending(true);
+      }
+    } catch { toast.error("Pending bill recovery could not be read. Check Sales History before retrying a previous purchase."); }
+  }, [user]);
   const [done, setDone] = useState<null | { bill_no: string; total: number; paid: number; due: number; mobile: string; name: string; stamp: boolean; unlocked: { card: string; amount: number }[] }>(null);
   const [held, setHeld] = useState<Held[]>([]);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -246,37 +262,45 @@ function POS() {
   async function ensureCustomer(): Promise<Customer | null> {
     if (customer) return customer;
     const clean = mobile.replace(/\D/g, "").slice(-10);
-    if (clean.length !== 10) return null;
+    if (!clean.length && !newName.trim()) return null;
+    if (clean.length !== 10) throw new Error("Enter a valid 10-digit customer mobile, or choose Walk-in.");
     const cols = "id,mobile,name,is_premium,regular_stamps,premium_stamps,last_stamp_date";
     const found = await supabase.from("customers").select(cols).eq("mobile", clean).maybeSingle();
+    if (found.error) throw new Error("Customer lookup failed. Retry before billing: " + found.error.message);
     if (found.data) { setCustomer(found.data); return found.data; }
     const { data, error } = await supabase.from("customers").insert({ mobile: clean, name: newName.trim() || "Walk-in Customer" }).select(cols).single();
-    if (error) { toast.error(t("Customer save nahi hua:") + " " + error.message); return null; }
+    if (error) throw new Error("Customer could not be saved. Retry before billing: " + error.message);
     setCustomer(data); setNewName(""); toast.success(`Customer ${clean} saved`);
     return data;
   }
 
   async function complete() {
-    if (!cart.length || submittingRef.current) return;
+    if ((!cart.length && !pendingSaleRef.current) || submittingRef.current) return;
     submittingRef.current = true;
     setBusy(true);
     try {
-      const customer = await ensureCustomer();
-      if (pay === "Credit" && !customer) {
+      await requireRetailIntegrity();
+      if (!user) throw new Error("Sign in before billing.");
+      const existingPending = JSON.parse(sessionStorage.getItem(requestStorageKey) ?? "null");
+      if (existingPending && existingPending.userId !== user.id) throw new Error("A previous cashier has an unresolved bill in this tab. Ask them to recover it before starting another bill.");
+      const customer = pendingSaleRef.current ? null : await ensureCustomer();
+      if (!pendingSaleRef.current && pay === "Credit" && !customer) {
         toast.error("Credit bill ke liye customer mobile zaroori hai");
         mobileRef.current?.focus();
         return;
       }
-      if (due > 0 && !customer) {
+      if (!pendingSaleRef.current && due > 0 && !customer) {
         toast.error("Baaki (due) amount ke liye customer mobile zaroori hai");
         mobileRef.current?.focus();
         return;
       }
-      if (pay === "Split" && (Number(splitCash) < 0 || Number(splitCash) > paid)) { toast.error("Cash part must be between zero and amount received"); return; }
-      const { data, error } = await supabase.rpc("create_sale", {
-        _sale: {
+      if (!pendingSaleRef.current && pay === "Split" && (Number(splitCash) < 0 || Number(splitCash) > paid)) { toast.error("Cash part must be between zero and amount received"); return; }
+      const request = pendingSaleRef.current ?? {
+        sale: {
+          request_id: crypto.randomUUID(),
           customer_id: customer?.id ?? "",
           customer_name: customer?.name || "Walk-in",
+          customer_mobile: customer?.mobile ?? "",
           payment_mode: pay,
           split_cash: pay === "Split" ? Number(splitCash) || 0 : 0,
           bill_type: billType,
@@ -294,14 +318,24 @@ function POS() {
           removed_reward_id: reward && !rewardOn ? reward.id : "",
           coupon_code: coupon?.code ?? "",
         },
-        _items: cart.map((i) => ({ variant_id: i.variant_id, product_name: i.product_name, size: i.size, sku: i.sku, price: i.price, qty: i.qty, discount: 0 })),
-      });
-      if (error) throw error;
+        items: cart.map((i) => ({ variant_id: i.variant_id, product_name: i.product_name, size: i.size, sku: i.sku, price: i.price, qty: i.qty, discount: 0 })),
+      };
+      sessionStorage.setItem(requestStorageKey, JSON.stringify({ userId: user.id, payload: request }));
+      pendingSaleRef.current = request;
+      const { data, error } = await supabase.rpc("create_sale", { _sale: request.sale, _items: request.items });
+      if (error) {
+        // A PostgreSQL business error rolls back; transport/proxy errors may follow a committed sale.
+        if (/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST")) { pendingSaleRef.current = null; sessionStorage.removeItem(requestStorageKey); setRetryPending(false); }
+        else setRetryPending(true);
+        throw error;
+      }
+      pendingSaleRef.current = null; sessionStorage.removeItem(requestStorageKey); setRetryPending(false);
       const r = data as { bill_no: string; stamp_regular: boolean; stamp_premium?: boolean; unlocked: { card: string; amount: number }[] };
-       setDone({ bill_no: r.bill_no, total: bill.total, paid, due, mobile: customer?.mobile ?? "", name: customer?.name ?? "", stamp: r.stamp_regular || !!r.stamp_premium, unlocked: r.unlocked ?? [] });
+       setDone({ bill_no: r.bill_no, total: Number(request.sale["total"]), paid: Number(request.sale["paid_amount"]), due: Number(request.sale["due_amount"]), mobile: String(request.sale["customer_mobile"] ?? ""), name: String(request.sale["customer_name"] ?? ""), stamp: r.stamp_regular || !!r.stamp_premium, unlocked: r.unlocked ?? [] });
       reset();
       refreshOperationalData(qc);
     } catch (e) {
+      if (pendingSaleRef.current) setRetryPending(true);
       beep(false);
       toast.error((e as Error).message);
     } finally {
@@ -533,6 +567,7 @@ function POS() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={retryPending}><DialogContent onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}><DialogHeader><DialogTitle>Confirm the last bill</DialogTitle></DialogHeader><p>The connection interrupted billing. Retry the same request to retrieve its bill safely. Do not start a second bill for this purchase.</p><Button disabled={busy} onClick={() => void complete()}>Retry / recover bill</Button></DialogContent></Dialog>
       <QuickAddProduct open={quickOpen} initialArticle={q && !/^[A-Z0-9]{8,}$/i.test(q) ? q : ""} onClose={() => setQuickOpen(false)} onAdded={(r) => { const first = r.variants.find((v) => (r.qty[v.size] ?? 0) > 0); toast.message(first ? "Ab size tap karke bill mein daalo" : "Stock 0 hai — pehle pairs add karo"); }} />
       <Dialog open={cameraOpen} onOpenChange={setCameraOpen}><DialogContent><DialogHeader><DialogTitle>Scan box label</DialogTitle></DialogHeader>{cameraOpen && <CameraScanner onScan={(code)=>{if(scanCode(code))setCameraOpen(false);}} />}</DialogContent></Dialog>
     </div>

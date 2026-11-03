@@ -1,3 +1,4 @@
+import { withReturnCosts } from "@/lib/retail-integrity";
 import { watchVisibleQuery } from "@/lib/inventory-live";
 import {
   financialReturns,
@@ -65,7 +66,7 @@ function Reports() {
           supabase
             .from("sale_returns")
             .select(
-              "sale_id,product_name,size,qty,refund,kind,taxable_reversal,gst_reversal,cost_reversal,created_at,sales(bill_no,payment_mode,gst_rate),sale_items(price,qty,discount,sale_item_costs(unit_cost))",
+              "id,sale_id,product_name,size,qty,refund,kind,taxable_reversal,gst_reversal,created_at,sales(bill_no,payment_mode,gst_rate),sale_items(price,qty,discount,sale_item_costs(unit_cost))",
             )
             .gte("created_at", a)
             .lt("created_at", b)
@@ -95,7 +96,7 @@ function Reports() {
       return {
         sales,
         costs,
-        returns: financialReturns(returns),
+        returns: financialReturns(await withReturnCosts(returns)),
         expense: expenses.reduce((t, x) => t + Number(x.amount), 0),
       };
     },

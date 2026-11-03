@@ -225,6 +225,13 @@
       "when": 1793732377759,
       "tag": "0031_fixed_loyalty_rewards",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793740000000,
+      "tag": "0032_retail_integrity",
+      "breakpoints": true
     }
   ]
 }

@@ -106,7 +106,7 @@ export async function printBill(billNo: string, designArg?: PrintDesign, duplica
       supabase
         .from("sale_returns")
         .select(
-          "product_name,size,qty,refund,kind,gst_reversal,cash_refund,created_at,sales!inner(bill_no)",
+          "product_name,size,qty,refund,kind,gst_reversal,cash_refund,refund_mode,replacement_size,created_at,sales!inner(bill_no)",
         )
         .eq("sales.bill_no", billNo)
         .order("created_at")
@@ -121,7 +121,7 @@ export async function printBill(billNo: string, designArg?: PrintDesign, duplica
   const gstBill = sale.bill_type === "gst" && Number(sale.gst_rate) > 0;
   const returned = returnSummary(returns);
   const returnNote = returns.length
-    ? `<section style="margin-top:12px;border:1px solid #999;padding:8px;break-inside:avoid"><strong>Recorded returns / exchanges</strong><p><small>Original invoice above is unchanged. Summary as of ${esc(new Date().toLocaleString("en-IN"))}.</small></p>${returns.map((r) => `<p style="font-size:11px">${esc(new Date(r.created_at).toLocaleDateString("en-IN"))} · ${esc(r.product_name)} · ${esc(r.size)} ×${r.qty} · ${esc(r.kind)} · ${money(r.refund)}</p>`).join("")}<div class="t"><span>Original bill amount</span><strong>${money(sale.total)}</strong></div><div class="t"><span>Returned amount</span><strong>−${money(returned.refunded)}</strong></div><div class="t g"><span>Net after returns</span><strong>${money(netSales(Number(sale.total), returns))}</strong></div>${gstBill ? `<div class="t"><span>GST net of returns</span><strong>${money(Number(sale.gst_amount) - returned.gst)}</strong></div>` : ""}<div class="t"><span>Refund paid (recorded)</span><strong>${money(financialReturns(returns).reduce((n, r) => n + Number(r.cash_refund), 0))}</strong></div></section>`
+    ? `<section style="margin-top:12px;border:1px solid #999;padding:8px;break-inside:avoid"><strong>Recorded returns / exchanges</strong><p><small>Original invoice above is unchanged. Summary as of ${esc(new Date().toLocaleString("en-IN"))}.</small></p>${returns.map((r) => `<p style="font-size:11px">${esc(new Date(r.created_at).toLocaleDateString("en-IN"))} · ${esc(r.product_name)} · ${esc(r.size)}${r.replacement_size ? ` → ${esc(r.replacement_size)}` : ""} ×${r.qty} · ${esc(r.kind)} · ${money(r.refund)}${Number(r.cash_refund) > 0 ? ` · ${esc(r.refund_mode ?? "Refund method not recorded")}` : ""}</p>`).join("")}<div class="t"><span>Original bill amount</span><strong>${money(sale.total)}</strong></div><div class="t"><span>Returned amount</span><strong>−${money(returned.refunded)}</strong></div><div class="t g"><span>Net after returns</span><strong>${money(netSales(Number(sale.total), returns))}</strong></div>${gstBill ? `<div class="t"><span>GST net of returns</span><strong>${money(Number(sale.gst_amount) - returned.gst)}</strong></div>` : ""}<div class="t"><span>Refund paid (recorded)</span><strong>${money(financialReturns(returns).reduce((n, r) => n + Number(r.cash_refund), 0))}</strong></div></section>`
     : "";
   const design: PrintDesign = designArg ?? ((st?.bill_design as PrintDesign) || "Thermal");
   const narrow = design === "Thermal" && st?.thermal_width === "58";

@@ -76,22 +76,4 @@ export function downloadCsv(name: string, rows: (string | number)[][]) {
   a.click();
 }
 
-export function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  const split = (l: string) => {
-    const out: string[] = [];
-    let cur = "";
-    let q = false;
-    for (const ch of l) {
-      if (ch === '"') q = !q;
-      else if (ch === "," && !q) {
-        out.push(cur);
-        cur = "";
-      } else cur += ch;
-    }
-    out.push(cur);
-    return out.map((s) => s.trim());
-  };
-  const head = split(lines[0] ?? "").map((h) => h.toLowerCase().replace(/\s+/g, "_"));
-  return lines.slice(1).map((l) => Object.fromEntries(split(l).map((v, i) => [head[i], v])));
-}
+export { parseCsv } from "./csv";

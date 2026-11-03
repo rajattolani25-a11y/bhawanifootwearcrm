@@ -23,6 +23,7 @@ import { waLink } from "@/lib/pos";
 import { useShop } from "@/hooks/use-shop";
 
 export const Route = createFileRoute("/_authenticated/customers")({
+  validateSearch: (search: Record<string, unknown>): { id?: string } => typeof search["id"] === "string" ? { id: search["id"] } : {},
   head: () => ({
     meta: [
       { title: "Customers — SoleStack POS" },
@@ -52,7 +53,8 @@ function Customers() {
     [qc],
   );
   const [q, setQ] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const { id: linkedCustomer }=Route.useSearch();
+  const [openId, setOpenId] = useState<string | null>(linkedCustomer || null);
   const [adding, setAdding] = useState(false);
 
   const {

@@ -35,4 +35,4 @@ export const MODULES: ModuleDef[] = [
 ];
 
 export const inr = (n: number | null | undefined) =>
-  "₹" + Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  "₹" + Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });

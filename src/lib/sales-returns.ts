@@ -71,3 +71,24 @@ export function originalBillReceipt(
   );
   return Math.max(0, money(total - due - laterPayments - creditReversed));
 }
+
+/** Timestamp offsets may differ in JSON; compare instants, never ISO strings. */
+export function inPeriod(value: string, start: string, end: string): boolean {
+  const instant = Date.parse(value);
+  return instant >= Date.parse(start) && instant < Date.parse(end);
+}
+export function refundPayouts(
+  rows: readonly (RecordedReturn & { cash_refund?: Money; refund_mode?: string | null })[],
+) {
+  const financial = financialReturns(rows);
+  return {
+    cash: money(
+      financial
+        .filter((r) => r.refund_mode === "Cash")
+        .reduce((s, r) => s + amount(r.cash_refund), 0),
+    ),
+    unknown: money(
+      financial.filter((r) => !r.refund_mode).reduce((s, r) => s + amount(r.cash_refund), 0),
+    ),
+  };
+}

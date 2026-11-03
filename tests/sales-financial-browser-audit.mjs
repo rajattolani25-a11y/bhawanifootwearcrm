@@ -98,13 +98,16 @@ await page.route("**/*", async (r) => {
   if (u.pathname.startsWith("/rest/v1/")) {
     const { sale, returns } = records();
     let data = [];
-    if (u.pathname.endsWith("/rpc/process_return")) {
+    if (u.pathname.endsWith("/rpc/retail_integrity_version")) return r.fulfill({ json: 32 });
+    if (u.pathname.endsWith("/rpc/return_cost_reversals")) return r.fulfill({ json: returns.map((x) => ({ id: x.id, cost_reversal: x.cost_reversal })) });
+    if (u.pathname.endsWith("/rpc/sale_return_positions")) return r.fulfill({ json: isReturn ? [] : [{ variant_id: variantId, size: "7", qty: pairQty }] });
+    if (u.pathname.endsWith("/rpc/process_sale_return")) {
       assert.equal(method, "POST");
       assert.equal(r.request().postDataJSON()._kind, "return");
       isReturn = true;
       refunded = 2200;
       writes.push("mock return");
-      return r.fulfill({ json: 2200 });
+      return r.fulfill({ json: { refund: 2200, payout: 2200 } });
     }
     if (method !== "GET" && method !== "HEAD") {
       blocked.push(u.pathname);
@@ -194,7 +197,7 @@ const card = (label) =>
     .filter({ has: page.locator("p").filter({ hasText: new RegExp("^" + label + "$") }) })
     .last();
 async function go(route) {
-  await page.goto("http://localhost:8080/" + route);
+  await page.goto("http://127.0.0.1:3000/" + route);
 }
 async function checkValue(label, value) {
   const p = page
@@ -238,8 +241,9 @@ try {
   await go("sales");
   await page.getByText("DEMO-001", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Return / exchange", exact: true }).click();
+  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Return (good)", exact: true }).click();
-  await page.getByText("Returned. Refund ₹2,200", { exact: true }).first().waitFor();
+  await page.getByText("Return saved. ₹2,200 reversed · ₹2,200 refunded.", { exact: true }).first().waitFor();
   await page.keyboard.press("Escape");
   const bill = page.locator("tr").filter({ hasText: "DEMO-001" });
   await page.waitForFunction(() =>

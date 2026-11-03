@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { ListPagination } from "@/components/ListPagination";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,21 +13,31 @@ export const Route = createFileRoute("/_authenticated/stock-ledger")({
 });
 
 function Ledger() {
-  const { data = [] } = useQuery({
-    queryKey: ["ledger"],
+  const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const pageSize=50;
+  const { data: result, error, isPending, refetch } = useQuery({
+    queryKey: ["ledger",page,search],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("stock_movements")
-        .select("id,moved_at,type,product_name,qty_in,qty_out,note,product_variants(size)")
+        .select("id,moved_at,type,product_name,qty_in,qty_out,note,product_variants(size)",{ count: "exact" })
         .order("moved_at", { ascending: false })
-        .limit(300);
+        .order("id");
+      if (search) q=q.ilike("product_name", `%${search.replace(/[\\%_]/g,"\\$&")}%`);
+      const { data, error, count } = await q.range(page*pageSize,(page+1)*pageSize-1);
       if (error) throw error;
-      return data;
+      return { rows: data ?? [], count: count ?? 0 };
     },
   });
+  const data=result?.rows ?? [];
   return (
     <div>
-      <PageHeader title="Stock Ledger" subtitle="Latest 300 movements." />
+      <PageHeader title="Stock Ledger" subtitle="Complete stock movement history. Search and browse older movements." />
+      <form className="mb-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); setSearch(query.trim()); setPage(0); }}><Input aria-label="Search stock movements" placeholder="Search product" value={query} onChange={(e) => setQuery(e.target.value)} /><Button type="submit">Search</Button></form>
+      {error && <p role="alert">Stock history could not be loaded: {error.message} <Button onClick={() => void refetch()}>Retry</Button></p>}
+      {isPending && <p role="status">Loading movements…</p>}
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
@@ -38,13 +52,14 @@ function Ledger() {
                 <td className="p-3">{m.product_variants?.size ?? "–"}</td>
                 <td className="p-3 text-right text-success">{m.qty_in || ""}</td>
                 <td className="p-3 text-right text-destructive">{m.qty_out || ""}</td>
-                <td className="p-3 text-muted-foreground">{m.note}</td>
+                <td className="p-3 text-muted-foreground">{m.type === "CSV-IMPORT" ? "CSV import completed" : m.note}</td>
               </tr>
             ))}
-            {data.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No movements yet.</td></tr>}
+            {!isPending && !error && data.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No movements yet.</td></tr>}
           </tbody>
         </table>
       </div>
+      <ListPagination page={page} pageSize={pageSize} total={result?.count ?? 0} busy={isPending} onPage={setPage} />
     </div>
   );
 }

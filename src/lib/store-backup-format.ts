@@ -155,4 +155,7 @@ export function clearStoreDrafts(
   local.removeItem("solestack-held-bills");
   local.removeItem("solestack-poster-campaigns-v1");
   session.removeItem("offer-seen");
+  session.removeItem("solestack-pending-billing-v1");
+  session.removeItem("solestack-pending-return-v1");
+  session.removeItem("solestack-pending-import-v1");
 }

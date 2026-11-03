@@ -1,0 +1,102 @@
+{
+  "result": "PASS",
+  "productionWrites": 0,
+  "scope": "Local source, real disposable offline PostgreSQL, synthetic browser API data; live schema application not performed",
+  "database": {
+    "result": "PASS",
+    "scope": "Disposable offline PostgreSQL17; actual checked-in migrations and RPCs; no live writes",
+    "checks": [
+      "same and concurrent billing retry returns one bill",
+      "payload mismatch rejected",
+      "size swap atomic and no duplicate revenue/profit",
+      "return replacement size once; over-return blocked",
+      "staff operational access retained / cost column and owner RPC denied",
+      "CSV add/replace + preserved identifiers + scan codes",
+      "CSV preview read-only / bad row rolls everything back",
+      "CSV retries do not duplicate stock",
+      "full return removes one stamp and unspent fifth-visit reward",
+      "used reward flagged without automatic charge; legacy voucher preserved",
+      "three separate returns reconcile exact pennies and UPI method",
+      "damaged return increments damaged stock",
+      "repeat migration preserves backup fingerprint",
+      "20-stamp reversal and premium partial/full return rules",
+      "non-null integrity fields survive actual backup/reset/restore",
+      "stale CSV preview cannot overwrite concurrent stock changes",
+      "unknown billing definition fails with full transaction rollback"
+    ]
+  },
+  "browser": {
+    "result": "PASS",
+    "checks": [
+      "customer lookup failure stops sale",
+      "paise visible in POS",
+      "lost response + reload recovered same bill",
+      "size swap without new sale; return selected replacement with UPI",
+      "CSV escaped/multiline preview and confirmation",
+      "old pending order reachable on page 3",
+      "ledger and coupons pagination",
+      "orders errors do not display false empty state"
+    ],
+    "liveWrites": 0
+  },
+  "financialBrowser": {
+    "result": "PASS",
+    "scope": "Synthetic HTTP data, real screens; no live database access",
+    "checks": [
+      "2200 sale / 1400 cost = 800 profit",
+      "return via Sales History -> net zero / profit zero",
+      "Reports and Accounting net zero",
+      "CSV includes negative return transaction",
+      "customer lifetime spend excludes returns",
+      "missing cost does not show revenue as profit",
+      "accounting PDF carries missing-cost status",
+      "partial 1100 return -> net 1100 / profit 400",
+      "mobile dashboard overflow",
+      "bill reprint return summary in Thermal / A4 / Premium",
+      "downloaded A4 PDF is valid",
+      "khata return/refund rows in CSV and PDF",
+      "customer directory PDF uses net spend",
+      "WhatsApp return lines retain Hindi translation",
+      "old bill returned today yields negative current-period sales"
+    ],
+    "errors": [],
+    "liveWrites": 0
+  },
+  "unitTests": {
+    "passed": 19,
+    "failed": 0
+  },
+  "typescript": "PASS",
+  "productionBuild": "PASS",
+  "lint": "No errors in changed operational components/helpers (formatting rule disabled for existing mixed-style files)",
+  "maintenanceRegression": {
+    "scope": "Disposable PostgreSQL17, all checked-in migrations; real app schema, auth trigger and role guards; Storage service metadata fixture only. No live backend connection.",
+    "checks": [
+      "first signup owner / subsequent pending",
+      "staff, pending and anon blocked",
+      "old reset disabled",
+      "0029 definition-only/idempotent; actual business allocation reclaimed; unknown FK RESTRICT rolls back; preserved hero version advances",
+      "gallery: visible-only/cover-first; hidden and archived denied; staff delete denied; billed delete rolls back",
+      "stale backup rejected",
+      "failed reset atomic",
+      "catalog orders cleared before sales/variants",
+      "owner preserved, other access revoked, Auth retained",
+      "identity/defaults and operational preference preservation; stale offers cleared",
+      "storage queue and verified acknowledgements",
+      "restore staging",
+      "missing photo blocked",
+      "corrupt restore rolls back with FK checks",
+      "exact full table restore including cost/history",
+      "nonempty restore blocked",
+      "hero/theme and numbering options",
+      "reset never opens public owner signup",
+      "atomic verified-email handover",
+      "last owner protection",
+      "queued role calls recheck ownership after handover"
+    ],
+    "allocationReclaimedBytes": 3006464,
+    "safeupdateGuard": false,
+    "guardRegression": "not loaded",
+    "result": "PASS"
+  }
+}

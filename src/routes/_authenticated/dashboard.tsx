@@ -1,3 +1,4 @@
+import { withReturnCosts } from "@/lib/retail-integrity";
 import {
   financialReturns,
   hasRecordedCosts,
@@ -137,7 +138,7 @@ function Dashboard() {
               supabase
                 .from("sale_returns")
                 .select(
-                  "refund,kind,cost_reversal,created_at,sale_items(sale_item_costs(unit_cost))",
+                  "id,refund,kind,created_at,sale_items(sale_item_costs(unit_cost))",
                 )
                 .gte("created_at", since.toISOString())
                 .order("id")
@@ -157,7 +158,7 @@ function Dashboard() {
         dues,
         openingBalances,
         returns,
-        returnCosts,
+        returnCosts: isOwner ? await withReturnCosts(returnCosts) : [],
       };
     },
   });
@@ -390,7 +391,7 @@ function Dashboard() {
           <Score label="Bills Today" value={String(m.bills)} hint="Across all counters" />
         )}
         {isOwner ? (
-          <Score label="Stock Value" value={inr(m.stockValue)} hint="Inventory at cost" />
+          <Score label="Stock Value" value={inr(m.stockValue)} hint="At latest saved purchase cost; not FIFO or weighted average" />
         ) : (
           <Score label="Pairs in Stock" value={m.pairs.toLocaleString("en-IN")} hint="All sizes" />
         )}

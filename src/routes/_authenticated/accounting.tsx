@@ -1,5 +1,6 @@
+import { withReturnCosts } from "@/lib/retail-integrity";
 import { watchVisibleQuery } from "@/lib/inventory-live";
-import { financialReturns, hasRecordedCosts, hasReturnCost, money } from "@/lib/sales-returns";
+import { financialReturns, hasRecordedCosts, hasReturnCost, money, inPeriod, refundPayouts } from "@/lib/sales-returns";
 import { AnimatedTabs } from "@/components/motion/animated-tabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -130,7 +131,7 @@ function Accounting() {
           supabase
             .from("sale_returns")
             .select(
-              "refund,kind,taxable_reversal,gst_reversal,cost_reversal,cash_refund,created_at,sale_items(sale_item_costs(unit_cost))",
+              "id,refund,kind,taxable_reversal,gst_reversal,cash_refund,refund_mode,created_at,sale_items(sale_item_costs(unit_cost))",
             )
             .gte("created_at", start)
             .lt("created_at", end)
@@ -174,8 +175,8 @@ function Accounting() {
           ]),
         ),
         purchases,
-        returns,
-        collections: cps.filter((x) => x.paid_at >= s0 && x.paid_at < e0),
+        returns: await withReturnCosts(returns),
+        collections: cps.filter((x) => inPeriod(x.paid_at, s0, e0)),
         allCollections: cps,
         supplierPayments,
         receivable: sum(allSales, (x) => n(x.due_amount)) + sum(custs, (x) => n(x.opening_balance)),
@@ -219,7 +220,7 @@ function Accounting() {
     (data?.collections ?? []).filter((x) => x.payment_mode === "Cash"),
     (x) => n(x.amount),
   );
-  const cashRefunds = sum(returns, (x) => n(x.cash_refund));
+  const { cash: cashRefunds, unknown: unknownRefunds } = refundPayouts(returns);
   const cashExpenses = sum(
     (data?.exp ?? []).filter((x) => x.mode === "Cash"),
     (x) => n(x.amount),
@@ -229,8 +230,8 @@ function Accounting() {
     (x) => n(x.amount),
   );
   const cashNet = cashSales + cashCollections - cashRefunds - cashExpenses - cashSuppliers;
-  // The legacy payout field stores no payment method. Do not invent a cash refund.
-  const cashUnverified = cashRefunds > 0;
+  // Historical payouts retain their unknown method; never invent cash movement.
+  const cashUnverified = unknownRefunds > 0;
   const cashValue = () =>
     cashUnverified ? tr("Refund payment mode not recorded") : inr(money(cashNet));
   const inputTax = sum(data?.purchases ?? [], (x) => n(x.gst_amount));
@@ -245,7 +246,7 @@ function Accounting() {
   const cashRows: [string, number][] = [
     ["Cash collected at sale", cashSales],
     ["Cash received against dues", cashCollections],
-    ["− Refund payouts (mode not recorded)", -cashRefunds],
+    ["− Cash refund payouts", -cashRefunds],
     ["− Cash expenses", -cashExpenses],
     ["− Supplier cash payments", -cashSuppliers],
   ];
@@ -385,7 +386,7 @@ function Accounting() {
                     key,
                     key === "− Cost of goods sold (net returns)" && missingCosts ? "" : value,
                   ]),
-                  ["Refund payment mode", cashUnverified ? "Not recorded" : "No refund payouts"],
+                  ["Refund payment mode", cashUnverified ? "Some historical refunds have no recorded method" : "All refund methods recorded"],
                   [
                     netLabel,
                     ((tab === "Summary" || tab === "Profit & Loss") && missingCosts) ||

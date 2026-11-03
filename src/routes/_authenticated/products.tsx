@@ -1,7 +1,8 @@
+import { integrityError } from "@/lib/retail-integrity";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Images, Plus, Search, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,36 +117,62 @@ function Products() {
   );
 }
 
+type ImportPlan = { rows: number; plan: { variant_id?: string | null; brand: string; article: string; size: string; before: number; after: number; delta: number }[] };
 function CsvTools() {
   const qc = useQueryClient();
   const { data = [] } = useStock();
   const [busy, setBusy] = useState(false);
-  async function upload(file: File) {
-    setBusy(true);
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState("add");
+  const [rows, setRows] = useState<Record<string, string>[]>([]);
+  const [preview, setPreview] = useState<ImportPlan | null>(null);
+  const [uncertain, setUncertain] = useState(false);
+  const requestId = useRef("");
+  const importStorageKey="solestack-pending-import-v1";
+  useEffect(() => {
     try {
-      type R = Record<string, string>;
-      const recs = parseCsv(await file.text()).filter((r) => r["article"] && r["size"]);
-      if (!recs.length) throw new Error("CSV needs columns: brand, article, category, color, mrp, selling_price, size, qty, barcode, rack, cost");
-      const key = (b: string, a: string) => `${b.toLowerCase()}|${a.toLowerCase()}`;
-      const map = new Map(data.map((p) => [key(p.brand, p.article), p.id]));
-      const fresh = new Map<string, R>();
-      for (const r of recs) if (!map.has(key(r["brand"] ?? "", r["article"]!))) fresh.set(key(r["brand"] ?? "", r["article"]!), r);
-      const np = [...fresh.values()];
-      for (let i = 0; i < np.length; i += 500) {
-        const { data: ins, error } = await supabase.from("products").insert(np.slice(i, i + 500).map((r) => ({ brand: (r["brand"] ?? "").toUpperCase(), article: r["article"]!, category: r["category"] ?? "", color: r["color"] ?? "", mrp: Number(r["mrp"]) || 0, selling_price: Number(r["selling_price"] || r["price"]) || Number(r["mrp"]) || 0 }))).select("id,brand,article");
-        if (error) throw error;
-        ins.forEach((p) => map.set(key(p.brand, p.article), p.id));
+      const saved=JSON.parse(sessionStorage.getItem(importStorageKey) ?? "null");
+      if (saved?.id && Array.isArray(saved.rows) && ["add","replace"].includes(saved.mode)) {
+        requestId.current=saved.id;setRows(saved.rows);setMode(saved.mode);setPreview(saved.preview ?? null);setOpen(true);setUncertain(true);
       }
-      const costs = new Map<string, number>();
-      const variants = recs.map((r) => { const pid = map.get(key(r["brand"] ?? "", r["article"]!))!; if (Number(r["cost"])) costs.set(pid, Number(r["cost"])); return { product_id: pid, size: r["size"]!, stock: Math.max(0, Number(r["qty"]) || 0), barcode: r["barcode"] || null, sku: r["sku"] || null, rack: r["rack"] ?? "" }; });
-      for (let i = 0; i < variants.length; i += 500) { const { error } = await supabase.from("product_variants").upsert(variants.slice(i, i + 500), { onConflict: "product_id,size" }); if (error) throw error; }
-      if (costs.size) { const { error } = await supabase.from("product_costs").upsert([...costs].map(([product_id, purchase_price]) => ({ product_id, purchase_price }))); if (error) throw error; }
-      toast.success(`Uploaded ${variants.length} size rows (${np.length} new articles)`);
-      refreshOperationalData(qc);
-    } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    } catch { toast.error("Import recovery could not be read. Check stock before repeating an earlier import."); }
+  }, []);
+  async function load(file: File) {
+    try {
+      if (file.size > 2 * 1024 * 1024) throw new Error("CSV must be smaller than 2 MB.");
+      const parsed = parseCsv(await file.text()).map((r) => Object.fromEntries(Object.entries(r).map(([k,v]) => [k,v.trim()])));
+      if (!parsed.length || parsed.length > 2000) throw new Error("Choose 1 to 2000 size rows per import.");
+      if (parsed.some((r) => !r["article"] || !r["size"] || !/^\d+$/.test(r["qty"] ?? ""))) throw new Error("Every CSV row needs article, size and a whole non-negative qty. No changes made.");
+      setRows(parsed); setPreview(null); setMode("add"); setOpen(true); setUncertain(false); requestId.current = crypto.randomUUID();
+    } catch (e) { toast.error((e as Error).message); }
   }
-  return (<>
-    <Button variant="outline" className="h-11" onClick={() => downloadCsv("stock.csv", [["brand", "article", "category", "color", "mrp", "selling_price", "size", "qty", "damaged", "barcode", "rack"], ...data.flatMap((p) => [...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => [p.brand, p.article, p.category, p.color ?? "", p.mrp, p.selling_price, v.size, v.stock, v.damaged_stock, v.barcode ?? "", v.rack ?? ""]))])}><Download className="h-4 w-4" /> CSV</Button>
-    <Button asChild variant="outline" className="h-11" disabled={busy}><label className="cursor-pointer"><Upload className="h-4 w-4" /> {busy ? "Uploading…" : "Bulk CSV"}<input type="file" accept=".csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} /></label></Button>
-  </>);
+  async function run(previewOnly: boolean) {
+    if (busy) return;
+    setBusy(true);
+    let definitiveFailure=false;
+    try {
+      if (!previewOnly) sessionStorage.setItem(importStorageKey,JSON.stringify({id:requestId.current,rows,mode,preview}));
+      const { data: result, error } = await supabase.rpc("import_stock_csv", { _rows: rows, _mode: mode, _preview: previewOnly, _operation_id: requestId.current, _expected: previewOnly ? null : preview?.plan ?? null });
+      if (error) {
+        definitiveFailure=/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST");
+        if (definitiveFailure && !previewOnly) { sessionStorage.removeItem(importStorageKey); setPreview(null); }
+        throw integrityError(error);
+      }
+      if (previewOnly) setPreview(result as unknown as ImportPlan);
+      else { sessionStorage.removeItem(importStorageKey); toast.success(`Imported ${(result as unknown as ImportPlan).rows} size rows. Stock ledger updated.`); setOpen(false); setRows([]); setPreview(null); setUncertain(false); refreshOperationalData(qc); }
+    } catch (e) { if (!previewOnly && !definitiveFailure) setUncertain(true); toast.error((e as Error).message); } finally { setBusy(false); }
+  }
+  return <>
+    <Button variant="outline" className="h-11" onClick={() => downloadCsv("stock.csv", [["brand", "article", "category", "color", "mrp", "selling_price", "size", "qty", "damaged", "barcode", "sku", "rack"], ...data.flatMap((p) => [...p.product_variants].sort((a,b) => sizeSort(a.size,b.size)).map((v) => [p.brand,p.article,p.category,p.color ?? "",p.mrp,p.selling_price,v.size,v.stock,v.damaged_stock,v.barcode ?? "",v.sku ?? "",v.rack ?? ""]))])}><Download className="h-4 w-4" /> CSV</Button>
+    <Button asChild variant="outline" className="h-11" disabled={busy || open}><label className="cursor-pointer"><Upload className="h-4 w-4" /> Bulk CSV<input type="file" accept=".csv" hidden onChange={(e) => { const f=e.target.files?.[0]; if(f) void load(f); e.target.value=""; }} /></label></Button>
+    <Dialog open={open} onOpenChange={(v) => !busy && !uncertain && setOpen(v)}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>Preview stock import</DialogTitle></DialogHeader>
+      <p className="text-sm">{rows.length} size rows. Blank barcode, SKU and rack preserve existing values. Damaged stock is unchanged. Existing prices are preserved; a supplied cost updates the latest saved purchase cost. This is a stock import, not a supplier invoice.</p>
+      <label>Stock action<select disabled={busy || uncertain} className="ml-2 rounded-md border bg-background p-2" value={mode} onChange={(e) => { setMode(e.target.value); setPreview(null); requestId.current=crypto.randomUUID(); }}><option value="add">Add quantities to current stock</option><option value="replace">Replace quantities with CSV stock counts</option></select></label>
+      {mode === "replace" && <p role="alert" className="text-sm text-destructive">Replace sets each listed size to its CSV qty. It does not add pairs. Other sizes remain unchanged.</p>}
+      {!uncertain && <Button disabled={busy} variant="outline" onClick={() => void run(true)}>Validate & preview</Button>}
+      {preview && <><div className="max-h-64 overflow-auto"><table className="w-full text-sm"><thead><tr><th>Article / size</th><th>Current</th><th>After</th><th>Change</th></tr></thead><tbody>{preview.plan.map((r,i) => <tr key={i}><td>{r.brand} {r["article"]} / {r["size"]}</td><td>{r.before}</td><td>{r.after}</td><td>{r.delta > 0 ? "+" : ""}{r.delta}</td></tr>)}</tbody></table></div><p className="text-xs text-muted-foreground">Preview is read-only. On confirmation, current stock is rechecked and all rows are saved together, or none are saved.</p></>}
+      {uncertain && <p role="alert">Connection interrupted. Recover this same import before starting another one.</p>}
+      <Button disabled={busy || (!preview && !uncertain)} onClick={() => void run(false)}>{busy ? "Working…" : uncertain ? "Retry / recover import" : "Confirm import"}</Button>
+    </DialogContent></Dialog>
+  </>;
 }

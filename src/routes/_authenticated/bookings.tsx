@@ -1,3 +1,4 @@
+import { ListPagination } from "@/components/ListPagination";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -32,20 +33,24 @@ function Bookings() {
   const { lang } = useLang();
   const [tab, setTab] = useState<(typeof TABS)[number][0]>("pending");
   const [billing, setBilling] = useState<Booking | null>(null);
-  const { data = [] } = useQuery({
-    queryKey: ["bookings"],
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
+  const { data: result, error, isPending, refetch } = useQuery({
+    queryKey: ["bookings",tab,page],
     queryFn: async () => {
-      await supabase.rpc("expire_catalog_bookings");
-      const { data, error } = await supabase.from("catalog_bookings").select("*").order("created_at", { ascending: false }).limit(300);
+      const expired = await supabase.rpc("expire_catalog_bookings");
+      if (expired.error) throw expired.error;
+      const statuses = Object.keys(GROUP).filter((status) => GROUP[status] === tab);
+      const { data, error, count } = await supabase.from("catalog_bookings").select("*", { count: "exact" }).in("status", statuses).order("created_at", { ascending: false }).order("id").range(page * pageSize,(page + 1) * pageSize - 1);
       if (error) throw error;
-      return data as Booking[];
+      return { rows: data as Booking[], count: count ?? 0 };
     },
   });
   useEffect(() => {
     const ch = supabase.channel("bookings-live").on("postgres_changes", { event: "*", schema: "public", table: "catalog_bookings" }, () => qc.invalidateQueries({ queryKey: ["bookings"] })).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
-  const list = data.filter((b) => GROUP[b.status] === tab);
+  const list = result?.rows ?? [];
   const msg = (b: Booking, st: string) => waLink(b.mobile, statusText(lang, { booking_no: b.booking_no, product: b.product_name, size: b.size, name: b.customer_name, price: b.price, advance: b.advance, delivery_charge: b.delivery_charge, fulfillment: b.fulfillment, shop: shop.name, address: b.fulfillment === "pickup" ? null : [b.address, b.area].filter(Boolean).join(", ") }, st, `${window.location.origin}/catalog?track=${b.booking_no}`));
   async function move(b: Booking, st: "packed" | "shipped") {
     const { error } = await supabase.rpc("update_catalog_order_status", { _id: b.id, _status: st });
@@ -76,8 +81,10 @@ function Bookings() {
     <div>
       <PageHeader title="Online Orders" subtitle="Pickup bookings and delivery orders from your catalog. These pairs are already taken out of stock, so nobody else can buy them." actions={<Button variant="outline" onClick={copyLink} className="h-11"><Link2 className="h-4 w-4" /> Copy catalog link</Button>} />
       <div className="mb-4 flex gap-2 overflow-x-auto">
-        {TABS.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`shrink-0 rounded-full border px-4 py-1.5 text-sm ${tab === k ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{l} ({data.filter((b) => GROUP[b.status] === k).length})</button>)}
+        {TABS.map(([k, l]) => <button key={k} onClick={() => { setTab(k); setPage(0); }} className={`shrink-0 rounded-full border px-4 py-1.5 text-sm ${tab === k ? "border-primary bg-primary text-primary-foreground" : "bg-card"}`}>{l}{k===tab && result ? ` (${result.count})` : ""}</button>)}
       </div>
+      {error && <div role="alert" className="mb-3 text-destructive">Orders could not be loaded: {error.message} <Button variant="outline" onClick={() => void refetch()}>Retry</Button></div>}
+      {isPending && <p role="status">Loading orders…</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {list.map((b) => (
           <div key={b.id} className="rounded-lg border bg-card p-4">
@@ -98,8 +105,9 @@ function Bookings() {
             </div>
           </div>
         ))}
-        {list.length === 0 && <p className="text-sm text-muted-foreground">No bookings here.</p>}
+        {!isPending && !error && list.length === 0 && <p className="text-sm text-muted-foreground">No bookings here.</p>}
       </div>
+      <ListPagination page={page} pageSize={pageSize} total={result?.count ?? 0} busy={isPending} onPage={setPage} />
       {billing && <PickupBill b={billing} onClose={() => setBilling(null)} onDone={refresh} />}
     </div>
   );

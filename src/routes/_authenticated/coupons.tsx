@@ -1,3 +1,5 @@
+import { ReturnRewardReviews } from "@/components/ReturnRewardReviews";
+import { ListPagination } from "@/components/ListPagination";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -31,15 +33,22 @@ function Coupons() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"coupons" | "rewards">("coupons");
   const { data: shop } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
-  const { data: coupons = [] } = useQuery({
-    queryKey: ["coupons"],
-    queryFn: async () => { const { data, error } = await supabase.from("coupons").select("*,customers(name,mobile)").order("created_at", { ascending: false }).limit(500); if (error) throw error; return data as unknown as Coupon[]; },
+  const [couponPage, setCouponPage] = useState(0);
+  const [rewardPage, setRewardPage] = useState(0);
+  const pageSize=50;
+  const { data: couponResult, error: couponError, isPending: couponsPending, refetch: retryCoupons } = useQuery({
+    queryKey: ["coupons",couponPage],
+    queryFn: async () => { const { data, error, count } = await supabase.from("coupons").select("*,customers(name,mobile)", { count: "exact" }).order("created_at", { ascending: false }).order("id").range(couponPage*pageSize,(couponPage+1)*pageSize-1); if (error) throw error; return { rows: data as unknown as Coupon[], count: count ?? 0 }; },
   });
-  const { data: rewards = [] } = useQuery({
-    queryKey: ["loyalty-rewards-all"], enabled: tab === "rewards",
-    queryFn: async () => { const { data, error } = await supabase.from("loyalty_rewards").select("id,card,milestone,amount,status,expires_at,unlocked_at,customers(name,mobile)").order("unlocked_at", { ascending: false }).limit(300); if (error) throw error; return data as unknown as { id: string; card: string; milestone: number; amount: number; status: string; expires_at: string; customers: { name: string; mobile: string } | null }[]; },
+  const { data: rewardResult, error: rewardError, isPending: rewardsPending, refetch: retryRewards } = useQuery({
+    queryKey: ["loyalty-rewards-all",rewardPage], enabled: tab === "rewards",
+    queryFn: async () => { const { data, error, count } = await supabase.from("loyalty_rewards").select("id,card,milestone,amount,status,expires_at,unlocked_at,customers(name,mobile)", { count: "exact" }).order("unlocked_at", { ascending: false }).order("id").range(rewardPage*pageSize,(rewardPage+1)*pageSize-1); if (error) throw error; return { rows: data ?? [], count: count ?? 0 }; },
   });
 
+  const coupons=couponResult?.rows ?? [];
+  const rewards=rewardResult?.rows ?? [];
+  const listError=tab === "coupons" ? couponError : rewardError;
+  const listPending=tab === "coupons" ? couponsPending : rewardsPending;
   const now = Date.now();
   const status = (c: Coupon) => !c.active ? "Paused" : c.expires_at && new Date(c.expires_at).getTime() < now ? "Expired" : c.usage_limit !== null && c.used_count >= c.usage_limit ? "Used up" : c.starts_at && new Date(c.starts_at).getTime() > now ? "Scheduled" : "Live";
   const shopName = shop?.business_name || "Our Store";
@@ -53,10 +62,13 @@ function Coupons() {
   return (
     <div>
       <PageHeader title="Rewards & Coupons" subtitle="Apne coupons banao — sab ke liye ya ek customer ke liye. Billing par code daalte hi discount lag jayega." actions={isOwner && <Button className="h-11" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> New coupon</Button>} />
+      <ReturnRewardReviews />
       <div className="mb-4 inline-flex rounded-lg border bg-card p-1">
-        {(["coupons", "rewards"] as const).map((t) => <Button key={t} size="sm" variant={tab === t ? "default" : "ghost"} onClick={() => setTab(t)}>{t === "coupons" ? `Coupons (${coupons.length})` : "Loyalty rewards"}</Button>)}
+        {(["coupons", "rewards"] as const).map((t) => <Button key={t} size="sm" variant={tab === t ? "default" : "ghost"} onClick={() => setTab(t)}>{t === "coupons" ? `Coupons (${couponResult?.count ?? 0})` : "Loyalty rewards"}</Button>)}
       </div>
 
+      {listError && <div role="alert">This list could not be loaded: {listError.message} <Button onClick={() => void (tab === "coupons" ? retryCoupons() : retryRewards())}>Retry</Button></div>}
+      {listPending && <p role="status">Loading…</p>}
       {tab === "coupons" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {coupons.map((c) => {
@@ -89,7 +101,7 @@ function Coupons() {
               </div>
             );
           })}
-          {!coupons.length && <p className="text-sm text-muted-foreground">Abhi koi coupon nahi. {isOwner ? '"New coupon" se pehla code banao.' : "Owner coupons bana sakte hain."}</p>}
+          {!listPending && !listError && !coupons.length && <p className="text-sm text-muted-foreground">Abhi koi coupon nahi. {isOwner ? '"New coupon" se pehla code banao.' : "Owner coupons bana sakte hain."}</p>}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card">
@@ -97,9 +109,10 @@ function Coupons() {
             <thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr><th className="p-2">Customer</th><th className="p-2">Card</th><th className="p-2">Milestone</th><th className="p-2">Status</th><th className="p-2">Valid till</th><th className="p-2 text-right">Amount</th></tr></thead>
             <tbody>{rewards.map((r) => <tr key={r.id} className="border-t"><td className="p-2">{r.customers?.name} <span className="text-xs text-muted-foreground">{r.customers?.mobile}</span></td><td className="p-2 capitalize">{r.card}</td><td className="p-2">{r.milestone} stamps</td><td className="p-2 capitalize">{r.status === "active" && new Date(r.expires_at).getTime() < now ? "expired" : r.status}</td><td className="p-2">{new Date(r.expires_at).toLocaleDateString("en-IN")}</td><td className="p-2 text-right font-semibold">{inr(r.amount)}</td></tr>)}</tbody>
           </table>
-          {!rewards.length && <p className="p-4 text-sm text-muted-foreground">Rewards at 5/10/15/20 eligible visits will appear here.</p>}
+          {!listPending && !listError && !rewards.length && <p className="p-4 text-sm text-muted-foreground">Rewards at 5/10/15/20 eligible visits will appear here.</p>}
         </div>
       )}
+      <ListPagination page={tab === "coupons" ? couponPage : rewardPage} pageSize={pageSize} total={(tab === "coupons" ? couponResult : rewardResult)?.count ?? 0} busy={listPending} onPage={tab === "coupons" ? setCouponPage : setRewardPage} />
       {isOwner && <NewCoupon open={open} onClose={() => setOpen(false)} shopName={shopName} />}
     </div>
   );
