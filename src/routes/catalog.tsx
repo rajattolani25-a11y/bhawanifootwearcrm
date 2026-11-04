@@ -1,9 +1,10 @@
+import { catalogSizeGroups, catalogSizeMatches } from "@/lib/catalog-size-options";
 import { CatalogCollectionFilters, type CatalogSort } from "@/components/CatalogCollectionFilters";
 import { CatalogProductGrid } from "@/components/CatalogProductGrid";
 import * as catalogApi from "@/lib/catalog.functions";
 import { CATALOG_ORDER_EVENT, readCatalogOrder, saveCatalogOrder, clearCatalogOrder, type PendingCatalogOrder, type OrderRequest } from "@/lib/catalog-order-recovery";
 import { catalogProductLink, catalogShareText } from "@/lib/catalog-share";
-import { DEPARTMENTS, SUBCATEGORIES, parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
+import { DEPARTMENTS, parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
 import { catalogPresentation } from "@/lib/catalog-presentation";
 import { catalogDescription } from "@/lib/catalog-description";
 import { CouponTicket } from "@/components/CouponTicket";
@@ -103,7 +104,6 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   }, []);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
-  const [brand, setBrand] = useState("All");
   const [open, setOpen] = useState<CatalogProduct | null>(null);
   const [track, setTrack] = useState<string | null>(null);
   const [views, setViews] = useState(0);
@@ -123,14 +123,13 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
     return () => { obs.disconnect(); el.classList.toggle("dark", wasDark); el.style.colorScheme = prev; };
   }, [dark]);
   const toggleTheme = () => { const d = !dark; setDark(d); localStorage.setItem("catalog-theme", d ? "dark" : "light"); };
-  const [ptype, setPtype] = useState("All");
   const [photo, setPhoto] = useState(false);
   const [help, setHelp] = useState(false);
   const [about, setAbout] = useState(false);
   const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
   const [sort, setSort] = useState<CatalogSort>("default");
-  const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
+  const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
   useEffect(() => {
     setOpen(current => current ? products.find(p => p.id===current.id) ?? { ...current, sizes: current.sizes.map(s => ({ ...s, available: false })) } : null);
   }, [products]);
@@ -149,13 +148,11 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
     link.searchParams.delete("product"); link.searchParams.delete("size");
     window.history.replaceState(window.history.state,"",link.toString());
   };
-  const brands = useMemo(() => ["All", ...new Set(products.map((p) => p.brand))], [products]);
-  const types = useMemo(() => ["All", ...new Set(filter === "All" ? Object.values(SUBCATEGORIES).flat() : SUBCATEGORIES[filter] ?? TYPE_RULES.map(([t]) => t).filter((t) => products.some((p) => categoryMatches(p.category, filter) && p.ptype === t)))], [products, filter]);
-  const sizeList = useMemo(() => ["All", ...[...new Set(products.filter((p) => categoryMatches(p.category, filter)).flatMap((p) => p.sizes.filter((s) => s.available).map((s) => s.size)))].sort((a, b) => (parseFloat(a) || 99) - (parseFloat(b) || 99) || a.localeCompare(b))], [products, filter]);
+  const sizeGroups = useMemo(() => catalogSizeGroups(products, filter), [products, filter]);
   const list = useMemo(() => {
     const s = q.toLowerCase().trim();
-    const filtered = products.filter((p) => (categoryMatches(p.category, filter)) && (brand === "All" || p.brand === brand) &&
-      (ptype === "All" || (filter === "All" || SUBCATEGORIES[filter] ? parseCategory(p.category).subcategory === ptype : p.ptype === ptype)) && (fsize === "All" || p.sizes.some((x) => x.size === fsize && x.available)) &&
+    const filtered = products.filter((p) => categoryMatches(p.category, filter) &&
+      (fsize === "All" || p.sizes.some((x) => x.available && catalogSizeMatches(p.category, x.size, fsize))) &&
       (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s))));
     if (sort === "price-asc") filtered.sort((a, b) => a.price - b.price);
     else if (sort === "price-desc") filtered.sort((a, b) => b.price - a.price);
@@ -165,14 +162,14 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       filtered.sort((a, b) => discount(b) - discount(a));
     }
     return filtered;
-  }, [products, q, filter, brand, ptype, fsize, sort]);
+  }, [products, q, filter, fsize, sort]);
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
   const presentation = catalogPresentation(data.presentation);
 
   const copy = CATALOG_COPY[lang];
-  const resetFilters = () => { setQ(""); setFilter("All"); setPtype("All"); setBrand("All"); setFsize("All"); setSort("default"); };
+  const resetFilters = () => { setQ(""); setFilter("All"); setFsize("All"); setSort("default"); };
   const heroAction = () => {
     const hero = data.hero;
     if (!hero) return;
@@ -205,7 +202,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   </section>;
 
   return (
-    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-palette={presentation.theme ?? "studio"} data-tone={presentation.category_accents ? (ptype !== "All" ? ptype : filter) : "All"} data-motion={presentation.motion_enabled}>
+    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-palette={presentation.theme ?? "studio"} data-tone={presentation.category_accents ? filter : "All"} data-motion={presentation.motion_enabled}>
       <header className={styles["header"]}>
         <div className={styles["headerInner"]}>
           <a href="#catalog-collection" className={styles["identity"]} aria-label={shop.name}>
@@ -236,7 +233,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
             <button type="button" onClick={() => setPhoto(true)} aria-label="Ask about a photo" title={copy.photo}><Camera aria-hidden="true" /></button>
           </div>
           <nav className={styles["categories"]} aria-label={copy.categories}>
-            {FILTERS.map((f) => <button key={f} onClick={() => { setFilter(f); setPtype("All"); setFsize("All"); }} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
+            {FILTERS.map((f) => <button key={f} onClick={() => { setFilter(f); setFsize("All"); }} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
               {f === "All" && <ShoppingBag aria-hidden="true" />}<span>{f}</span>
             </button>)}
           </nav>
@@ -246,16 +243,12 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
 
       {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
+        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
         <div className={styles["collectionHeader"]}>
           <h2>Shop the collection</h2>
-          <CatalogCollectionFilters
-            styleLabel={filter === "All" || SUBCATEGORIES[filter] ? "Subcategory" : "Type"}
-            types={types} ptype={ptype} setPtype={setPtype} brands={brands} brand={brand} setBrand={setBrand}
-            sizes={sizeList} size={fsize} setSize={setFsize} sort={sort} setSort={setSort}
-            onClear={() => { setPtype("All"); setBrand("All"); setFsize("All"); setSort("default"); }}
-          />
         </div>
-        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${brand}-${ptype}-${fsize}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
+        <CatalogCollectionFilters groups={sizeGroups} size={fsize} setSize={setFsize} sort={sort} setSort={setSort}
+          onClear={() => { setFsize("All"); setSort("default"); }} />
         <CatalogProductGrid products={list} onOpen={openProduct} />
         {list.length === 0 && <div className={styles["empty"]}><Search aria-hidden="true" /><h3>No designs found.</h3><p>Try another search or category.</p><button onClick={resetFilters} data-no-translate>{copy.reset}</button></div>}
         <footer className={styles["footer"]}>
@@ -591,17 +584,4 @@ function TrackDialog({ initial, onClose }: { initial: string; onClose: () => voi
       </DialogContent>
     </Dialog>
   );
-}
-
-/** Strict auto type from article name. First matching rule wins; no keyword = only in "All" (never a wrong section). */
-const TYPE_RULES: [string, RegExp][] = [
-  ["School", /\bschool\b|\buniform\b/i],
-  ["Formal", /\bformal\b|\boxford\b|\bderby\b|\bloafer|\bmocc?asin|\bbrogue|\bmojari|\bjutti|\bbellies\b|\bbelly\b|\bpump/i],
-  ["Sports", /\bsports?\b|\brunn(ing|er)\b|\btrain(er|ing)\b|\bgym\b|\bjogg|\btrek|\bwalking\b|\bcourt\b|\btennis\b|\bfootball\b|\bstuds?\b/i],
-  ["Sneakers", /\bsneak|\bcasual shoe|\bcanvas\b/i],
-  ["Sandals", /\bsandal|\bfloater|\bkolhapuri|\bwedge|\bheel/i],
-  ["Slippers", /\bslipper|\bchappal|\bflip ?flop|\bslides?\b|\bclog|\bcrocs?\b|\bhawai/i],
-];
-function detectType(article: string) {
-  return TYPE_RULES.find(([, rx]) => rx.test(article))?.[0] ?? "Other";
 }

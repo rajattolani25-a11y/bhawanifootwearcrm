@@ -95,29 +95,37 @@ try {
     0,
   );
   assert.deepEqual(await order(), names);
-  for (const name of ["Subcategory", "Brand", "Size", "Sort by"])
+  for (const name of ["Size", "Sort by"])
     assert.equal(await page.getByRole("combobox", { name, exact: true }).count(), 1);
+  assert.equal(await page.getByRole("combobox", { name: "Brand", exact: true }).count(), 0);
+  assert.equal(await page.getByRole("combobox", { name: "Subcategory", exact: true }).count(), 0);
   assert.equal(await sorting().locator("option").count(), 5);
+  const spotlight = page.getByRole("heading", { name: "In the spotlight", exact: true });
+  await spotlight.waitFor();
+  assert(
+    await spotlight.evaluate(
+      (el) =>
+        !!(
+          el.compareDocumentPosition(document.querySelector('[class*="filterPanel"]')) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+    ),
+    "Spotlight precedes size/sort controls",
+  );
+  const size = page.getByRole("combobox", { name: "Size", exact: true });
+  const choice = (department, value) => JSON.stringify([department, value]);
   await sorted("price-asc", ["Birch", "Dune", "Cedar", "Fir", "Elm", "Atlas"]);
   await sorted("price-desc", ["Atlas", "Elm", "Cedar", "Fir", "Dune", "Birch"]);
   await sorted("name", ["Atlas", "Birch", "Cedar", "Dune", "Elm", "Fir"]);
   await sorted("discount", ["Birch", "Fir", "Atlas", "Cedar", "Dune", "Elm"]);
   await page.getByRole("button", { name: "Men", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Subcategory", exact: true })
-    .selectOption("Sports & Active");
-  await page.getByRole("combobox", { name: "Size", exact: true }).selectOption("7");
-  await page.getByRole("combobox", { name: "Brand", exact: true }).selectOption("Demo");
+  await size.selectOption(choice("Men", "7"));
   await sorted("price-asc", ["Birch", "Cedar"]);
   await page.getByRole("button", { name: "Demo Birch", exact: true }).click();
   await page.getByRole("dialog").getByRole("heading", { name: "Birch", exact: true }).waitFor();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Clear filters", exact: true }).click();
   assert.equal(await sorting().inputValue(), "default");
-  assert.equal(
-    await page.getByRole("combobox", { name: "Brand", exact: true }).inputValue(),
-    "All",
-  );
   assert.equal(await page.getByRole("combobox", { name: "Size", exact: true }).inputValue(), "All");
   await page.getByRole("button", { name: "All", exact: true }).click();
   await sorted("price-asc", ["Birch", "Dune", "Cedar", "Fir", "Elm", "Atlas"]);
@@ -133,6 +141,107 @@ try {
       "Cedar",
   );
   assert.deepEqual(await order(), ["Cedar", "Birch", "Dune", "Fir", "Elm", "Atlas"]);
+  // Identical size labels across departments must never mix products.
+  const expanded = structuredClone(fresh);
+  expanded.products.push(
+    {
+      ...products[0],
+      id: "kids",
+      article: "Mini",
+      brand: "",
+      category: "Kids",
+      sizes: [
+        { id: "kids2", size: "2", available: true },
+        { id: "kids3", size: "3", available: false },
+        { id: "blank", size: "", available: true },
+      ],
+    },
+    {
+      ...products[0],
+      id: "boys",
+      article: "School",
+      category: "Boys",
+      sizes: [
+        { id: "boys2", size: "2", available: true },
+        { id: "boys4", size: "4", available: true },
+      ],
+    },
+    {
+      ...products[0],
+      id: "girls",
+      article: "Blossom",
+      category: "Girls",
+      sizes: [
+        { id: "girls5", size: "5", available: true },
+        { id: "girls7", size: "7", available: true },
+      ],
+    },
+  );
+  await page.evaluate((fresh) => {
+    window.__nextCatalog = fresh;
+    window.dispatchEvent(new Event("solestack-catalog-refresh"));
+  }, expanded);
+  await size.locator('optgroup[label="Boys"]').waitFor({ state: "attached" });
+  const groups = () =>
+    size.locator("optgroup").evaluateAll((nodes) => nodes.map((node) => node.label));
+  assert.deepEqual(await groups(), ["Men", "Women", "Kids", "Girls", "Boys"]);
+  assert.equal(await size.locator('option[value=""]').count(), 0);
+  assert.equal(
+    await size.locator('optgroup[label="Kids"] option').count(),
+    1,
+    "Sold-out and blank sizes are excluded",
+  );
+  for (const [department, value, expected] of [
+    ["Kids", "2", ["Mini"]],
+    ["Boys", "2", ["School"]],
+    ["Girls", "7", ["Blossom"]],
+    ["Men", "7", ["Cedar", "Birch"]],
+  ]) {
+    await size.selectOption(choice(department, value));
+    assert.deepEqual(await order(), expected, `Exact ${department} size selection`);
+  }
+  await page.getByRole("button", { name: "Women", exact: true }).click();
+  assert.equal(await size.inputValue(), "All");
+  assert.deepEqual(await groups(), ["Women", "Girls"]);
+  await size.selectOption(choice("Women", "7"));
+  assert.deepEqual(await order(), ["Dune", "Fir", "Elm"]);
+  await page.getByRole("button", { name: "Men", exact: true }).click();
+  assert.deepEqual(await groups(), ["Men"]);
+  await size.selectOption(choice("Men", "8"));
+  assert.deepEqual(await order(), ["Birch", "Atlas"], "Out-of-stock Men size8 excluded");
+  await page.getByRole("button", { name: "Kids", exact: true }).click();
+  assert.deepEqual(await groups(), ["Kids"]);
+  await page.getByRole("button", { name: "Boys", exact: true }).click();
+  assert.deepEqual(await groups(), ["Boys"]);
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await size.selectOption(choice("Kids", "2"));
+  const soldOut = structuredClone(expanded);
+  soldOut.products.find((p) => p.id === "kids").sizes[0].available = false;
+  await page.evaluate((fresh) => {
+    window.__nextCatalog = fresh;
+    window.dispatchEvent(new Event("solestack-catalog-refresh"));
+  }, soldOut);
+  await page.getByRole("heading", { name: "No designs found.", exact: true }).waitFor();
+  assert.equal(await size.inputValue(), choice("Kids", "2"));
+  assert.equal(
+    await size.locator("option:checked").evaluate((option) => option.disabled),
+    true,
+    "Unavailable selection remains labelled, never blank: " + (await size.innerHTML()),
+  );
+  await page.getByRole("button", { name: "Clear filters", exact: true }).click();
+  assert.equal(
+    await grid.getByRole("heading").count(),
+    9,
+    "A product without a brand remains listed",
+  );
+  await page.evaluate((fresh) => {
+    window.__nextCatalog = fresh;
+    window.dispatchEvent(new Event("solestack-catalog-refresh"));
+  }, fresh);
+  await page.waitForFunction(
+    () => document.querySelectorAll('#catalog-collection [class*="productGrid"] h3').length === 6,
+  );
+  await sorting().selectOption("price-asc");
   const layouts = [];
   for (const [width, height] of [
     [320, 568],
@@ -141,7 +250,7 @@ try {
     [1440, 1000],
   ]) {
     await page.setViewportSize({ width, height });
-    await heading.scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollTo(0, 0));
     const boxes = await page
       .locator('#catalog-collection [class*="filters"] > label')
       .evaluateAll((labels) =>
@@ -150,11 +259,14 @@ try {
           return { x: r.x, y: r.y, w: r.width, h: r.height };
         }),
       );
-    assert.equal(boxes.length, 4);
+    assert.equal(boxes.length, 2);
     assert(Math.abs(boxes[0].y - boxes[1].y) < 1, "First two fields must align");
     assert(Math.abs(boxes[0].w - boxes[1].w) < 1, "Equal field widths");
-    if (width < 768) assert(boxes[2].y > boxes[0].y, "Two rows on mobile");
-    else assert(Math.abs(boxes[3].y - boxes[0].y) < 1, "One row on desktop/tablet");
+    assert.equal(
+      Math.round((await page.locator('[class*="filterPanel"]').boundingBox()).height),
+      44,
+      "Only one compact control row",
+    );
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
       false,
@@ -181,7 +293,12 @@ try {
     passed: true,
     countRemoved: true,
     fiveSortOrders: true,
-    filtersCombine: true,
+    categorySizeGroups: true,
+    overlappingSizeLabelsSeparated: true,
+    spotlightBeforeControls: true,
+    brandAndStyleRemoved: true,
+    blankBrandProductRetained: true,
+    noBlankSizeOptionOnStockRefresh: true,
     correctProductOpens: true,
     livePriceRefreshReorders: true,
     languages: 3,

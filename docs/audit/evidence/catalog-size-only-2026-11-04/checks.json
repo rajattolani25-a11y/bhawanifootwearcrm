@@ -1,0 +1,86 @@
+{
+  "browser": {
+    "collection": {
+      "passed": true,
+      "countRemoved": true,
+      "fiveSortOrders": true,
+      "categorySizeGroups": true,
+      "overlappingSizeLabelsSeparated": true,
+      "spotlightBeforeControls": true,
+      "brandAndStyleRemoved": true,
+      "blankBrandProductRetained": true,
+      "noBlankSizeOptionOnStockRefresh": true,
+      "correctProductOpens": true,
+      "livePriceRefreshReorders": true,
+      "languages": 3,
+      "layouts": [
+        {
+          "width": 320,
+          "height": 568,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 1440,
+          "height": 1000,
+          "aligned": true,
+          "noOverflow": true
+        }
+      ],
+      "errors": [],
+      "productionWrites": 0
+    },
+    "categories_owner_profile": {
+      "result": "PASS",
+      "checks": [
+        "category required on new product",
+        "subcategory required for Men/Women",
+        "sixth Other saved with department",
+        "owner category edit and reload persistence",
+        "staff category edit hidden",
+        "legacy Ladies/Girls in Women and Gents in Men",
+        "owner subcategory dropdowns retained; public Style/Brand filters removed",
+        "category-specific grouped sizes; Women and legacy Girls labelled separately; size resets between departments",
+        "mobile owner and catalog layout",
+        "owner article/colour/MRP/selling-price edits persist; invalid amounts blocked and stale colour/price conflicts rejected",
+        "master profile edits preserve historical invoice prices and stock; staff price fields hidden",
+        "description and size editing",
+        "owner cancellation confirmation and separate audit history",
+        "professional WhatsApp share link and selected-size deep link",
+        "unavailable shared product falls back safely"
+      ],
+      "productionWrites": 0
+    },
+    "order_recovery": {
+      "result": "PASS",
+      "checks": [
+        "Interrupted response retains exact order request and quote; no false success",
+        "Reload recovers one original order; direct shop WhatsApp includes order reference, with no app screenshot upload",
+        "Recovered order immediately provides pinned UPI/WhatsApp/tracking while decorative art loops",
+        "Open catalog and product view refresh current price/stock without re-signing unchanged photos; sold-out checkout blocked"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    }
+  },
+  "typecheck": "passed",
+  "scoped_lint": "passed",
+  "production_build": "passed",
+  "visual_review": [
+    "390px: Spotlight first, no controls above it",
+    "1440px: Spotlight then collection heading and single Size/Sort row"
+  ],
+  "limits": "Intercepted synthetic services; no live DB writes, messages, sales or payments. No migrations/backend definitions changed. Legacy Girls taxonomy is unchanged."
+}

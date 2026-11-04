@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
  * Photo inquiry — no automatic matching. Customer optionally previews a photo (stays on phone),
  * picks section + size, and opens WhatsApp to the store with a prefilled message; the photo is attached there.
  */
-type P = CatalogProduct & { ptype: string };
+type P = CatalogProduct;
 const SECTIONS = ["Men", "Women", "Kids"] as const;
 
 const TXT = {

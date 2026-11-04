@@ -612,16 +612,24 @@ try {
   assert.equal(await cp.getByRole("button", { name: "Demo Legacy Women", exact: true }).count(), 1);
   assert.equal(await cp.getByRole("button", { name: "Demo Legacy Girls", exact: true }).count(), 1);
   assert.equal(await cp.getByRole("button", { name: "Demo Men Sports", exact: true }).count(), 0);
-  const filter = cp.getByRole("combobox", { name: "Subcategory", exact: true });
-  assert.equal(await filter.locator("option").count(), 7);
-  await filter.selectOption("Heels & Occasion");
+  assert.equal(await cp.getByRole("combobox", { name: "Subcategory", exact: true }).count(), 0);
+  assert.equal(await cp.getByRole("combobox", { name: "Brand", exact: true }).count(), 0);
+  const filter = cp.getByRole("combobox", { name: "Size", exact: true });
+  assert.deepEqual(
+    await filter.locator("optgroup").evaluateAll((groups) => groups.map((group) => group.label)),
+    ["Women", "Girls"],
+  );
+  await filter.selectOption(JSON.stringify(["Women", "7"]));
   assert.equal(await cp.getByRole("button", { name: "Demo Women Heels", exact: true }).count(), 1);
-  assert.equal(await cp.getByRole("button", { name: "Demo Legacy Women", exact: true }).count(), 0);
+  assert.equal(await cp.getByRole("button", { name: "Demo Legacy Girls", exact: true }).count(), 0);
   await cp.getByRole("button", { name: "Men", exact: true }).click();
   assert.equal(await filter.inputValue(), "All");
-  assert.equal(await filter.locator("option").count(), 7);
+  assert.deepEqual(
+    await filter.locator("optgroup").evaluateAll((groups) => groups.map((group) => group.label)),
+    ["Men"],
+  );
   assert.equal(await cp.getByRole("button", { name: "Demo Legacy Men", exact: true }).count(), 1);
-  await filter.selectOption("Other");
+  await filter.selectOption(JSON.stringify(["Men", "7"]));
   assert.equal(await cp.getByRole("button", { name: "Demo Men Other", exact: true }).count(), 1);
   await cp.screenshot({ path: out + "/catalog-subcategory-mobile.png", fullPage: true });
   assert.equal(
@@ -671,8 +679,8 @@ try {
       "owner category edit and reload persistence",
       "staff category edit hidden",
       "legacy Ladies/Girls in Women and Gents in Men",
-      "six subcategories in dropdown for each adult department",
-      "filters reset when switching department",
+      "owner subcategory dropdowns retained; public Style/Brand filters removed",
+      "category-specific grouped sizes; Women and legacy Girls labelled separately; size resets between departments",
       "mobile owner and catalog layout",
       "owner article/colour/MRP/selling-price edits persist; invalid amounts blocked and stale colour/price conflicts rejected",
       "master profile edits preserve historical invoice prices and stock; staff price fields hidden",
