@@ -1,0 +1,37 @@
+{
+  "scope": "Scoped Spotlight CSS only. Real transparent shoe plus synthetic wide/tall image fixtures; no live product writes.",
+  "viewports": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "captures": 12,
+  "photoScaleComparedWithPrevious": [
+    0.94
+  ],
+  "allCurrentPhotoBoxesWithinCard": true,
+  "pageHorizontalOverflow": false,
+  "desktopPreviewCentreTravel": "62% of photo frame, previously70%; preview scale .39, previously .40",
+  "mobileSlideDistancePx": 22,
+  "productionBuild": "PASS",
+  "motionRegression": {
+    "result": "PASS",
+    "checks": [
+      "Three delayed token renewals keep the same hero node and old decoded frame until replacement is ready",
+      "Failed token renewal/temporary optional read keeps working hero; late response cannot overwrite newer photo; owner OFF still removes hero",
+      "Retained3photo pool has overlapping650ms slide/fade, no empty central frame and no layout overflow at320/768/1440",
+      "Reduced motion disables transition"
+    ],
+    "motion": {
+      "incoming": 0.605099,
+      "outgoing": 0.329014,
+      "transition": "0.65s, 0.65s",
+      "images": 3,
+      "height": 373.390625
+    },
+    "productionWrites": 0,
+    "errors": []
+  },
+  "databaseOrRpcChanges": false
+}
