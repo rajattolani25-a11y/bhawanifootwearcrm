@@ -158,4 +158,6 @@ export function clearStoreDrafts(
   session.removeItem("solestack-pending-billing-v1");
   session.removeItem("solestack-pending-return-v1");
   session.removeItem("solestack-pending-import-v1");
+  session.removeItem("solestack-pending-operations-v1");
+  session.removeItem("solestack-catalog-order-pending-v1");
 }

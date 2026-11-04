@@ -1,3 +1,5 @@
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
+import { runOperationalRequest } from "@/lib/operational-requests";
 import { watchVisibleQuery } from "@/lib/inventory-live";
 import { financialReturns, money, originalBillReceipt } from "@/lib/sales-returns";
 import { createFileRoute } from "@tanstack/react-router";
@@ -95,7 +97,7 @@ function KhataPage() {
           fetchAll((a, b) =>
             supabase
               .from("customers")
-              .select("id,name,mobile,opening_balance")
+              .select("id,name,mobile,opening_balance,opening_initial")
               .order("name")
               .range(a, b),
           ),
@@ -117,7 +119,7 @@ function KhataPage() {
           id: c.id,
           name: c.name,
           mobile: c.mobile,
-          opening: n(c.opening_balance),
+          opening: n(c.opening_initial ?? c.opening_balance),
           balance: n(c.opening_balance) + (due.get(c.id) ?? 0),
           last: last.get(c.id) ?? "",
         }));
@@ -126,7 +128,7 @@ function KhataPage() {
         fetchAll((a, b) =>
           supabase
             .from("suppliers")
-            .select("id,name,phone,opening_balance")
+            .select("id,name,phone,opening_balance,opening_initial")
             .order("name")
             .range(a, b),
         ),
@@ -149,7 +151,7 @@ function KhataPage() {
         id: s.id,
         name: s.name,
         mobile: s.phone ?? "",
-        opening: n(s.opening_balance),
+        opening: n(s.opening_initial ?? s.opening_balance),
         balance: n(s.opening_balance) + (due.get(s.id) ?? 0),
         last: last.get(s.id) ?? "",
       }));
@@ -178,7 +180,7 @@ function KhataPage() {
           fetchAll((a, b) =>
             supabase
               .from("credit_payments")
-              .select("sale_id,amount,payment_mode,paid_at")
+              .select("sale_id,amount,payment_mode,paid_at,entry_kind")
               .eq("customer_id", id!)
               .range(a, b),
           ),
@@ -205,7 +207,7 @@ function KhataPage() {
             ),
           });
         }
-        for (const p of pays)
+        for (const p of pays.filter(p => !p.entry_kind || p.entry_kind === "credit" || p.entry_kind === "opening" || p.entry_kind === "catalog_advance" && !!p.sale_id))
           list.push({
             date: p.paid_at,
             text: `Credit received (${p.payment_mode})`,
@@ -240,7 +242,7 @@ function KhataPage() {
           fetchAll((a, b) =>
             supabase
               .from("supplier_payments")
-              .select("amount,payment_mode,paid_at,note")
+              .select("amount,payment_mode,paid_at,note,opening_amount")
               .eq("supplier_id", id!)
               .range(a, b),
           ),
@@ -268,7 +270,7 @@ function KhataPage() {
           });
         const extra =
           purchases.reduce((a, p) => a + n(p.paid_amount), 0) -
-          pays.reduce((a, p) => a + n(p.amount), 0);
+          pays.reduce((a, p) => a + n(p.amount) - n(p.opening_amount), 0);
         const first = purchases.map((p) => p.purchase_date).sort()[0];
         if (extra > 0.5 && first)
           list.push({ date: first, text: "Paid at billing", credit: 0, debit: extra });
@@ -356,51 +358,14 @@ function KhataPage() {
     if (amt > balance + 0.5) return void toast.error(`${t("Balance is only")} ${inr(balance)}`);
     setBusy(true);
     try {
-      if (k === "supplier") {
-        const { error } = await supabase.rpc("record_supplier_payment", {
-          _supplier_id: party.id,
-          _amount: amt,
-          _mode: pay.mode,
-          _note: "Khatabook",
-        });
-        if (error) throw error;
-      } else {
-        // Oldest due bills are cleared first; opening balance is reduced only after all bills.
-        const { data: dues, error } = await supabase
-          .from("sales")
-          .select("id,due_amount")
-          .eq("customer_id", party.id)
-          .gt("due_amount", 0)
-          .order("sale_date");
-        if (error) throw error;
-        let left = amt;
-        for (const s of dues ?? []) {
-          if (left <= 0) break;
-          const part = Math.min(left, n(s.due_amount));
-          const r = await supabase.rpc("collect_credit_payment", {
-            _sale_id: s.id,
-            _amount: part,
-            _mode: pay.mode,
-            _note: "Khatabook",
-          });
-          if (r.error) throw r.error;
-          left -= part;
-        }
-        if (left > 0.5) {
-          if (!isOwner)
-            throw new Error(`${inr(left)} — ${t("only the Owner can reduce the opening balance")}`);
-          const r = await supabase
-            .from("customers")
-            .update({ opening_balance: Math.max(0, party.opening - left) })
-            .eq("id", party.id);
-          if (r.error) throw r.error;
-        }
-      }
+      const response = k === "supplier"
+        ? await runOperationalRequest(`supplier-payment:${party.id}`, "record_supplier_payment_v2", { _supplier_id: party.id, _amount: amt, _mode: pay.mode, _note: "Khatabook" })
+        : await runOperationalRequest(`customer-payment:${party.id}`, "receive_customer_payment", { _customer_id: party.id, _amount: amt, _mode: pay.mode, _note: "Khatabook" });
+      if (response.error) throw response.error;
+
       toast.success(t("Payment added to the account"));
       setPay({ ...pay, amount: "" });
-      ["khata-parties", "khata-entries", "acct", "purchases-sum", "supplier-payments"].forEach(
-        (key) => qc.invalidateQueries({ queryKey: [key] }),
-      );
+      await refreshOperationalData(qc);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {

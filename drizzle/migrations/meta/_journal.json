@@ -246,6 +246,48 @@
       "when": 1793740002000,
       "tag": "0034_void_incorrect_bills",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793740003000,
+      "tag": "0035_stock_operations_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793740004000,
+      "tag": "0036_receipts_and_retry_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793740005000,
+      "tag": "0037_catalog_payment_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793740006000,
+      "tag": "0038_server_bill_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793740007000,
+      "tag": "0039_atomic_legacy_import",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793740008000,
+      "tag": "0040_billing_defaults_and_readiness",
+      "breakpoints": true
     }
   ]
 }

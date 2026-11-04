@@ -315,7 +315,7 @@ if (
   throw Error("Public catalog ignored the saved theme");
 if (await p.getByRole("region", { name: "Product spotlight" }).count())
   throw Error("Gallery off ignored");
-await p.getByRole("combobox", { name: "Type", exact: true }).selectOption("Formal");
+await p.getByRole("combobox", { name: "Subcategory", exact: true }).selectOption("Formals & Occasion");
 if ((await p.locator("[data-theme]").getAttribute("data-tone")) !== "All")
   throw Error("Category accents off ignored");
 if ((await p.locator("[data-theme]").getAttribute("data-motion")) !== "false")

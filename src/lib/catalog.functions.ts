@@ -5,7 +5,7 @@ import { HERO_BUCKET, type PublicHero } from "./catalog-hero";
 
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
-export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; mrp: number; price: number; image: string | null; few_left?: boolean; sizes: CatalogSize[] };
+export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
 export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
 export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null; presentation?: CatalogPresentation };
@@ -64,7 +64,17 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Pr
       if (signed?.signedUrl) hero = { ...settings, image: signed.signedUrl };
     }
   } catch { /* Existing catalog remains available. */ }
-  return { enabled: true, presentation: await presentationRequest, hero, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image: p.image ? urls.get(p.image) ?? null : null })) };
+  return { enabled: true, presentation: await presentationRequest, hero, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image_key: p.image, image: p.image ? urls.get(p.image) ?? null : null })) };
+});
+
+/** Public metadata only; existing signed photo URLs are reused when paths are unchanged. */
+export const getCatalogSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<CatalogData> => {
+  const sb = await publicClient();
+  const { data, error } = await sb.rpc("public_catalog");
+  if (error) throw new Error("Catalog refresh is unavailable");
+  const d = data as unknown as CatalogData;
+  if (!d.enabled || !d.shop) return { enabled: false };
+  return { enabled: true, shop: d.shop, products: (d.products ?? []).map(p => ({ ...p, image_key: p.image, image: null })) };
 });
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;
@@ -88,6 +98,8 @@ export const createBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({
       variantId: z.string().uuid(),
+      requestId: z.string().uuid(),
+      quote: z.object({ price: z.number().finite().nonnegative(), net: z.number().finite().nonnegative(), charge: z.number().finite().nonnegative(), advance: z.number().finite().nonnegative() }),
       name: z.string().trim().min(2).max(60),
       mobile: z.string().trim().regex(mobileRx, "Enter a valid 10-digit mobile number"),
       fulfillment: z.enum(["pickup", "local", "outside"]),
@@ -98,8 +110,8 @@ export const createBooking = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<BookingResult> => {
     const sb = await publicClient();
-    const { data: r, error } = await sb.rpc("create_catalog_order", { _variant_id: data.variantId, _name: data.name, _mobile: data.mobile, _fulfillment: data.fulfillment, _address: data.address, _area: data.area, _coupon: data.coupon });
-    if (error) throw new Error(error.message);
+    const { data: r, error } = await sb.rpc("create_catalog_order", { _variant_id: data.variantId, _name: data.name, _mobile: data.mobile, _fulfillment: data.fulfillment, _address: data.address, _area: data.area, _coupon: data.coupon, _request_id: data.requestId, _quote: data.quote });
+    if (error) throw new Error((/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST") ? "ORDER_REJECTED: " : "ORDER_UNCONFIRMED: ") + error.message);
     return r as unknown as BookingResult;
   });
 

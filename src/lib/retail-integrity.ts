@@ -10,7 +10,8 @@ export function integrityError(error: { message: string; code?: string }): Error
 let support: Promise<void> | undefined;
 export function requireRetailIntegrity() {
   return (support ??= (async () => {
-    const { data, error } = await supabase.rpc("retail_integrity_version");
+    const [{ data, error }, safety] = await Promise.all([supabase.rpc("retail_integrity_version"),supabase.rpc("operational_safety_version")]);
+    if (safety.error || safety.data !== 40) throw new Error("Apply database updates 0035–0040, then reload before recording transactions.");
     if (error) throw integrityError(error);
     if (data !== 32)
       throw new Error("Database safety update 0032 is required. Reload after applying it.");

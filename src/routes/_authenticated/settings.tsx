@@ -35,6 +35,9 @@ function SettingsPage() {
   const qc = useQueryClient();
   const [section, setSection] = useState("store");
   const [f, setF] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState(false);
+  const editF = (next: Record<string,string>) => { setDirty(true); setF(next); };
+  useEffect(() => { if (!dirty) return; const leave = (event: BeforeUnloadEvent) => {event.preventDefault();}; window.addEventListener("beforeunload",leave); return () => window.removeEventListener("beforeunload",leave); }, [dirty]);
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [changingRole, setChangingRole] = useState<string | null>(null);
@@ -68,7 +71,7 @@ function SettingsPage() {
   });
 
   useEffect(() => {
-    if (settings)
+    if (settings && !dirty)
       setF({
         business_name: settings.business_name ?? "",
         business_phone: settings.business_phone ?? "",
@@ -78,8 +81,11 @@ function SettingsPage() {
         daily_target: String(settings.daily_target ?? ""),
         bill_design: settings.bill_design ?? "Thermal",
         thermal_width: settings.thermal_width ?? "80",
+        default_bill_type: settings.default_bill_type ?? (settings.gstin ? "gst" : "simple"),
+        default_tax_mode: settings.default_tax_mode ?? "inclusive",
+        default_gst_rate: String(settings.default_gst_rate ?? 5),
       });
-  }, [settings]);
+  }, [settings, dirty]);
 
   if (loading)
     return (
@@ -125,13 +131,13 @@ function SettingsPage() {
   }
 
   async function save() {
-    const { error } = await supabase
-      .from("store_settings")
-      .update({ ...f, daily_target: Number(f["daily_target"]) || 0 })
-      .eq("id", 1);
-    qc.invalidateQueries({ queryKey: ["shop-identity"] });
-    if (error) toast.error(error.message);
-    else toast.success("Settings saved");
+    const payload = { ...f, daily_target: Number(f["daily_target"]) || 0, default_gst_rate: Number(f["default_gst_rate"] ?? 5) };
+    const { error } = await supabase.from("store_settings").update(payload).eq("id",1);
+    if (error) { toast.error(error.message); return; }
+    qc.setQueryData(["settings"], { ...settings, ...payload });
+    setDirty(false);
+    await Promise.all([qc.invalidateQueries({queryKey:["shop-identity"]}),qc.invalidateQueries({queryKey:["settings"]})]);
+    toast.success("Settings saved");
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -140,6 +146,7 @@ function SettingsPage() {
     setBusy(true);
     setLog([]);
     try {
+      if (file.size > 10 * 1024 * 1024) throw new Error("Legacy backup must be under 10 MB; larger stores need a reviewed import.");
       const db = JSON.parse(await file.text());
       await importLegacy(db, (m) => setLog((l) => [...l, m]));
       toast.success("Old data imported");
@@ -162,6 +169,7 @@ function SettingsPage() {
 
   return (
     <div className="max-w-5xl space-y-5">
+      {dirty && <p role="status" className="mb-3 text-sm text-warning-foreground">Unsaved changes — save before leaving this page.</p>}
       <PageHeader title="Settings" subtitle="Manage your catalog, store and team." />
       <Tabs value={section} onValueChange={setSection}>
         <TabsList
@@ -193,7 +201,7 @@ function SettingsPage() {
               {fields.map(([k, l]) => (
                 <div key={k} className="space-y-1">
                   <Label>{l}</Label>
-                  <Input value={f[k] ?? ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} />
+                  <Input value={f[k] ?? ""} onChange={(e) => editF({ ...f, [k]: e.target.value })} />
                 </div>
               ))}
             </div>
@@ -205,6 +213,11 @@ function SettingsPage() {
         <TabsContent value="billing" forceMount className="space-y-5 data-[state=inactive]:hidden">
           <section className="rounded-xl border bg-card p-5">
             <h2 className="mb-1 font-semibold">Bill printing</h2>
+            <div className="my-4 grid gap-3 sm:grid-cols-3">
+              <label className="text-sm">Default invoice<select value={f["default_bill_type"] ?? "simple"} onChange={e=>editF({...f,default_bill_type:e.target.value})} className="mt-1 h-11 w-full rounded-md border bg-background px-2"><option value="simple">Cash Memo (no GST)</option><option value="gst">GST Invoice</option></select></label>
+              <label className="text-sm">GST rate<select disabled={f["default_bill_type"]!=="gst"} value={f["default_gst_rate"] ?? "5"} onChange={e=>editF({...f,default_gst_rate:e.target.value})} className="mt-1 h-11 w-full rounded-md border bg-background px-2">{[0,5,12,18,28].map(rate=><option key={rate} value={rate}>{rate}%</option>)}</select></label>
+              <label className="text-sm">Tax pricing<select disabled={f["default_bill_type"]!=="gst"} value={f["default_tax_mode"] ?? "inclusive"} onChange={e=>editF({...f,default_tax_mode:e.target.value})} className="mt-1 h-11 w-full rounded-md border bg-background px-2"><option value="inclusive">Included in price</option><option value="exclusive">Add to price</option></select></label>
+            </div>
             <p className="mb-4 text-sm text-muted-foreground">
               Billing aur reprint mein yahi size pehle se chuna rahega. Billing screen par ek bill
               ke liye badal bhi sakte ho.
@@ -223,7 +236,7 @@ function SettingsPage() {
                     <button
                       key={d}
                       type="button"
-                      onClick={() => setF({ ...f, bill_design: d })}
+                      onClick={() => editF({ ...f, bill_design: d })}
                       className={`rounded-lg border p-3 text-left text-sm ${f["bill_design"] === d ? "border-primary bg-primary/10" : ""}`}
                     >
                       <b className="block">{d}</b>
@@ -245,7 +258,7 @@ function SettingsPage() {
                       key={w}
                       type="button"
                       disabled={f["bill_design"] !== "Thermal"}
-                      onClick={() => setF({ ...f, thermal_width: w })}
+                      onClick={() => editF({ ...f, thermal_width: w })}
                       className={`rounded-lg border p-3 text-left text-sm disabled:opacity-50 ${f["thermal_width"] === w ? "border-primary bg-primary/10" : ""}`}
                     >
                       <b className="block">{w} mm</b>

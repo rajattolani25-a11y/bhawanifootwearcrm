@@ -61,16 +61,17 @@ function POS() {
   const [mobile, setMobile] = useState("");
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [newName, setNewName] = useState("");
+  const customerLookupRequest = useRef(0);
   const [lookupDone, setLookupDone] = useState(false);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [rewardOn, setRewardOn] = useState(true);
   const [giveStamp, setGiveStamp] = useState(true);
   const [billDiscount, setBillDiscount] = useState("");
-  const [billType, setBillType] = useState<"gst" | "simple">("gst");
+  const [billType, setBillType] = useState<"gst" | "simple">("simple");
   const [rate, setRate] = useState(5);
   const [pay, setPay] = useState<"Cash" | "UPI" | "Card" | "Split" | "Credit">("Cash");
   const [splitCash, setSplitCash] = useState("");
-  const [taxMode, setTaxMode] = useState<"inclusive" | "exclusive">("exclusive");
+  const [taxMode, setTaxMode] = useState<"inclusive" | "exclusive">("inclusive");
   const [design, setDesign] = useState<PrintDesign>("Thermal");
   const [received, setReceived] = useState("");
   const [busy, setBusy] = useState(false);
@@ -97,6 +98,14 @@ function POS() {
   const couponRequestRef = useRef(0);
   const [couponBusy, setCouponBusy] = useState(false);
   const { data: storeCfg } = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("store_settings").select("*").eq("id", 1).single()).data });
+  const defaultsLoaded = useRef(false);
+  useEffect(() => {
+    if (!storeCfg || (cart.length && defaultsLoaded.current) || pendingSaleRef.current) return;
+    defaultsLoaded.current=true;
+    setBillType(storeCfg.default_bill_type === "gst" || (!storeCfg.default_bill_type && storeCfg.gstin?.trim()) ? "gst" : "simple");
+    setTaxMode(storeCfg.default_tax_mode === "exclusive" ? "exclusive" : "inclusive");
+    setRate(Number(storeCfg.default_gst_rate ?? 5));
+  }, [storeCfg, cart.length]);
   useEffect(() => { const d = storeCfg?.bill_design; if (d) setDesign(d as PrintDesign); }, [storeCfg?.bill_design]);
 
   useEffect(() => {
@@ -120,7 +129,7 @@ function POS() {
       (p) =>
         (categoryMatches(p.category, cat)) &&
         (brand === "All" || p.brand === brand) &&
-        (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s)) || p.product_variants.some((v) => v.sku?.toLowerCase() === s || v.barcode === s)),
+        (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s)) || p.product_variants.some((v) => v.sku?.toLowerCase() === s || v.barcode === s || v.label_code?.toLowerCase() === s)),
     );
   }, [products, deferredSearch, cat, brand]);
 
@@ -146,7 +155,7 @@ function POS() {
 
   const scanCode = useCallback((code: string) => {
     const key = code.trim().toLowerCase();
-    for (const p of products) for (const v of p.product_variants) if (v.barcode?.toLowerCase() === key || v.sku?.toLowerCase() === key) { addVariant(p,v); setQ(""); return true; }
+    for (const p of products) for (const v of p.product_variants) if (v.barcode?.toLowerCase() === key || v.sku?.toLowerCase() === key || v.label_code?.toLowerCase() === key) { addVariant(p,v); setQ(""); return true; }
     beep(false); toast.error("No product with this scan code"); return false;
   }, [products,addVariant]);
 
@@ -173,15 +182,17 @@ function POS() {
   }
 
   async function lookup(m = mobile) {
+    const request = ++customerLookupRequest.current;
     const clean = m.replace(/\D/g, "");
-    if (clean.length < 10) return;
+    if (clean.length !== 10) return;
     const { data } = await supabase.from("customers").select("id,mobile,name,is_premium,regular_stamps,premium_stamps,last_stamp_date").eq("mobile", clean).maybeSingle();
+    if (request !== customerLookupRequest.current) return;
     setCustomer(data);
     setLookupDone(true);
     setRewardOn(true);
     if (data) {
       const { data: rw } = await supabase.from("loyalty_rewards").select("id,card,milestone,amount,expires_at").eq("customer_id", data.id).eq("status", "active").gt("expires_at", new Date().toISOString()).order("amount", { ascending: false });
-      setRewards(rw ?? []);
+      if (request === customerLookupRequest.current) setRewards(rw ?? []);
     } else setRewards([]);
   }
 
@@ -202,6 +213,7 @@ function POS() {
   }
 
   function clearCustomer() {
+    customerLookupRequest.current++;
     setMobile("");
     setCustomer(null);
     setRewards([]);
@@ -211,6 +223,18 @@ function POS() {
 
   const reward = rewards[0];
   const rewardAmt = reward && rewardOn ? Number(reward.amount) : 0;
+  const cartChanged = cart.some(item => {
+    const p = products.find(p => p.product_variants.some(v => v.id===item.variant_id));
+    const v = p?.product_variants.find(v=>v.id===item.variant_id);
+    return !p || !v || Number(p.selling_price)!==item.price || v.stock<item.qty;
+  });
+  function updateCart() {
+    if (!window.confirm("Review current prices and remove unavailable pairs?")) return;
+    setCart(items=>items.flatMap(item=>{
+      const p=products.find(p=>p.product_variants.some(v=>v.id===item.variant_id));const v=p?.product_variants.find(v=>v.id===item.variant_id);
+      return p && v && v.stock>0 ? [{...item,price:Number(p.selling_price),qty:Math.min(item.qty,v.stock),max:v.stock}] : [];
+    }));
+  }
   const cartSubtotal = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const couponAmt = coupon ? Number(coupon.amount) : 0;
   const bill = computeBill(cart, Number(billDiscount) || 0, rewardAmt + couponAmt, { billType, taxMode, rate });
@@ -261,7 +285,7 @@ function POS() {
 
   // Typed a 10-digit mobile but customer isn't saved yet → save automatically so they appear in Customers.
   async function ensureCustomer(): Promise<Customer | null> {
-    if (customer) return customer;
+    if (customer && customer.mobile === mobile.replace(/\D/g, "").slice(-10)) return customer;
     const clean = mobile.replace(/\D/g, "").slice(-10);
     if (!clean.length && !newName.trim()) return null;
     if (clean.length !== 10) throw new Error("Enter a valid 10-digit customer mobile, or choose Walk-in.");
@@ -277,6 +301,7 @@ function POS() {
 
   async function complete() {
     if ((!cart.length && !pendingSaleRef.current) || submittingRef.current) return;
+    if (cartChanged && !pendingSaleRef.current) { toast.error("Stock or prices changed. Review and refresh the cart."); return; }
     submittingRef.current = true;
     setBusy(true);
     try {
@@ -284,7 +309,9 @@ function POS() {
       if (!user) throw new Error("Sign in before billing.");
       const existingPending = JSON.parse(sessionStorage.getItem(requestStorageKey) ?? "null");
       if (existingPending && existingPending.userId !== user.id) throw new Error("A previous cashier has an unresolved bill in this tab. Ask them to recover it before starting another bill.");
+      if (!pendingSaleRef.current && (!Number.isFinite(recv) || recv < 0)) throw new Error("Enter a valid non-negative amount received");
       const customer = pendingSaleRef.current ? null : await ensureCustomer();
+      if (!pendingSaleRef.current && pay === "Credit" && recv > 0) throw new Error("Choose Cash, UPI or Card for partial payment; Credit means unpaid");
       if (!pendingSaleRef.current && pay === "Credit" && !customer) {
         toast.error("Credit bill ke liye customer mobile zaroori hai");
         mobileRef.current?.focus();
@@ -328,6 +355,7 @@ function POS() {
         // A PostgreSQL business error rolls back; transport/proxy errors may follow a committed sale.
         if (/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST")) { pendingSaleRef.current = null; sessionStorage.removeItem(requestStorageKey); setRetryPending(false); }
         else setRetryPending(true);
+        if (/price changed|product or size changed|out of stock/i.test(error.message)) void qc.invalidateQueries({queryKey:["stock-all"]});
         throw error;
       }
       pendingSaleRef.current = null; sessionStorage.removeItem(requestStorageKey); setRetryPending(false);
@@ -428,7 +456,7 @@ function POS() {
             ) : (
               <>
                 <div className="flex gap-2">
-                  <Input ref={mobileRef} value={mobile} inputMode="numeric" maxLength={10} placeholder="F4 · Customer mobile" onChange={(e) => { setMobile(e.target.value); setLookupDone(false); if (e.target.value.replace(/\D/g, "").length === 10) lookup(e.target.value); }} className="h-11" />
+                  <Input ref={mobileRef} value={mobile} inputMode="numeric" maxLength={10} placeholder="F4 · Customer mobile" onChange={(e) => { customerLookupRequest.current++; setMobile(e.target.value); setLookupDone(false); if (e.target.value.replace(/\D/g, "").length === 10) lookup(e.target.value); }} className="h-11" />
                   <Button variant="outline" className="h-11" onClick={clearCustomer}>Walk-in</Button>
                 </div>
                 {lookupDone && !customer && (
@@ -454,6 +482,7 @@ function POS() {
           </m.div>)}
           {!cart.length && <div className={styles["emptyCart"]}><ReceiptTextIcon /><p>Scan or tap a size to add.</p></div>}
         </div>
+        {cartChanged && !retryPending && <div role="alert" className="m-3 rounded-lg border p-3 text-sm">Stock or prices changed. <Button size="sm" variant="outline" onClick={updateCart}>Refresh cart prices</Button></div>}
         <section className={styles["checkout"]} aria-label={copy.payment}>
             {reward && (
               <div className={`flex items-center justify-between rounded-lg p-2.5 text-sm ${rewardOn ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground line-through"}`}>
@@ -524,7 +553,7 @@ function POS() {
             {(["Cash", "UPI", "Card", "Split", "Credit"] as const).map((m) => <button key={m} type="button" aria-pressed={pay === m} onClick={() => setPay(m)}>{m === "Cash" ? <Banknote aria-hidden="true" /> : m === "UPI" ? <Smartphone aria-hidden="true" /> : m === "Card" ? <CreditCard aria-hidden="true" /> : null}<span>{m}</span></button>)}
           </div>
           {pay === "Split" && <Input value={splitCash} onChange={(e) => setSplitCash(e.target.value)} inputMode="decimal" aria-label="Split cash amount" placeholder={`Cash part · rest ${inr(bill.total - (Number(splitCash) || 0))}`} className={styles["received"]} />}
-          <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" aria-label="Amount received" placeholder={pay === "Credit" ? "Advance received · customer required" : "Amount received · blank = exact"} className={styles["received"]} />
+          <Input value={received} onChange={(e) => setReceived(e.target.value)} inputMode="decimal" min="0" aria-label="Amount received" placeholder={pay === "Credit" ? "Credit = unpaid · choose Cash/UPI for partial payment" : "Amount received · blank = exact"} className={styles["received"]} />
           <div className={styles["quickAmounts"]}>
             {[["Exact", 0], ["+100", 100], ["+500", 500], ["+1000", 1000]].map(([l, v]) => <button key={l} type="button" onClick={() => setReceived(String(v === 0 ? bill.total : (Number(received) || 0) + Number(v)))}>{l}</button>)}
           </div>

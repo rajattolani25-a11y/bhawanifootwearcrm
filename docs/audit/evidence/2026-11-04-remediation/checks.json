@@ -1,0 +1,337 @@
+{
+  "date": "2026-11-04",
+  "baseline": "eb962f519b2ba8ead5e0be3cce1cf713c1bd1807",
+  "productionWrites": 0,
+  "pushed": false,
+  "deployed": false,
+  "productionSqlApplied": false,
+  "unit": {
+    "passed": 39,
+    "failed": 0
+  },
+  "typescript": "PASS",
+  "productionBuild": "PASS",
+  "semanticLint": {
+    "errors": 0,
+    "warnings": 1,
+    "note": "Existing i18n Fast Refresh warning; formatting rule disabled for semantic-only lint of modified source."
+  },
+  "browser": [
+    {
+      "test": "product-photos-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 19.6
+    },
+    {
+      "test": "store-maintenance-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 22.5
+    },
+    {
+      "test": "retail-integrity-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 46.9
+    },
+    {
+      "test": "label-dock-audit.mjs",
+      "exit": 0,
+      "seconds": 21.4
+    },
+    {
+      "test": "presentation-settings-audit.mjs",
+      "exit": 0,
+      "seconds": 64.7
+    },
+    {
+      "test": "browser-audit.mjs",
+      "exit": 0,
+      "seconds": 4.5
+    },
+    {
+      "test": "catalog-theme-audit.mjs",
+      "exit": 0,
+      "seconds": 8.4
+    },
+    {
+      "test": "poster-studio-audit.mjs",
+      "exit": 0,
+      "seconds": 27.8
+    },
+    {
+      "test": "storage-meter-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 6.4
+    },
+    {
+      "test": "catalog-product-gallery-audit.mjs",
+      "exit": 0,
+      "seconds": 7.4
+    },
+    {
+      "test": "ivory-background-audit.mjs",
+      "exit": 0,
+      "seconds": 9.6
+    },
+    {
+      "test": "catalog-product-actions-audit.mjs",
+      "exit": 0,
+      "seconds": 16.3
+    },
+    {
+      "test": "receipts-financial-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 13.8
+    },
+    {
+      "test": "operations-safety-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 29.1
+    },
+    {
+      "test": "catalog-order-recovery-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 10.1
+    },
+    {
+      "test": "order-fulfillment-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 6.6
+    },
+    {
+      "test": "sales-financial-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 40.8
+    }
+  ],
+  "database": {
+    "full": {
+      "result": "PASS",
+      "scope": "All migrations on offline PostgreSQL17, genuine RPCs/RLS; no production writes",
+      "checks": [
+        "atomic/stale/owner stock guards and damaged disposition ledger",
+        "colour identity, conflicting price rejection, concurrent identity reuse and compact label alias without replacing old code",
+        "dated opening receipts, immutable starting balances, retries and altered-payload rejection",
+        "receiving retry dedup and invalid-line full rollback",
+        "owner recovery proves committed state; abandoned unknown request cannot submit a late receipt",
+        "negative/NaN/inconsistent totals, invalid mode and forged price denied; sale recovery still deduplicates",
+        "staff mixed opening/bill collection rolls back atomically; permitted bill-only repayment succeeds",
+        "public order retry one hold; manual receipt one event; delivery1080 reconciles invoice and receipt; completion retry one bill",
+        "pickup split preserves300UPI/700Cash; dashboard cash uses actual receipts without double counting advance",
+        "paid cancel restores stock and waits for recorded refund; owner reference and refund retries protected",
+        "coupon cancellation releases quota; online/POS repeats blocked; net-price delivery quote checked; archived orders rejected",
+        "simultaneous last-pair orders and limited coupon prevent oversell/quota overspend",
+        "all new receipt, booking and stock fields survive actual verified backup/reset/restore",
+        "malformed legacy money/stock and unsupported payment history reject with full rollback",
+        "legacy import atomic/no-overwrite/re-import safe; closing stock not deducted for historical bills",
+        "reapplying the complete definition update preserves business rows and one guarded bill patch"
+      ],
+      "productionWrites": 0
+    },
+    "sqlEditorParts": {
+      "result": "PASS",
+      "scope": "All migrations on offline PostgreSQL17, genuine RPCs/RLS; no production writes",
+      "checks": [
+        "atomic/stale/owner stock guards and damaged disposition ledger",
+        "colour identity, conflicting price rejection, concurrent identity reuse and compact label alias without replacing old code",
+        "dated opening receipts, immutable starting balances, retries and altered-payload rejection",
+        "receiving retry dedup and invalid-line full rollback",
+        "owner recovery proves committed state; abandoned unknown request cannot submit a late receipt",
+        "negative/NaN/inconsistent totals, invalid mode and forged price denied; sale recovery still deduplicates",
+        "staff mixed opening/bill collection rolls back atomically; permitted bill-only repayment succeeds",
+        "public order retry one hold; manual receipt one event; delivery1080 reconciles invoice and receipt; completion retry one bill",
+        "pickup split preserves300UPI/700Cash; dashboard cash uses actual receipts without double counting advance",
+        "paid cancel restores stock and waits for recorded refund; owner reference and refund retries protected",
+        "coupon cancellation releases quota; online/POS repeats blocked; net-price delivery quote checked; archived orders rejected",
+        "simultaneous last-pair orders and limited coupon prevent oversell/quota overspend",
+        "all new receipt, booking and stock fields survive actual verified backup/reset/restore",
+        "malformed legacy money/stock and unsupported payment history reject with full rollback",
+        "legacy import atomic/no-overwrite/re-import safe; closing stock not deducted for historical bills",
+        "reapplying the complete definition update preserves business rows and one guarded bill patch"
+      ],
+      "productionWrites": 0
+    },
+    "returnsAndLoyaltyLatest": {
+      "result": "PASS",
+      "scope": "All checked-in migrations and genuine RPCs; no live writes",
+      "checks": [
+        "same and concurrent billing retry returns one bill",
+        "payload mismatch rejected",
+        "size swap atomic and no duplicate revenue/profit",
+        "return replacement size once; over-return blocked",
+        "staff operational access retained / cost column and owner RPC denied",
+        "CSV add/replace + preserved identifiers + scan codes",
+        "CSV preview read-only / bad row rolls everything back",
+        "CSV retries do not duplicate stock",
+        "full return removes one stamp and unspent fifth-visit reward",
+        "used reward flagged without automatic charge; legacy voucher preserved",
+        "three separate returns reconcile exact pennies and UPI method",
+        "damaged return increments damaged stock",
+        "repeat migration preserves backup fingerprint",
+        "20-stamp reversal and premium partial/full return rules",
+        "non-null integrity fields survive actual backup/reset/restore",
+        "stale CSV preview cannot overwrite concurrent stock changes",
+        "unknown billing definition fails with full transaction rollback"
+      ]
+    },
+    "ownerAndVoidLatest": {
+      "result": "PASS",
+      "splitSql": false,
+      "scope": "Real offline PostgreSQL17, all migrations; no production writes",
+      "checks": [
+        "owner size add, unused rename/remove, ledgered quantity adjustment",
+        "staff and stale size edits denied",
+        "new product metadata does not alter old bill names/sizes",
+        "owner confirmation and bill cancellation retry safety",
+        "stock/due/loyalty reversed exactly once",
+        "void sale/line/returns/cost hidden in all normal owner/staff reads",
+        "cancelled request cannot recover as a valid bill",
+        "owner-only cancelled bill history; hard-delete blocked",
+        "coupon redemption released and consumed voucher restored",
+        "later collection/prior return block cancellation atomically",
+        "new audit fields survive actual backup/reset/restore",
+        "0033 and 0034 reapply safely",
+        "online order and spent reward guards",
+        "legacy reward conflict fully rolls back cancellation",
+        "concurrent cancellation restores stock once",
+        "void audit notes and physical line count owner-only"
+      ]
+    }
+  },
+  "focusedBrowser": {
+    "operations": {
+      "result": "PASS",
+      "scope": "Actual authenticated UI and real client navigation; synthetic RPC/storage responses, not proof of live delivery",
+      "checks": [
+        "Products Quick Add → POS size7 and stock2 without full reload",
+        "Counter Quick Add → immediate POS card",
+        "Old customer response cannot replace the latest customer",
+        "Negative received amount stops before create_sale",
+        "Changed prices require explicit cart review and then bill at the current total",
+        "Counter Quick Add → Products list via client navigation",
+        "Both entry points → Inventory Control low-stock sizes",
+        "Both entry points → barcode/QR label selection",
+        "Both entry points → stock movement rows",
+        "Receiving lost response + reload retries the exact same saved request without duplicate stock",
+        "Purchase New article qty0 → Receive qty1 → POS qty1, without double addition",
+        "Purchase receipt → stock ledger movement",
+        "Staff direct URLs for Reports, Accounting, Purchase, Suppliers and Inventory Control redirect to POS"
+      ],
+      "createdProducts": 3,
+      "productionWrites": 0,
+      "errors": []
+    },
+    "receipts": {
+      "result": "PASS",
+      "checks": [
+        "current month: two invoices2080; cash1200 includes opening500; UPI1680 contains advance once; refund300 separately",
+        "previous-month pickup advance stays out of this month; pickup700Cash preserved; actual CashBook receipts and supplier repayment",
+        "customer Khata excludes unbilled cancelled/refund records; supplier initial purchase payment plus opening-only repayment reconcile to500",
+        "Thermal/A4/Premium invoices render product1000 plus delivery80 as two lines; total1080"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "catalogRecovery": {
+      "result": "PASS",
+      "checks": [
+        "Interrupted response retains exact order request and quote; no false success",
+        "Reload recovers one original order; direct shop WhatsApp includes order reference, with no app screenshot upload",
+        "Recovered order immediately provides UPI/tracking; success flourish settles within1second",
+        "Open catalog and product view refresh current price/stock without re-signing unchanged photos; sold-out checkout blocked"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "orderFulfillment": {
+      "result": "PASS",
+      "checks": [
+        "Outside delivery: manual receipt → no-GST default bill1080 including80delivery; original physical item1000",
+        "Pickup:300UPI prepaid plus700Cash generates one correctly split invoice",
+        "Paid cancel requires refund-pending stage, owner confirmation/reference and deduplicated saved request"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "returnAwareFinance": {
+      "result": "PASS",
+      "scope": "Synthetic HTTP data, real screens; no live database access",
+      "checks": [
+        "2200 sale / 1400 cost = 800 profit",
+        "return via Sales History -> net zero / profit zero",
+        "Reports and Accounting net zero",
+        "CSV includes negative return transaction",
+        "customer lifetime spend excludes returns",
+        "missing cost does not show revenue as profit",
+        "accounting PDF carries missing-cost status",
+        "partial 1100 return -> net 1100 / profit 400",
+        "mobile dashboard overflow",
+        "bill reprint return summary in Thermal / A4 / Premium",
+        "downloaded A4 PDF is valid",
+        "khata return/refund rows in CSV and PDF",
+        "customer directory PDF uses net spend",
+        "WhatsApp return lines retain Hindi translation",
+        "old bill returned today yields negative current-period sales"
+      ],
+      "errors": [],
+      "liveWrites": 0
+    }
+  },
+  "sqlParts": [
+    {
+      "file": "part-01-0035.sql",
+      "source": "0035_stock_operations_safety.sql",
+      "lines": 117,
+      "sha256": "fc6de382c6919cb58106837d5a0f753d9cdc1b5e5e30c029e4a8e034597548ee"
+    },
+    {
+      "file": "part-02-0036.sql",
+      "source": "0036_receipts_and_retry_safety.sql",
+      "lines": 159,
+      "sha256": "c5e89cbfa3c81f7167a1c2ee62f6fa9d5ce1eb5b8ae95f9be6f3bac5b2aa5ad1"
+    },
+    {
+      "file": "part-03-0036.sql",
+      "source": "0036_receipts_and_retry_safety.sql",
+      "lines": 39,
+      "sha256": "7a3ef9bd38f8225d48fcfe2111688c57d94aa3c8a5dee1c8398069584a1c744c"
+    },
+    {
+      "file": "part-04-0037.sql",
+      "source": "0037_catalog_payment_reconciliation.sql",
+      "lines": 177,
+      "sha256": "5935cf732cb9079454cb8fd9bb44da928c2b1c9a70860a573e74f6bf585f923c"
+    },
+    {
+      "file": "part-05-0037.sql",
+      "source": "0037_catalog_payment_reconciliation.sql",
+      "lines": 58,
+      "sha256": "b8fd99a8317837ac0c6180e9f609dfe0d700ae0819ef43a7a55ea20156f8996d"
+    },
+    {
+      "file": "part-06-0038.sql",
+      "source": "0038_server_bill_validation.sql",
+      "lines": 95,
+      "sha256": "74f0eb21a95eb3034dea91950e2710f5198ec094b3144c81e4d8667d8682adc3"
+    },
+    {
+      "file": "part-07-0039.sql",
+      "source": "0039_atomic_legacy_import.sql",
+      "lines": 121,
+      "sha256": "df1d4ab9e9f5d8557321ec204ed07ae072cd0ee15f4dbcfcc6d4e33d83321c22"
+    },
+    {
+      "file": "part-08-0040.sql",
+      "source": "0040_billing_defaults_and_readiness.sql",
+      "lines": 32,
+      "sha256": "6ca46c4cdb5bd86408083301f04b8c0ce26e758111ef1bd40350b9da118a1512"
+    }
+  ],
+  "limits": [
+    "Hosted Lovable access blocked in environment; no live verification.",
+    "UPI confirmation and refunds are manual records, not automatic bank verification/transfers.",
+    "Historical missing receipts/costs cannot be safely inferred.",
+    "Real203dpi printer/scanner acceptance remains pending.",
+    "Idle expiry scheduler requires provider pg_cron; active reads also expire holds."
+  ],
+  "stage": "Pre-push verification snapshot"
+}

@@ -1,3 +1,4 @@
+import { isDeadStock, isLowStock } from "@/lib/stock-policy";
 import { withReturnCosts } from "@/lib/retail-integrity";
 import {
   financialReturns,
@@ -47,6 +48,8 @@ function Dashboard() {
   const { data, error, isPending } = useQuery({
     queryKey: ["dashboard", isOwner],
     staleTime: 15_000,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       const since = new Date();
       since.setDate(since.getDate() - 90);
@@ -151,6 +154,7 @@ function Dashboard() {
       return {
         sales,
         variants,
+        cashFlow: isOwner ? (await supabase.rpc("owner_cash_today")).data as {cash_in:number;cash_out:number;cash_net:number;verified:boolean} | null : null,
         moves: moves.data ?? [],
         costs,
         pcosts,
@@ -165,7 +169,7 @@ function Dashboard() {
 
   useEffect(
     () =>
-      watchVisibleQuery(qc, ["dashboard"], ["product_variants", "sales", "sale_returns"], "dash"),
+      watchVisibleQuery(qc, ["dashboard"], ["product_variants", "sales", "sale_returns", "credit_payments", "customers", "expenses", "supplier_payments", "product_costs"], "dash"),
     [qc],
   );
 
@@ -240,11 +244,12 @@ function Dashboard() {
       sizes[v.size] = (sizes[v.size] ?? 0) + v.stock;
     }
     const cutoff = Date.now() - 60 * 86400000;
+    const recentSales = new Set(sales.filter(s=>Date.parse(s.sale_date)>=cutoff).flatMap(s=>s.sale_items.map(i=>i.variant_id)));
     const dead = variants.filter(
-      (v) => v.stock > 0 && (sold.get(v.id) ?? 0) <= 0 && new Date(v.created_at).getTime() < cutoff,
+      (v) => v.stock > 0 && isDeadStock(v.created_at, recentSales.has(v.id)),
     );
     const reorder = variants
-      .filter((v) => v.stock < Math.max(3, v.min_stock))
+      .filter((v) => v.stock === 0 || isLowStock(v.stock,v.min_stock))
       .sort((a, b) => a.stock - b.stock);
 
     const grossSales = todays.reduce((a, s) => a + Number(s.total), 0);
@@ -280,9 +285,10 @@ function Dashboard() {
         (data?.dues ?? []).reduce((a, s) => a + Number(s.due_amount), 0) +
         (data?.openingBalances ?? []).reduce((a, c) => a + Number(c.opening_balance), 0),
       gst: money(todays.reduce((a, s) => a + Number(s.gst_amount), 0) - reversed.gst),
-      cashIn,
+      cashIn: isOwner ? data?.cashFlow?.cash_in ?? null : cashIn,
+      cashNet: data?.cashFlow?.verified ? data.cashFlow.cash_net : null,
       pairs: variants.reduce((a, v) => a + v.stock, 0),
-      low: variants.filter((v) => v.stock > 0 && v.stock < 3).length,
+      low: variants.filter((v) => isLowStock(v.stock,v.min_stock)).length,
       out: variants.filter((v) => v.stock === 0).length,
       target,
       trend,
@@ -294,7 +300,7 @@ function Dashboard() {
       reorder: reorder.slice(0, 5),
       returning: new Set(todays.map((s) => s.customer_id).filter(Boolean)).size,
     };
-  }, [data]);
+  }, [data, isOwner]);
 
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -447,14 +453,14 @@ function Dashboard() {
           />
           <Action
             label="Shop Closing"
-            text={`Cash in ${inr(m.cashIn)} · GST ${inr(m.gst)} · ${m.returning} customers billed`}
+            text={isOwner ? `Net cash movement ${m.cashNet == null ? "—" : inr(m.cashNet)} · GST ${inr(m.gst)} · ${m.returning} customers billed` : `Paid on cash-mode bills ${m.cashIn==null ? "—" : inr(m.cashIn)} · ${m.returning} customers billed`}
           />
           <Action tone="success" label="Next Action" text={nextAction} />
           <Panel eyebrow="Live operations" title="Control Stats">
             <div className="grid grid-cols-3 gap-2">
               {[
                 ["Pairs", m.pairs.toLocaleString("en-IN")],
-                ["Cash In", inr(m.cashIn)],
+                ["Cash In", m.cashIn==null ? "—" : inr(m.cashIn)],
                 ["GST", inr(m.gst)],
                 ["Low", String(m.low)],
                 ["Out", String(m.out)],

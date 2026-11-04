@@ -1,3 +1,7 @@
+import { ListPagination } from "@/components/ListPagination";
+import { fetchAll } from "@/lib/fetch-all";
+import { runOperationalRequest } from "@/lib/operational-requests";
+import { requireOwnerRoute } from "@/lib/owner-route";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +17,7 @@ import { useStock } from "@/lib/stock";
 import { QuickAddProduct } from "@/components/QuickAddProduct";
 
 export const Route = createFileRoute("/_authenticated/purchase")({
+  beforeLoad: requireOwnerRoute,
   head: () => ({ meta: [{ title: "Purchase — SoleStack POS" }, { name: "description", content: "Receive new stock from suppliers." }, { property: "og:title", content: "Purchase — SoleStack POS" }, { property: "og:description", content: "Receive and record supplier footwear stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Purchase,
 });
@@ -21,10 +26,15 @@ type Line = { variant_id: string; label: string; qty: number; price: number; gst
 
 function Purchase() {
   const qc = useQueryClient();
-  const { data: stock = [] } = useStock();
-  const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers"], queryFn: async () => (await supabase.from("suppliers").select("*").order("name")).data ?? [] });
-  const { data: recent = [] } = useQuery({ queryKey: ["purchases"], queryFn: async () => (await supabase.from("purchases").select("id,purchase_date,supplier_name,invoice_no,quantity,purchase_price,total").order("purchase_date", { ascending: false }).limit(100)).data ?? [] });
-  const { data: costs = [] } = useQuery({ queryKey: ["purchase-costs"], queryFn: async () => { const { data, error } = await supabase.from("product_costs").select("product_id,purchase_price"); if (error) throw error; return data; } });
+  const [historyPage,setHistoryPage] = useState(0);
+  const { data: stock = [], error: stockError } = useStock();
+  const { data: suppliers = [], error: supplierError } = useQuery({ queryKey: ["suppliers"], queryFn: async () => await fetchAll((a,b) => supabase.from("suppliers").select("*").order("name").order("id").range(a,b)) });
+  const history = useQuery({ queryKey:["purchases",historyPage],queryFn:async()=>{
+    const r=await supabase.from("purchases").select("id,purchase_date,supplier_name,invoice_no,quantity,purchase_price,total",{count:"exact"}).order("purchase_date",{ascending:false}).order("id").range(historyPage*50,(historyPage+1)*50-1);
+    if(r.error)throw r.error;return {rows:r.data,count:r.count??0};
+  }});
+  const recent=history.data?.rows??[];
+  const { data: costs = [], error: costError } = useQuery({ queryKey: ["purchase-costs"], queryFn: async () => { return fetchAll((a,b) => supabase.from("product_costs").select("product_id,purchase_price").order("product_id").range(a,b)); } });
   const [sup, setSup] = useState("");
   const [inv, setInv] = useState("");
   const [gst, setGst] = useState(5);
@@ -40,7 +50,7 @@ function Purchase() {
     if (lines.some((l) => !Number.isInteger(l.qty) || l.qty <= 0 || !Number.isFinite(l.price) || l.price < 0 || (l.price === 0 && !l.free_sample))) { toast.error("Enter quantity and cost for every size, or mark free/sample stock"); return; }
     setBusy(true);
     const supplier = suppliers.find((x) => x.id === sup);
-    const { data, error } = await supabase.rpc("receive_stock", { _supplier_id: sup || (null as unknown as string), _supplier_name: supplier?.name ?? "", _invoice: inv, _items: lines.map((l) => ({ variant_id: l.variant_id, qty: l.qty, price: l.price, gst_rate: l.gst_rate, free_sample: l.free_sample })) });
+    const { data, error } = await runOperationalRequest("purchase-receive", "receive_stock_v2", { _supplier_id: sup || null, _supplier_name: supplier?.name ?? "", _invoice: inv, _items: lines.map((l) => ({ variant_id: l.variant_id, qty: l.qty, price: l.price, gst_rate: l.gst_rate, free_sample: l.free_sample })) });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`${data} pairs added to stock`);
@@ -52,6 +62,7 @@ function Purchase() {
   return (
     <div>
       <PageHeader title="Purchase" subtitle="Receive stock — adds pairs, updates cost price, logs ledger. New sizes: add in Products first." />
+      {(stockError||supplierError||costError||history.error) && <p role="alert" className="mb-3 text-destructive">Purchase data could not be loaded. <Button variant="outline" onClick={()=>refreshOperationalData(qc)}>Retry</Button></p>}
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="space-y-3 rounded-xl border bg-card p-4">
           <div className="grid gap-2 sm:grid-cols-3">
@@ -90,16 +101,17 @@ function Purchase() {
             </div>
           ))}
           <p className="pt-2 text-right font-display text-2xl font-bold">{inr(total)}</p>
-          <Button className="w-full" disabled={!lines.length || busy} onClick={save}>{busy ? "Saving…" : "Receive stock"}</Button>
+          <Button className="w-full" disabled={!lines.length || busy || !!stockError || !!supplierError || !!costError} onClick={save}>{busy ? "Saving…" : "Receive stock"}</Button>
         </div>
       </div>
-      <h2 className="mb-2 mt-6 font-semibold">Recent purchases</h2>
+      <h2 className="mb-2 mt-6 font-semibold">Purchase history</h2>
       <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr><th className="p-2">Date</th><th className="p-2">Supplier</th><th className="p-2">Invoice</th><th className="p-2">Qty</th><th className="p-2">Cost</th><th className="p-2 text-right">Total</th></tr></thead>
           <tbody>{recent.map((r) => <tr key={r.id} className="border-t"><td className="p-2">{new Date(r.purchase_date).toLocaleDateString("en-IN")}</td><td className="p-2">{r.supplier_name}</td><td className="p-2">{r.invoice_no}</td><td className="p-2">{r.quantity}</td><td className="p-2">{inr(r.purchase_price)}</td><td className="p-2 text-right">{inr(r.total)}</td></tr>)}</tbody>
         </table>
       </div>
+      <ListPagination page={historyPage} pageSize={50} total={history.data?.count??0} busy={history.isPending} onPage={setHistoryPage} />
     </div>
   );
 }

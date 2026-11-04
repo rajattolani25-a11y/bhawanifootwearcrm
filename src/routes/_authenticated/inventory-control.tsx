@@ -1,6 +1,9 @@
+import { isDeadStock, isLowStock } from "@/lib/stock-policy";
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
+import { requireOwnerRoute } from "@/lib/owner-route";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,16 +12,17 @@ import { Input } from "@/components/ui/input";
 import { sizeSort, useStock, type Product, type Variant } from "@/lib/stock";
 
 export const Route = createFileRoute("/_authenticated/inventory-control")({
+  beforeLoad: requireOwnerRoute,
   head: () => ({ meta: [{ title: "Inventory Control — SoleStack POS" }, { name: "description", content: "Low stock, damaged, dead stock and stock adjustments." }, { property: "og:title", content: "Inventory Control — SoleStack POS" }, { property: "og:description", content: "Monitor low, damaged and inactive footwear stock." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Control,
 });
 
 function Control() {
-  const { data = [] } = useStock();
+  const { data = [], error: stockError, isPending: stockPending } = useStock();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"low" | "damaged" | "dead" | "adjust">("low");
   const [q, setQ] = useState("");
-  const { data: soldIds = new Set<string>() } = useQuery({
+  const { data: soldIds = new Set<string>(), error: soldError, isPending: soldPending } = useQuery({
     queryKey: ["sold-60"],
     queryFn: async () => {
       const since = new Date(Date.now() - 60 * 864e5).toISOString();
@@ -28,19 +32,22 @@ function Control() {
     },
   });
   const flat = data.flatMap((p) => p.product_variants.map((v) => ({ p, v })));
-  const low = flat.filter(({ v }) => v.stock <= v.min_stock);
+  const low = flat.filter(({ v }) => isLowStock(v.stock, v.min_stock));
   const damaged = flat.filter(({ v }) => v.damaged_stock > 0);
-  const dead = flat.filter(({ p, v }) => v.stock > 0 && !soldIds.has(v.id) && Date.now() - new Date(p.created_at).getTime() > 60 * 864e5);
+  const dead = soldError || soldPending ? [] : flat.filter(({ p, v }) => v.stock > 0 && isDeadStock(v.created_at ?? p.created_at, soldIds.has(v.id)));
   const s = q.toLowerCase();
   const adj = flat.filter(({ p, v }) => !s || `${p.brand} ${p.article} ${v.size} ${v.barcode}`.toLowerCase().includes(s)).slice(0, 100);
 
-  async function adjust(p: Product, v: Variant, patch: Partial<Variant>, note: string) {
-    const { error } = await supabase.from("product_variants").update(patch).eq("id", v.id);
-    if (error) { toast.error(error.message); return; }
-    const diff = (patch.stock ?? v.stock) - v.stock;
-    if (diff) await supabase.from("stock_movements").insert({ type: "ADJUST", variant_id: v.id, product_name: `${p.brand} ${p.article} (${v.size})`, qty_in: Math.max(diff, 0), qty_out: Math.max(-diff, 0), note });
+  async function adjust(p: Product, v: Variant, patch: Partial<Variant>, note: string, disposition: string | null = null) {
+    const { error } = await supabase.rpc("adjust_inventory", {
+      _variant_id: v.id, _expected_stock: v.stock, _expected_damaged: v.damaged_stock,
+      _stock: patch.stock ?? null, _min: patch.min_stock ?? null, _rack: patch.rack ?? null,
+      _disposition: disposition, _reason: note,
+    });
+    if (error) { toast.error(error.code === "PGRST202" ? "Apply database update 0035 before adjusting stock." : error.message); return false; }
     toast.success("Saved");
-    qc.invalidateQueries();
+    await refreshOperationalData(qc);
+    return true;
   }
 
   const tabs = [["low", `Low stock (${low.length})`], ["damaged", `Damaged (${damaged.length})`], ["dead", `Dead 60d (${dead.length})`], ["adjust", "Adjust stock"]] as const;
@@ -56,6 +63,10 @@ function Control() {
         {tabs.map(([k, l]) => <Button key={k} size="sm" variant={tab === k ? "default" : "outline"} onClick={() => setTab(k)}>{l}</Button>)}
         {tab === "adjust" && <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search / scan" className="h-9 w-56" />}
       </div>
+      {tab === "dead" && soldPending && <p role="status">Checking recent sales…</p>}
+      {tab === "dead" && soldError && <p role="alert">Recent sales could not be loaded. Dead stock cannot be verified. <Button variant="outline" onClick={() => qc.invalidateQueries({queryKey:["sold-60"]})}>Retry</Button></p>}
+      {stockPending && <p role="status">Loading inventory…</p>}
+      {stockError && <p role="alert">Inventory could not be loaded. <Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["stock-all"] })}>Retry</Button></p>}
       <div className="divide-y border-y">
         {grouped.map(({ product, variants }) => <section key={product.id} className="py-4">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
@@ -66,25 +77,42 @@ function Control() {
             {variants.map((v) => <Row key={v.id} p={product} v={v} tab={tab} adjust={adjust} />)}
           </div>
         </section>)}
-        {!grouped.length && <p className="py-6 text-center text-muted-foreground">Nothing here</p>}
+        {!stockPending && !stockError && !grouped.length && <p className="py-6 text-center text-muted-foreground">Nothing here</p>}
       </div>
     </div>
   );
 }
 
-function Row({ p, v, tab, adjust }: { p: Product; v: Variant; tab: string; adjust: (p: Product, v: Variant, patch: Partial<Variant>, note: string) => void }) {
+function Row({ p, v, tab, adjust }: { p: Product; v: Variant; tab: string; adjust: (p: Product, v: Variant, patch: Partial<Variant>, note: string, disposition?: string | null) => Promise<boolean> }) {
+  const [snapshot, setSnapshot] = useState(v);
+  const [dirty, setDirty] = useState(false);
   const [stock, setStock] = useState(String(v.stock));
   const [min, setMin] = useState(String(v.min_stock));
   const [rack, setRack] = useState(v.rack ?? "");
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-sm">
-      <strong className="min-w-16">Size {v.size}</strong>
-      <label className="flex items-center gap-2 text-muted-foreground">Stock {tab === "adjust" ? <Input type="number" min="0" aria-label={`Size ${v.size} stock`} value={stock} onChange={(e) => setStock(e.target.value)} className="h-8 w-20 text-foreground" /> : <b className="text-foreground">{v.stock}</b>}</label>
-      <label className="flex items-center gap-2 text-muted-foreground">Min {tab === "adjust" ? <Input type="number" min="0" aria-label={`Size ${v.size} minimum stock`} value={min} onChange={(e) => setMin(e.target.value)} className="h-8 w-16 text-foreground" /> : <b className="text-foreground">{v.min_stock}</b>}</label>
-      <span className="text-muted-foreground">Damaged <b className="text-foreground">{v.damaged_stock}</b></span>
-      <label className="flex items-center gap-2 text-muted-foreground">Rack {tab === "adjust" ? <Input aria-label={`Size ${v.size} rack`} value={rack} onChange={(e) => setRack(e.target.value)} className="h-8 w-20 text-foreground" /> : <b className="text-foreground">{v.rack || "—"}</b>}</label>
-      {tab === "adjust" && <Button size="sm" onClick={() => { const nextStock = Number(stock), nextMin = Number(min); if (!Number.isInteger(nextStock) || nextStock < 0 || !Number.isInteger(nextMin) || nextMin < 0) { toast.error("Enter valid non-negative stock and minimum"); return; } void adjust(p, v, { stock: nextStock, min_stock: nextMin, rack }, "Manual count"); }}>Save</Button>}
-      {tab === "damaged" && <Button size="sm" variant="outline" onClick={() => adjust(p, v, { damaged_stock: 0 }, "Damaged returned to supplier / written off")}>Clear (sent back)</Button>}
-    </div>
-  );
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (dirty) return;
+    setSnapshot(v); setStock(String(v.stock)); setMin(String(v.min_stock)); setRack(v.rack ?? "");
+  }, [v, dirty]);
+  async function save(disposition: string | null = null) {
+    if (busy) return;
+    const next = Number(stock), minimum = Number(min);
+    if (!Number.isInteger(next) || next < 0 || !Number.isInteger(minimum) || minimum < 0) { toast.error("Enter valid non-negative stock and minimum"); return; }
+    const reason = next !== snapshot.stock || disposition ? window.prompt(disposition ? "Reason for damaged stock disposition (no supplier credit is created)" : "Stock adjustment reason") : "Rack / minimum updated";
+    if (!reason) return;
+    setBusy(true);
+    try {
+      if (await adjust(p, snapshot, disposition ? {} : { ...(next !== snapshot.stock ? { stock: next } : {}), min_stock: minimum, rack }, reason, disposition)) setDirty(false);
+    } finally { setBusy(false); }
+  }
+  return <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-sm">
+    <strong className="min-w-16">Size {v.size}</strong>
+    <label className="flex items-center gap-2">Stock {tab === "adjust" ? <Input type="number" min="0" aria-label={`Size ${v.size} stock`} value={stock} onChange={e => { setDirty(true); setStock(e.target.value); }} className="h-8 w-20" /> : <b>{v.stock}</b>}</label>
+    <label className="flex items-center gap-2">Min {tab === "adjust" ? <Input type="number" min="0" aria-label={`Size ${v.size} minimum stock`} value={min} onChange={e => { setDirty(true); setMin(e.target.value); }} className="h-8 w-16" /> : <b>{v.min_stock}</b>}</label>
+    <span>Damaged <b>{v.damaged_stock}</b></span>
+    <label className="flex items-center gap-2">Rack {tab === "adjust" ? <Input aria-label={`Size ${v.size} rack`} value={rack} onChange={e => { setDirty(true); setRack(e.target.value); }} className="h-8 w-20" /> : <b>{v.rack || "—"}</b>}</label>
+    {dirty && (snapshot.stock !== v.stock || snapshot.damaged_stock !== v.damaged_stock) && <p role="alert" className="text-destructive">Stock changed. Reload inventory before saving. <Button size="sm" variant="outline" onClick={() => setDirty(false)}>Discard changes</Button></p>}
+    {tab === "adjust" && <Button size="sm" disabled={busy || !dirty} onClick={() => void save()}>Save</Button>}
+    {tab === "damaged" && <><Button size="sm" variant="outline" disabled={busy} onClick={() => void save("supplier")}>Return to supplier</Button><Button size="sm" variant="outline" disabled={busy} onClick={() => void save("writeoff")}>Write off damaged</Button></>}
+  </div>;
 }

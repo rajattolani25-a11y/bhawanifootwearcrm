@@ -189,7 +189,7 @@ export function QuickAddProduct({
       toast.success(
         `${f.brand.toUpperCase()} ${f.article} ready — ${rows.reduce((a, x) => a + x.qty, 0)} pairs added`,
       );
-      ["products", "stock-all", "pos-products"].forEach((k) =>
+      ["products", "stock-all", "pos-products", "dashboard", "ledger", "catalog-studio-products", "hero-product-choices"].forEach((k) =>
         qc.invalidateQueries({ queryKey: [k] }),
       );
       onAdded?.({
@@ -249,8 +249,9 @@ export function QuickAddProduct({
           <div className="grid grid-cols-2 gap-2.5">
             {fields.map(([k, l]) => (
               <div key={k} className="space-y-1">
-                <Label className="text-xs">{l}</Label>
+                <Label htmlFor={`quick-product-${mode}-${k}`} className="text-xs">{l}</Label>
                 <Input
+                  id={`quick-product-${mode}-${k}`}
                   value={f[k]}
                   onChange={set(k)}
                   autoFocus={k === "article"}

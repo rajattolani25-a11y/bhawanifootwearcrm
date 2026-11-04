@@ -84,6 +84,7 @@ await p.route("**/*", async (r) => {
         business_address: "",
       };
     if (u.pathname.includes("/rpc/")) data = null;
+    if (u.pathname.endsWith("/rpc/ensure_variant_label_code")) data="SS1234567890";
     return r.fulfill({ json: data, headers: { "content-range": "0-0/0" } });
   }
   return r.abort();

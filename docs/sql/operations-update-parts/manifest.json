@@ -1,0 +1,50 @@
+[
+  {
+    "file": "part-01-0035.sql",
+    "source": "0035_stock_operations_safety.sql",
+    "lines": 117,
+    "sha256": "fc6de382c6919cb58106837d5a0f753d9cdc1b5e5e30c029e4a8e034597548ee"
+  },
+  {
+    "file": "part-02-0036.sql",
+    "source": "0036_receipts_and_retry_safety.sql",
+    "lines": 159,
+    "sha256": "c5e89cbfa3c81f7167a1c2ee62f6fa9d5ce1eb5b8ae95f9be6f3bac5b2aa5ad1"
+  },
+  {
+    "file": "part-03-0036.sql",
+    "source": "0036_receipts_and_retry_safety.sql",
+    "lines": 39,
+    "sha256": "7a3ef9bd38f8225d48fcfe2111688c57d94aa3c8a5dee1c8398069584a1c744c"
+  },
+  {
+    "file": "part-04-0037.sql",
+    "source": "0037_catalog_payment_reconciliation.sql",
+    "lines": 177,
+    "sha256": "5935cf732cb9079454cb8fd9bb44da928c2b1c9a70860a573e74f6bf585f923c"
+  },
+  {
+    "file": "part-05-0037.sql",
+    "source": "0037_catalog_payment_reconciliation.sql",
+    "lines": 58,
+    "sha256": "b8fd99a8317837ac0c6180e9f609dfe0d700ae0819ef43a7a55ea20156f8996d"
+  },
+  {
+    "file": "part-06-0038.sql",
+    "source": "0038_server_bill_validation.sql",
+    "lines": 95,
+    "sha256": "74f0eb21a95eb3034dea91950e2710f5198ec094b3144c81e4d8667d8682adc3"
+  },
+  {
+    "file": "part-07-0039.sql",
+    "source": "0039_atomic_legacy_import.sql",
+    "lines": 121,
+    "sha256": "df1d4ab9e9f5d8557321ec204ed07ae072cd0ee15f4dbcfcc6d4e33d83321c22"
+  },
+  {
+    "file": "part-08-0040.sql",
+    "source": "0040_billing_defaults_and_readiness.sql",
+    "lines": 32,
+    "sha256": "6ca46c4cdb5bd86408083301f04b8c0ce26e758111ef1bd40350b9da118a1512"
+  }
+]

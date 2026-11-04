@@ -1,3 +1,4 @@
+import { runOperationalRequest } from "@/lib/operational-requests";
 import { VoidSaleButton, VoidedBills } from "@/components/VoidBillControls";
 import type { Database } from "@/integrations/supabase/types";
 import { requireRetailIntegrity, integrityError } from "@/lib/retail-integrity";
@@ -114,7 +115,7 @@ function Sales() {
     printBill(b, d).catch((e) => toast.error(e.message));
   async function collectPayment() {
     if (!collect) return;
-    const { data: result, error } = await supabase.rpc("collect_credit_payment", {
+    const { data: result, error } = await runOperationalRequest(`sale-credit:${collect.id}`, "collect_credit_payment_v2", {
       _sale_id: collect.id,
       _amount: Number(amount),
       _mode: mode,
@@ -128,8 +129,7 @@ function Sales() {
     toast.success(`${inr(Number(r?.collected ?? 0))} collected · ${inr(Number(r?.due ?? 0))} due`);
     setCollect(null);
     setAmount("");
-    qc.invalidateQueries({ queryKey: ["sales"] });
-    qc.invalidateQueries({ queryKey: ["dashboard"] });
+    refreshOperationalData(qc);
   }
 
   return (

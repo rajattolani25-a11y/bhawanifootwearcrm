@@ -1,5 +1,7 @@
 """Real PostgreSQL/RLS audit on a disposable offline container. No app env/live DB."""
 from pathlib import Path
+import sys
+latest="--latest"in sys.argv
 import subprocess,json,time,uuid
 root=Path(__file__).resolve().parents[1]
 container='solestack-read-audit-'+uuid.uuid4().hex[:8]
@@ -52,12 +54,16 @@ try:
   if isinstance(value,list):return [original(v)for v in value]
   return value
  assert original(before)==original(after),'migration changed existing business data'
+ if latest:
+  for path in sorted((root/'drizzle/migrations').glob('*.sql')):
+   if path.name>='0033_':sql(path.read_text())
  def call(name,args,who=owner,ok=True):
   params=','.join('_'+k+'=>'+('NULL'if v is None else "'"+json.dumps(v).replace("'","''")+"'::jsonb"if isinstance(v,(list,dict))else 'true'if v is True else 'false'if v is False else str(v)if isinstance(v,(int,float))else "'"+v.replace("'","''")+"'") for k,v in args.items())
   r=as_role('authenticated',who,'SELECT '+name+'('+params+');',ok)
   if ok and name=='restore_store_backup_v2':return None
   return (json.loads(r.stdout) if r.stdout.strip() else None)if ok else r
  def sale(variant=old,amount=2200,cust='',qty=1,request=None,discount=0):
+  if latest:sql(f"UPDATE products SET selling_price={amount} WHERE id='{product}';")
   payload={'request_id':request or str(uuid.uuid4()),'customer_id':cust,'customer_name':'Audit Customer','subtotal':amount*qty,'taxable':amount*qty-discount,'discount':discount,'total':amount*qty-discount,'paid_amount':amount*qty-discount,'payment_mode':'Cash','bill_type':'simple','give_stamp':bool(cust)}
   items=[{'variant_id':variant,'product_name':'Audit Pair','size':'7'if variant==old else'8','price':amount,'qty':qty}]
   return call('create_sale',{'sale':payload,'items':items}),{'sale':payload,'items':items}
@@ -121,10 +127,10 @@ try:
  check("(SELECT barcode IS NOT NULL AND stock=3 FROM product_variants WHERE product_id=(SELECT id FROM products WHERE brand='NEW'))",'new import scan code missing')
  # A stock change after preview invalidates confirmation instead of overwriting a sale.
  plan=call('import_stock_csv',{'rows':rows,'mode':'replace','preview':True})
- as_role('authenticated',owner,f"UPDATE product_variants SET stock=stock-1 WHERE id='{old}';")
+ sql(f"SET request.jwt.claim.sub='{owner}';UPDATE product_variants SET stock=stock-1 WHERE id='{old}';")
  stale=call('import_stock_csv',{'rows':rows,'mode':'replace','preview':False,'expected':plan['plan'],'operation_id':str(uuid.uuid4())},ok=False)
  assert stale.returncode!=0 and 'Stock changed since preview' in stale.stderr
- as_role('authenticated',owner,f"UPDATE product_variants SET stock=10 WHERE id='{old}';")
+ sql(f"SET request.jwt.claim.sub='{owner}';UPDATE product_variants SET stock=10 WHERE id='{old}';")
  # Qualifying stamp is reversed once; a repeat network request has no second effect.
  fifth,_=sale(amount=500,cust=customer)
  check(f"(SELECT regular_stamps=5 AND regular_visits=5 FROM customers WHERE id='{customer}')",'fifth stamp failed')
@@ -139,7 +145,7 @@ try:
  check(f"(SELECT status='used' AND amount=100 FROM loyalty_rewards WHERE earned_sale_id='{fifth2['sale_id']}')",'spent voucher altered')
  check(f"EXISTS(SELECT 1 FROM loyalty_rewards WHERE customer_id='{customer}' AND amount=250 AND status='active')",'legacy reward altered')
  # Fresh stock and cumulative penny rounding, payout method, damaged returns.
- as_role('authenticated',owner,f"UPDATE product_variants SET stock=50 WHERE id='{old}';")
+ sql(f"SET request.jwt.claim.sub='{owner}';UPDATE product_variants SET stock=50 WHERE id='{old}';")
  three,_=sale(amount=999,qty=3,discount=100)
  assert ret(three,mode=None,ok=False).returncode!=0
  for _ in range(3):ret(three,mode='UPI')
@@ -164,7 +170,10 @@ try:
  assert call('import_stock_csv',{'rows':invalid,'mode':'add','preview':True},ok=False).returncode!=0
  # Definition-only and repeat application preserve every business row.
  snap=as_role('authenticated',owner,'SELECT store_backup_snapshot_v2();').stdout
- sql((root/'drizzle/migrations/0032_retail_integrity.sql').read_text())
+ if latest:
+  for path in sorted((root/'drizzle/migrations').glob('*.sql')):
+   if path.name>='0035_':sql(path.read_text())
+ else:sql((root/'drizzle/migrations/0032_retail_integrity.sql').read_text())
  assert as_role('authenticated',owner,'SELECT store_backup_snapshot_v2();').stdout==snap
  # A real backup/reset/restore preserves new exchange, retry and reward fields.
  snapshot=json.loads(as_role('authenticated',owner,'SELECT store_backup_snapshot_v2();').stdout)
@@ -179,7 +188,7 @@ try:
  assert failed.returncode!=0 and 'Unexpected create_sale definition' in failed.stderr
  check("has_column_privilege('authenticated','public.sale_returns','cost_reversal','SELECT')",'failed migration partially committed a privilege change')
  sql(billing_definition+";\nREVOKE SELECT(cost_reversal) ON public.sale_returns FROM authenticated;")
- result={'result':'PASS','scope':'Disposable offline PostgreSQL17; checked-in migrations through 0032 and genuine RPCs; later features tested separately; no live writes','checks':['same and concurrent billing retry returns one bill','payload mismatch rejected','size swap atomic and no duplicate revenue/profit','return replacement size once; over-return blocked','staff operational access retained / cost column and owner RPC denied','CSV add/replace + preserved identifiers + scan codes','CSV preview read-only / bad row rolls everything back','CSV retries do not duplicate stock','full return removes one stamp and unspent fifth-visit reward','used reward flagged without automatic charge; legacy voucher preserved','three separate returns reconcile exact pennies and UPI method','damaged return increments damaged stock','repeat migration preserves backup fingerprint','20-stamp reversal and premium partial/full return rules','non-null integrity fields survive actual backup/reset/restore','stale CSV preview cannot overwrite concurrent stock changes','unknown billing definition fails with full transaction rollback']}
+ result={'result':'PASS','scope':('All checked-in migrations and genuine RPCs; no live writes'if latest else'Disposable offline PostgreSQL17; checked-in migrations through0032; no live writes'),'checks':['same and concurrent billing retry returns one bill','payload mismatch rejected','size swap atomic and no duplicate revenue/profit','return replacement size once; over-return blocked','staff operational access retained / cost column and owner RPC denied','CSV add/replace + preserved identifiers + scan codes','CSV preview read-only / bad row rolls everything back','CSV retries do not duplicate stock','full return removes one stamp and unspent fifth-visit reward','used reward flagged without automatic charge; legacy voucher preserved','three separate returns reconcile exact pennies and UPI method','damaged return increments damaged stock','repeat migration preserves backup fingerprint','20-stamp reversal and premium partial/full return rules','non-null integrity fields survive actual backup/reset/restore','stale CSV preview cannot overwrite concurrent stock changes','unknown billing definition fails with full transaction rollback']}
  out=Path('/tmp/solestack-audit/retail-integrity');out.mkdir(parents=True,exist_ok=True);(out/'checks.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
 finally:
  run(['docker','rm','-f',container])

@@ -12,6 +12,8 @@ export type Variant = {
   min_stock: number;
   rack: string | null;
   barcode: string | null;
+  label_code?: string | null;
+  created_at?: string;
   sku: string | null;
 };
 export type Product = {
@@ -35,6 +37,7 @@ export const sizeSort = (a: string, b: string) =>
   (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b);
 
 const byId = (rows: Product[]) => [...rows].sort((a, b) => a.id.localeCompare(b.id));
+let lastExpiry = 0;
 const activeById = (rows: Product[]) => byId(rows.filter((row) => row.status === "Active"));
 export function useStock(options?: { activeOnly?: boolean; order?: "id" }) {
   const qc = useQueryClient();
@@ -50,11 +53,16 @@ export function useStock(options?: { activeOnly?: boolean; order?: "id" }) {
         ? { select: byId }
         : {}),
     queryFn: async () => {
+      if (Date.now()-lastExpiry>30000) {
+        const expired = await supabase.rpc("expire_catalog_bookings");
+        if (expired.error) throw new Error("Order holds could not be refreshed. Retry before relying on stock: " + expired.error.message);
+        lastExpiry=Date.now();
+      }
       const data = await fetchAll((a, b) =>
         supabase
           .from("products")
           .select(
-            "id,brand,article,category,color,gender,status,catalog_visible,mrp,selling_price,created_at,image_url,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku)",
+            "id,brand,article,category,color,gender,status,catalog_visible,mrp,selling_price,created_at,image_url,product_variants(id,size,stock,damaged_stock,min_stock,rack,barcode,sku,label_code,created_at)",
           )
           .order("created_at", { ascending: false })
           .order("id")

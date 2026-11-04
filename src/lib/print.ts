@@ -20,6 +20,7 @@ type Sale = {
   bill_type: string;
   tax_mode: string;
   subtotal: number;
+  delivery_charge?: number | null;
   discount: number;
   taxable: number;
   gst_rate: number;
@@ -41,7 +42,7 @@ type Sale = {
 
 // Same line split as old app: discount spread by value, last line absorbs rounding.
 function lines(s: Sale) {
-  const items = s.sale_items;
+  const items = [...s.sale_items, ...(Number(s.delivery_charge)>0 ? [{ product_name: "Delivery charge", size: "", sku: null, qty: 1, price: Number(s.delivery_charge) }] : [])];
   const sub = items.reduce((a, i) => a + i.qty * i.price, 0) || 1;
   const rate = Number(s.gst_rate);
   const gstBill = s.bill_type === "gst" && rate > 0;
@@ -52,17 +53,17 @@ function lines(s: Sale) {
   return items.map((it, idx) => {
     const last = idx === items.length - 1;
     const gross = it.qty * it.price;
-    const d = last ? Number(s.discount) - aD : Math.round((gross / sub) * Number(s.discount));
+    const d = last ? Number(s.discount) - aD : Math.round((gross / sub) * Number(s.discount)*100)/100;
     aD += d;
     const net = Math.max(gross - d, 0);
     let taxable = net,
       gst = 0,
       amount = net;
     if (gstBill && s.tax_mode === "inclusive") {
-      taxable = last ? Number(s.taxable) - aT : Math.round(net / (1 + rate / 100));
+      taxable = last ? Number(s.taxable) - aT : Math.round(net / (1 + rate / 100)*100)/100;
       gst = amount - taxable;
     } else if (gstBill) {
-      gst = last ? Number(s.gst_amount) - aG : Math.round((net * rate) / 100);
+      gst = last ? Number(s.gst_amount) - aG : Math.round(net * rate)/100;
       amount = net + gst;
     }
     if (last) amount = Number(s.total) - aA;
@@ -97,7 +98,7 @@ export async function printBill(billNo: string, designArg?: PrintDesign, duplica
     supabase
       .from("sales")
       .select(
-        "bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,coupon_code,coupon_amount,sale_items(product_name,size,sku,price,qty)",
+        "bill_no,sale_date,customer_name,payment_mode,bill_type,tax_mode,subtotal,discount,taxable,gst_rate,gst_amount,total,paid_amount,due_amount,reward_amount,coupon_code,coupon_amount,delivery_charge,sale_items(product_name,size,sku,price,qty)",
       )
       .eq("bill_no", billNo)
       .maybeSingle(),

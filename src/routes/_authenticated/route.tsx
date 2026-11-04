@@ -1,3 +1,4 @@
+import { OperationRecovery } from "@/components/OperationRecovery";
 import { StoreResetBoundary } from "@/components/StoreResetBoundary";
 import { InterfaceMotion } from "@/components/motion/provider";
 import premium from "@/components/premium.module.css";
@@ -117,6 +118,7 @@ function AppShell() {
           <span className="min-w-0 flex-1 truncate font-display font-semibold">SoleStack POS</span>
         </header>
         <main className={cn(styles["content"], premium["workspace"], "min-h-0 flex-1 p-3 md:p-5")}>
+          <OperationRecovery />
           <Outlet />
         </main>
         <MessageLanguage />

@@ -1,3 +1,6 @@
+import { useAuth } from "@/hooks/use-auth";
+import { runOperationalRequest } from "@/lib/operational-requests";
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { ListPagination } from "@/components/ListPagination";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,13 +24,15 @@ export const Route = createFileRoute("/_authenticated/bookings")({
   component: Bookings,
 });
 
-type Booking = { id: string; booking_no: string; variant_id: string; product_name: string; size: string; customer_name: string; mobile: string; price: number; advance: number; status: string; note: string | null; expires_at: string; created_at: string; fulfillment: string; delivery_charge: number; address: string | null; area: string | null };
+type Booking = { id: string; booking_no: string; variant_id: string; product_name: string; size: string; customer_name: string; mobile: string; price: number; advance: number; status: string; receipt_recorded?: boolean | null; refund_paid_at?: string | null; refund_reference?: string | null; note: string | null; expires_at: string; created_at: string; fulfillment: string; delivery_charge: number; address: string | null; area: string | null };
 const TABS = [["pending", "Pending payment"], ["active", "To fulfil"], ["done", "Completed"], ["closed", "Cancelled"]] as const;
-const GROUP: Record<string, string> = { pending: "pending", confirmed: "active", packed: "active", shipped: "active", picked: "done", delivered: "done", cancelled: "closed", expired: "closed", refunded: "closed" };
+const GROUP: Record<string, string> = { pending: "pending", confirmed: "active", packed: "active", shipped: "active", picked: "done", delivered: "done", cancelled: "closed", expired: "closed", refund_pending: "closed", refunded: "closed" };
 const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
-const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refunded: "Cancelled - refund initiated" };
+const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refund_pending: "Cancelled — refund pending", refunded: "Refund sent (recorded)" };
 
 function Bookings() {
+  const { isOwner } = useAuth();
+  const [refunding, setRefunding] = useState<Booking | null>(null);
   const qc = useQueryClient();
   const shop = useShop();
   const { lang } = useLang();
@@ -56,24 +61,24 @@ function Bookings() {
     const { error } = await supabase.rpc("update_catalog_order_status", { _id: b.id, _status: st });
     if (error) { toast.error(error.message); return; }
     toast.success(STATUS_LABEL[st]); refresh();
-    window.open(msg(b, st), "_blank");
+
   }
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["bookings"] }); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["pos-products"] }); };
+  const refresh = () => { void refreshOperationalData(qc); };
 
   async function confirm(b: Booking) {
     if (!window.confirm(`${inr(b.advance)} — UPI payment received? (${b.booking_no})`)) return;
     const { error } = await supabase.rpc("confirm_catalog_booking", { _id: b.id });
     if (error) { toast.error(error.message); return; }
     toast.success("Payment received — pair is on hold"); refresh();
-    window.open(msg(b, "confirmed"), "_blank");
+
   }
   async function cancel(b: Booking) {
-    const note = window.prompt("Reason / refund note (optional)", b.status !== "pending" ? `Refund ${inr(b.advance)} by UPI` : "");
-    if (note === null) return;
+    const note = window.prompt("Cancellation reason (refund is recorded separately)", "");
+    if (!note?.trim()) return;
     const { error } = await supabase.rpc("cancel_catalog_booking", { _id: b.id, _note: note });
     if (error) { toast.error(error.message); return; }
     toast.success("Booking cancelled — stock returned"); refresh();
-    if (b.status !== "pending") window.open(msg(b, "refunded"), "_blank");
+    if (b.status !== "pending") toast.info("Refund is pending. Send it outside the app, then record the payment reference.");
   }
   const copyLink = () => { void navigator.clipboard.writeText(`${window.location.origin}/catalog`); toast.success("Catalog link copied"); };
 
@@ -93,21 +98,26 @@ function Bookings() {
             <p className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleString("en-IN")}{b.status === "pending" && <> · <span>Releases at</span> {new Date(b.expires_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</>}</p>
             {b.address && <p className="mt-1 rounded bg-muted p-2 text-xs" data-no-translate>{b.address}{b.area ? `, ${b.area}` : ""}</p>}
             {b.note && <p className="mt-1 text-xs italic text-muted-foreground">{b.note}</p>}
+            {["picked","delivered","refunded"].includes(b.status) && !b.receipt_recorded && <p role="alert" className="mt-2 text-xs text-warning-foreground">Historical payment receipt needs owner reconciliation; the original invoice is unchanged.</p>}
             <div className="mt-3 flex flex-wrap gap-2">
-              {b.status === "pending" && <Button size="sm" onClick={() => confirm(b)}><Check className="h-4 w-4" /> Payment received</Button>}
+              {(b.status === "pending" || (["confirmed","packed","shipped","refund_pending"].includes(b.status) && !b.receipt_recorded)) && <Button size="sm" onClick={() => confirm(b)}><Check className="h-4 w-4" /> {b.status === "pending" ? "Payment received" : "Verify original payment receipt"}</Button>}
               {b.status === "confirmed" && <Button size="sm" variant="secondary" onClick={() => move(b, "packed")}><Package className="h-4 w-4" /> {b.fulfillment === "pickup" ? "Ready for pickup" : "Packed"}</Button>}
               {b.fulfillment !== "pickup" && (b.status === "confirmed" || b.status === "packed") && <Button size="sm" variant="secondary" onClick={() => move(b, "shipped")}><Truck className="h-4 w-4" /> Out for delivery</Button>}
-              {["confirmed", "packed", "shipped"].includes(b.status) && <Button size="sm" onClick={() => setBilling(b)}><Receipt className="h-4 w-4" /> {b.fulfillment === "pickup" ? "Make bill" : "Delivered — make bill"}</Button>}
+              {b.receipt_recorded && ["confirmed", "packed", "shipped"].includes(b.status) && <Button size="sm" onClick={() => setBilling(b)}><Receipt className="h-4 w-4" /> {b.fulfillment === "pickup" ? "Make bill" : "Delivered — make bill"}</Button>}
               {["pending", "confirmed", "packed", "shipped"].includes(b.status) && <>
                 <Button size="sm" variant="outline" asChild><a href={msg(b, b.status)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp</a></Button>
                 <Button size="sm" variant="ghost" onClick={() => cancel(b)}><X className="h-4 w-4" /> Cancel</Button>
               </>}
+              {b.status === "refund_pending" && b.receipt_recorded && isOwner && <Button size="sm" onClick={() => setRefunding(b)}>Record completed refund</Button>}
+              {["refund_pending","refunded"].includes(b.status) && <Button size="sm" variant="outline" asChild><a href={msg(b,b.status)} target="_blank" rel="noreferrer">WhatsApp update</a></Button>}
+              {b.refund_reference && <p className="text-xs" data-no-translate>{b.refund_reference}</p>}
             </div>
           </div>
         ))}
         {!isPending && !error && list.length === 0 && <p className="text-sm text-muted-foreground">No bookings here.</p>}
       </div>
       <ListPagination page={page} pageSize={pageSize} total={result?.count ?? 0} busy={isPending} onPage={setPage} />
+      {refunding && <RefundOrder b={refunding} onClose={() => setRefunding(null)} onDone={refresh} />}
       {billing && <PickupBill b={billing} onClose={() => setBilling(null)} onDone={refresh} />}
     </div>
   );
@@ -116,21 +126,26 @@ function Bookings() {
 function PickupBill({ b, onClose, onDone }: { b: Booking; onClose: () => void; onDone: () => void }) {
   const [mode, setMode] = useState<"Cash" | "UPI">("Cash");
   const [busy, setBusy] = useState(false);
-  const [rate, setRate] = useState("5");
-  const prepaid = Math.min(b.price, b.advance);
-  const rest = Math.max(0, b.price - prepaid);
+  const [rate, setRate] = useState("0");
+  const [rateEdited, setRateEdited] = useState(false);
+  const {data: invoiceDefaults, error: defaultsError, isPending: defaultsPending}=useQuery({queryKey:["settings"],queryFn:async()=>{const r=await supabase.from("store_settings").select("*").eq("id",1).single();if(r.error)throw r.error;return r.data;}});
+  useEffect(()=>{
+    if(!invoiceDefaults || rateEdited)return;
+    const gst=invoiceDefaults.default_bill_type==="gst" || (!invoiceDefaults.default_bill_type && !!invoiceDefaults.gstin?.trim());
+    setRate(gst ? String(invoiceDefaults.default_gst_rate??5) : "0");
+  },[invoiceDefaults,rateEdited]);
+  const invoiceTotal = Number(b.price) + Number(b.delivery_charge || 0);
+  const prepaid = Math.min(invoiceTotal, Number(b.advance));
+  const rest = Math.max(0, invoiceTotal - prepaid);
   async function make() {
     setBusy(true);
     try {
-      const cols = "id,name";
-      let { data: c } = await supabase.from("customers").select(cols).eq("mobile", b.mobile).maybeSingle();
-      if (!c) { const ins = await supabase.from("customers").insert({ mobile: b.mobile, name: b.customer_name }).select(cols).single(); if (ins.error) throw ins.error; c = ins.data; }
-      const bill = computeBill([{ variant_id: b.variant_id, product_name: b.product_name, brand: "", size: b.size, sku: null, price: b.price, qty: 1, max: 1 }], 0, 0, { billType: Number(rate) ? "gst" : "simple", taxMode: "inclusive", rate: Number(rate) || 0 });
+      const bill = computeBill([{ variant_id: b.variant_id, product_name: b.product_name, brand: "", size: b.size, sku: null, price: invoiceTotal, qty: 1, max: 1 }], 0, 0, { billType: Number(rate) ? "gst" : "simple", taxMode: "inclusive", rate: Number(rate) || 0 });
       const { data, error } = await supabase.rpc("complete_catalog_booking", {
         _id: b.id,
-        _sale: { customer_id: c.id, customer_name: c.name, payment_mode: mode === "Cash" && rest > 0 ? "Split" : "UPI", split_cash: mode === "Cash" ? rest : 0,
+        _sale: { payment_mode: mode === "Cash" && rest > 0 ? "Split" : "UPI", split_cash: mode === "Cash" ? rest : 0,
           bill_type: Number(rate) ? "gst" : "simple", tax_mode: "inclusive", subtotal: bill.subtotal, discount: 0, taxable: bill.taxable, gst_rate: bill.rate, gst_amount: bill.gst,
-          total: bill.total, paid_amount: bill.total, due_amount: 0, give_stamp: true },
+          total: bill.total, paid_amount: bill.total, due_amount: 0, give_stamp: true, delivery_charge: Number(b.delivery_charge || 0) },
         _items: [{ variant_id: b.variant_id, product_name: b.product_name, size: b.size, sku: null, price: b.price, qty: 1, discount: 0 }],
       });
       if (error) throw error;
@@ -146,14 +161,32 @@ function PickupBill({ b, onClose, onDone }: { b: Booking; onClose: () => void; o
         <DialogHeader><DialogTitle>Make bill</DialogTitle></DialogHeader>
         <p className="text-sm"><span data-no-translate>{b.product_name}</span> · <span>Size</span> {b.size} · <span data-no-translate>{b.customer_name}</span></p>
         <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
-          <div className="flex justify-between"><span>Bill total</span><b>{inr(b.price)}</b></div>
+          <div className="flex justify-between"><span>Bill total (including delivery)</span><b>{inr(invoiceTotal)}</b></div>
           <div className="flex justify-between"><span>Advance received (UPI)</span><b>− {inr(prepaid)}</b></div>
           <div className="flex justify-between border-t pt-1 text-base"><span>Collect now</span><b>{inr(rest)}</b></div>
         </div>
         <div className="flex gap-2">{(["Cash", "UPI"] as const).map((m) => <button key={m} onClick={() => setMode(m)} className={`flex-1 rounded-md border py-2 text-sm font-semibold ${mode === m ? "border-primary bg-primary/10 text-primary" : ""}`}>{m}</button>)}</div>
-        <label className="flex items-center justify-between text-sm"><span>GST % (price includes GST)</span><Input value={rate} onChange={(e) => setRate(e.target.value)} className="h-9 w-20" inputMode="numeric" /></label>
-        <Button disabled={busy} onClick={make} className="h-11">{busy ? "Please wait…" : "Complete bill"}</Button>
+        <label className="flex items-center justify-between text-sm"><span>GST % (price includes GST)</span><Input value={rate} onChange={(e) => {setRateEdited(true);setRate(e.target.value);}} className="h-9 w-20" inputMode="numeric" /></label>
+        {defaultsError && <p role="alert">Invoice settings could not be loaded. Reopen this bill to retry.</p>}
+        <Button disabled={busy || defaultsPending || !!defaultsError} onClick={make} className="h-11">{busy ? "Please wait…" : "Complete bill"}</Button>
       </DialogContent>
     </Dialog>
   );
+}
+
+function RefundOrder({ b, onClose, onDone }: { b: Booking; onClose: () => void; onDone: () => void }) {
+  const [mode, setMode] = useState("UPI");
+  const [reference, setReference] = useState("");
+  const [settled, setSettled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return <Dialog open onOpenChange={open => !open && !busy && onClose()}><DialogContent><DialogHeader><DialogTitle>Record completed refund</DialogTitle></DialogHeader>
+    <p>{b.booking_no} · {inr(b.advance)}</p><p className="text-sm text-muted-foreground">Send the refund using your bank/payment app first. This form records it; it does not transfer money.</p>
+    <label>Refund method<select value={mode} onChange={e=>setMode(e.target.value)} className="h-11 w-full rounded border bg-background px-3">{["Cash","UPI","Card","Bank"].map(m=><option key={m}>{m}</option>)}</select></label>
+    <label>Payment reference / receipt note<Input value={reference} maxLength={150} onChange={e=>setReference(e.target.value)} /></label>
+    <label className="flex gap-2 text-sm"><input type="checkbox" checked={settled} onChange={e=>setSettled(e.target.checked)} />I have sent the refund and verified the amount.</label>
+    <Button disabled={busy || !settled || reference.trim().length<3} onClick={async()=>{
+      setBusy(true);
+      try {const r=await runOperationalRequest(`order-refund:${b.id}`,"record_catalog_refund",{_id:b.id,_mode:mode,_reference:reference.trim()});if(r.error)throw r.error;toast.success("Refund recorded");onDone();onClose();}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}
+    }}>{busy ? "Saving…" : "Record refund"}</Button>
+  </DialogContent></Dialog>;
 }

@@ -16,6 +16,12 @@ export type Database = {
     Tables: {
       catalog_bookings: {
         Row: {
+          receipt_recorded: boolean | null
+          client_request_id: string | null
+          request_hash: string | null
+          refund_paid_at: string | null
+          refund_reference: string | null
+          refund_mode: string | null
           address: string | null
           advance: number
           area: string | null
@@ -40,6 +46,12 @@ export type Database = {
           variant_id: string
         }
         Insert: {
+          receipt_recorded?: boolean | null
+          client_request_id?: string | null
+          request_hash?: string | null
+          refund_paid_at?: string | null
+          refund_reference?: string | null
+          refund_mode?: string | null
           address?: string | null
           advance: number
           area?: string | null
@@ -64,6 +76,12 @@ export type Database = {
           variant_id: string
         }
         Update: {
+          receipt_recorded?: boolean | null
+          client_request_id?: string | null
+          request_hash?: string | null
+          refund_paid_at?: string | null
+          refund_reference?: string | null
+          refund_mode?: string | null
           address?: string | null
           advance?: number
           area?: string | null
@@ -306,6 +324,11 @@ export type Database = {
       }
       credit_payments: {
         Row: {
+          entry_kind: string | null
+          booking_id: string | null
+          operation_id: string | null
+          request_hash: string | null
+
           amount: number
           collected_by: string | null
           customer_id: string | null
@@ -313,9 +336,14 @@ export type Database = {
           note: string | null
           paid_at: string
           payment_mode: string
-          sale_id: string
+          sale_id: string | null
         }
         Insert: {
+          entry_kind?: string | null
+          booking_id?: string | null
+          operation_id?: string | null
+          request_hash?: string | null
+
           amount: number
           collected_by?: string | null
           customer_id?: string | null
@@ -323,9 +351,14 @@ export type Database = {
           note?: string | null
           paid_at?: string
           payment_mode?: string
-          sale_id: string
+          sale_id: string | null
         }
         Update: {
+          entry_kind?: string | null
+          booking_id?: string | null
+          operation_id?: string | null
+          request_hash?: string | null
+
           amount?: number
           collected_by?: string | null
           customer_id?: string | null
@@ -333,7 +366,7 @@ export type Database = {
           note?: string | null
           paid_at?: string
           payment_mode?: string
-          sale_id?: string
+          sale_id?: string | null
         }
         Relationships: [
           {
@@ -354,6 +387,8 @@ export type Database = {
       }
       customers: {
         Row: {
+          opening_initial: number | null
+
           brand_preference: string | null
           created_at: string
           id: string
@@ -370,6 +405,8 @@ export type Database = {
           shoe_size: string | null
         }
         Insert: {
+          opening_initial?: number | null
+
           brand_preference?: string | null
           created_at?: string
           id?: string
@@ -386,6 +423,8 @@ export type Database = {
           shoe_size?: string | null
         }
         Update: {
+          opening_initial?: number | null
+
           brand_preference?: string | null
           created_at?: string
           id?: string
@@ -569,6 +608,8 @@ export type Database = {
       }
       product_variants: {
         Row: {
+          label_code: string | null
+
           barcode: string | null
           created_at: string
           damaged_stock: number
@@ -582,6 +623,8 @@ export type Database = {
           stock: number
         }
         Insert: {
+          label_code?: string | null
+
           barcode?: string | null
           created_at?: string
           damaged_stock?: number
@@ -595,6 +638,8 @@ export type Database = {
           stock?: number
         }
         Update: {
+          label_code?: string | null
+
           barcode?: string | null
           created_at?: string
           damaged_stock?: number
@@ -691,6 +736,9 @@ export type Database = {
       }
       purchases: {
         Row: {
+          operation_id: string | null
+          request_hash: string | null
+
           free_sample: boolean
           gst_amount: number | null
           gst_rate: number | null
@@ -708,6 +756,9 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
+          operation_id?: string | null
+          request_hash?: string | null
+
           free_sample?: boolean
           gst_amount?: number | null
           gst_rate?: number | null
@@ -725,6 +776,9 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
+          operation_id?: string | null
+          request_hash?: string | null
+
           free_sample?: boolean
           gst_amount?: number | null
           gst_rate?: number | null
@@ -957,6 +1011,7 @@ export type Database = {
       }
       sales: {
         Row: {
+          delivery_charge: number | null
           voided_at: string | null
           voided_by: string | null
           void_reason: string | null
@@ -996,6 +1051,7 @@ export type Database = {
           total: number
         }
         Insert: {
+          delivery_charge?: number | null
           voided_at?: string | null
           voided_by?: string | null
           void_reason?: string | null
@@ -1035,6 +1091,7 @@ export type Database = {
           total?: number
         }
         Update: {
+          delivery_charge?: number | null
           voided_at?: string | null
           voided_by?: string | null
           void_reason?: string | null
@@ -1092,6 +1149,9 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          operation_id: string | null
+          operation_hash: string | null
+          operation_result: Json | null
           id: string
           legacy_id: string | null
           moved_at: string
@@ -1104,6 +1164,9 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
+          operation_id?: string | null
+          operation_hash?: string | null
+          operation_result?: Json | null
           id?: string
           legacy_id?: string | null
           moved_at?: string
@@ -1116,6 +1179,9 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
+          operation_id?: string | null
+          operation_hash?: string | null
+          operation_result?: Json | null
           id?: string
           legacy_id?: string | null
           moved_at?: string
@@ -1181,6 +1247,9 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          default_bill_type: string | null
+          default_tax_mode: string | null
+          default_gst_rate: number | null
           advance_percent: number
           bill_design: string
           bill_footer: string | null
@@ -1211,6 +1280,9 @@ export type Database = {
           upi_id: string | null
         }
         Insert: {
+          default_bill_type?: string | null
+          default_tax_mode?: string | null
+          default_gst_rate?: number | null
           advance_percent?: number
           bill_design?: string
           bill_footer?: string | null
@@ -1241,6 +1313,9 @@ export type Database = {
           upi_id?: string | null
         }
         Update: {
+          default_bill_type?: string | null
+          default_tax_mode?: string | null
+          default_gst_rate?: number | null
           advance_percent?: number
           bill_design?: string
           bill_footer?: string | null
@@ -1274,6 +1349,10 @@ export type Database = {
       }
       supplier_payments: {
         Row: {
+          operation_id: string | null
+          request_hash: string | null
+          opening_amount: number | null
+
           amount: number
           id: string
           note: string
@@ -1284,6 +1363,10 @@ export type Database = {
           supplier_id: string
         }
         Insert: {
+          operation_id?: string | null
+          request_hash?: string | null
+          opening_amount?: number | null
+
           amount: number
           id?: string
           note?: string
@@ -1294,6 +1377,10 @@ export type Database = {
           supplier_id: string
         }
         Update: {
+          operation_id?: string | null
+          request_hash?: string | null
+          opening_amount?: number | null
+
           amount?: number
           id?: string
           note?: string
@@ -1322,6 +1409,8 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          opening_initial: number | null
+
           address: string | null
           created_at: string
           gstin: string | null
@@ -1332,6 +1421,8 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          opening_initial?: number | null
+
           address?: string | null
           created_at?: string
           gstin?: string | null
@@ -1342,6 +1433,8 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          opening_initial?: number | null
+
           address?: string | null
           created_at?: string
           gstin?: string | null
@@ -1376,6 +1469,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_variant_label_code: { Args: { _variant_id: string }; Returns: string }
+      adjust_inventory: { Args: { _variant_id: string; _expected_stock: number; _expected_damaged: number; _stock?: number | null; _min?: number | null; _rack?: string | null; _disposition?: string | null; _reason?: string }; Returns: Json }
+      set_party_opening: { Args: { _kind: string; _id: string; _amount: number }; Returns: undefined }
+      receive_customer_payment: { Args: { _customer_id: string; _amount: number; _mode: string; _note: string; _request_id: string }; Returns: Json }
+      collect_credit_payment_v2: { Args: { _sale_id: string; _amount: number; _mode: string; _note: string; _request_id: string }; Returns: Json }
+      record_supplier_payment_v2: { Args: { _supplier_id: string; _amount: number; _mode: string; _note: string; _request_id: string; _purchase_id?: string | null }; Returns: number }
+      receive_stock_v2: { Args: { _supplier_id: string | null; _supplier_name: string; _invoice: string; _items: Json; _request_id: string }; Returns: number }
+      record_catalog_refund: { Args: { _id: string; _mode: string; _reference: string; _request_id: string }; Returns: Json }
+
       stored_bill_line_count:{Args:never;Returns:number}
       void_sale:{Args:{_sale_id:string;_confirmation:string;_reason:string;_payment_settled:boolean;_refund_mode?:string|null};Returns:Json}
       list_void_sales:{Args:{_offset?:number;_limit?:number};Returns:Json}
@@ -1433,30 +1535,11 @@ export type Database = {
         Args: { _mobile: string; _name: string; _variant_id: string }
         Returns: Json
       }
-      create_catalog_order:
-        | {
-            Args: {
-              _address: string
-              _area: string
-              _fulfillment: string
-              _mobile: string
-              _name: string
-              _variant_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              _address: string
-              _area: string
-              _coupon: string
-              _fulfillment: string
-              _mobile: string
-              _name: string
-              _variant_id: string
-            }
-            Returns: Json
-          }
+      create_catalog_order: { Args: { _address: string; _area: string; _coupon: string; _fulfillment: string; _mobile: string; _name: string; _variant_id: string; _request_id: string; _quote: Json }; Returns: Json }
+      resolve_pending_operation: { Args: { _request_id: string; _abandon?: boolean; _confirmation?: string }; Returns: Json }
+      import_legacy_store: { Args: { _payload: Json; _request_id: string }; Returns: Json }
+      owner_cash_today: { Args: never; Returns: Json }
+      operational_safety_version: { Args: never; Returns: number }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
       ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
       expire_catalog_bookings: { Args: never; Returns: number }

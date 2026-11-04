@@ -1,3 +1,4 @@
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { LOYALTY_MILESTONES, nextLoyaltyReward } from "@/lib/loyalty";
 import { watchVisibleQuery } from "@/lib/inventory-live";
 import { money, refundsBySale } from "@/lib/sales-returns";
@@ -377,9 +378,11 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
   const opening = Number(data?.c?.opening_balance ?? 0);
   const due = (data?.sales ?? []).reduce((a, s) => a + Number(s.due_amount), 0) + opening;
   async function saveOpening() {
-    const v = Math.max(0, Number(ob) || 0);
-    const { error } = await supabase.from("customers").update({ opening_balance: v }).eq("id", id);
+    const v = Number(ob);
+    if (!Number.isFinite(v) || v < 0) return void toast.error("Enter a valid opening balance");
+    const { error } = await supabase.rpc("set_party_opening", { _kind: "customer", _id: id, _amount: v });
     if (error) return void toast.error(error.message);
+    refreshOperationalData(qc);
     toast.success("Opening balance saved");
     setOb(null);
     refresh();
@@ -429,11 +432,11 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
             {(opening > 0 || isOwner) && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2 text-sm">
                 <span>
-                  Opening balance: <b>{inr(opening)}</b>
+                  Opening balance remaining: <b>{inr(opening)}</b>
                 </span>
                 {isOwner &&
                   (ob === null ? (
-                    <Button size="sm" variant="outline" onClick={() => setOb(String(opening))}>
+                    <Button size="sm" variant="outline" onClick={() => setOb(String(data?.c?.opening_initial ?? opening))}>
                       Edit
                     </Button>
                   ) : (
@@ -443,6 +446,7 @@ function Profile({ id, onClose }: { id: string; onClose: () => void }) {
                         type="number"
                         min="0"
                         value={ob}
+                        aria-label="Original opening balance before recorded repayments"
                         onChange={(e) => setOb(e.target.value)}
                       />
                       <Button size="sm" onClick={saveOpening}>

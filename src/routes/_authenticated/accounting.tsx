@@ -140,7 +140,7 @@ function Accounting() {
         all((x, y) =>
           supabase
             .from("credit_payments")
-            .select("sale_id,amount,payment_mode,paid_at")
+            .select("sale_id,amount,payment_mode,paid_at,entry_kind,booking_id")
             .range(x, y),
         ),
         all((x, y) =>
@@ -204,8 +204,8 @@ function Accounting() {
   const expense = sum(data?.exp ?? [], (x) => n(x.amount));
   const profit = netRevenue - cogs - expense;
   const later = new Map<string, number>();
-  for (const p of data?.allCollections ?? [])
-    later.set(p.sale_id, (later.get(p.sale_id) ?? 0) + n(p.amount));
+  for (const p of (data?.allCollections ?? []).filter(p => !!p.sale_id && p.entry_kind !== "catalog_refund"))
+    later.set(p.sale_id!, (later.get(p.sale_id!) ?? 0) + n(p.amount));
   const initPaid = (x: { id: string; paid_amount: number }) =>
     Math.max(0, n(x.paid_amount) - (later.get(x.id) ?? 0));
   const cashSales = sum(sales, (x) => {
@@ -217,9 +217,10 @@ function Accounting() {
         : 0;
   });
   const cashCollections = sum(
-    (data?.collections ?? []).filter((x) => x.payment_mode === "Cash"),
+    (data?.collections ?? []).filter((x) => x.payment_mode === "Cash" && x.entry_kind !== "catalog_refund"),
     (x) => n(x.amount),
   );
+  const cashOrderRefunds = sum((data?.collections??[]).filter(x=>x.entry_kind==="catalog_refund" && x.payment_mode==="Cash"),x=>n(x.amount));
   const { cash: cashRefunds, unknown: unknownRefunds } = refundPayouts(returns);
   const cashExpenses = sum(
     (data?.exp ?? []).filter((x) => x.mode === "Cash"),
@@ -229,11 +230,11 @@ function Accounting() {
     (data?.supplierPayments ?? []).filter((x) => x.payment_mode === "Cash"),
     (x) => n(x.amount),
   );
-  const cashNet = cashSales + cashCollections - cashRefunds - cashExpenses - cashSuppliers;
+  const cashNet = cashSales + cashCollections - cashRefunds - cashOrderRefunds - cashExpenses - cashSuppliers;
   // Historical payouts retain their unknown method; never invent cash movement.
-  const cashUnverified = unknownRefunds > 0;
+  const cashUnverified = unknownRefunds > 0 || sales.some(s=>s.payment_mode==="Credit" && initPaid(s)>0);
   const cashValue = () =>
-    cashUnverified ? tr("Refund payment mode not recorded") : inr(money(cashNet));
+    cashUnverified ? tr("Historical payment method needs owner review") : inr(money(cashNet));
   const inputTax = sum(data?.purchases ?? [], (x) => n(x.gst_amount));
   const taxPayable = output - returnedTax - inputTax;
   const pl: [string, number][] = [
@@ -245,8 +246,8 @@ function Accounting() {
   ];
   const cashRows: [string, number][] = [
     ["Cash collected at sale", cashSales],
-    ["Cash received against dues", cashCollections],
-    ["− Cash refund payouts", -cashRefunds],
+    ["Cash received against dues / order advances", cashCollections],
+    ["− Cash refund payouts", -cashRefunds-cashOrderRefunds],
     ["− Cash expenses", -cashExpenses],
     ["− Supplier cash payments", -cashSuppliers],
   ];
@@ -282,12 +283,18 @@ function Accounting() {
       byMode.set("UPI", (byMode.get("UPI") ?? 0) + paid - c);
     } else byMode.set(x.payment_mode, (byMode.get(x.payment_mode) ?? 0) + paid);
   }
-  for (const x of data?.collections ?? [])
-    byMode.set(x.payment_mode, (byMode.get(x.payment_mode) ?? 0) + n(x.amount));
+  const refundsByMode = new Map<string,number>();
+  for (const x of data?.collections??[]) {
+    const target=x.entry_kind==="catalog_refund" ? refundsByMode : byMode;
+    target.set(x.payment_mode,(target.get(x.payment_mode)??0)+n(x.amount));
+  }
+  for (const r of returns) if (r.refund_mode && n(r.cash_refund)>0) refundsByMode.set(r.refund_mode,(refundsByMode.get(r.refund_mode)??0)+n(r.cash_refund));
   const byCat = new Map<string, number>();
   for (const x of data?.exp ?? [])
     byCat.set(x.category, (byCat.get(x.category) ?? 0) + n(x.amount));
   const margin = netRevenue > 0 ? ((netRevenue - cogs) / netRevenue) * 100 : 0;
+  const creditLater = new Map<string,number>();
+  for (const p of data?.allCollections??[]) if(p.sale_id && (!p.entry_kind || p.entry_kind==="credit")) creditLater.set(p.sale_id,(creditLater.get(p.sale_id)??0)+n(p.amount));
   const summary: [string, number][] = [
     ["Gross sales", gross],
     ["Returns", returned],
@@ -295,9 +302,10 @@ function Accounting() {
     ["Bills", sales.length],
     ["Average bill before returns", sales.length ? gross / sales.length : 0],
     ["Discount given", sum(sales, (x) => n(x.discount))],
-    ["New udhar this month", sum(sales, (x) => n(x.due_amount) + (later.get(x.id) ?? 0))],
+    ["New udhar this month", sum(sales, (x) => n(x.due_amount) + (creditLater.get(x.id) ?? 0))],
     ["Purchases this month", sum(data?.purchases ?? [], (x) => n(x.total))],
     ...[...byMode].map(([k, v]) => [`Money received · ${k}`, v] as [string, number]),
+    ...[...refundsByMode].map(([k,v])=>[`Refund paid · ${k}`,-v] as [string,number]),
     ...[...byCat].map(([k, v]) => [`Expense · ${k}`, v] as [string, number]),
   ];
   const lines =

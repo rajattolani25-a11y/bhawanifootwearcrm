@@ -98,6 +98,8 @@ await page.route("**/*", async (r) => {
   if (u.pathname.startsWith("/rest/v1/")) {
     const { sale, returns } = records();
     let data = [];
+    if (u.pathname.endsWith("/rpc/owner_cash_today")) return r.fulfill({ json: {cash_in:2200,cash_out:refunded,cash_net:2200-refunded,verified:true} });
+    if (u.pathname.endsWith("/rpc/operational_safety_version")) return r.fulfill({ json: 40 });
     if (u.pathname.endsWith("/rpc/retail_integrity_version")) return r.fulfill({ json: 32 });
     if (u.pathname.endsWith("/rpc/return_cost_reversals")) return r.fulfill({ json: returns.map((x) => ({ id: x.id, cost_reversal: x.cost_reversal })) });
     if (u.pathname.endsWith("/rpc/sale_return_positions")) return r.fulfill({ json: isReturn ? [] : [{ variant_id: variantId, size: "7", qty: pairQty }] });

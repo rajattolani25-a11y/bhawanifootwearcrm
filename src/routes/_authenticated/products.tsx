@@ -1,3 +1,4 @@
+import { isLowStock } from "@/lib/stock-policy";
 import { ProductDetailsEditor } from "@/components/ProductDetailsEditor";
 import { ProductSizesEditor } from "@/components/ProductSizesEditor";
 import { categoryLabel } from "@/lib/product-categories";
@@ -49,7 +50,7 @@ function Products() {
     if (!s) return products;
     return products.filter((p) =>
       [p.brand, p.article, p.category, categoryLabel(p.category), p.color].some((f) => f?.toLowerCase().includes(s)) ||
-      p.product_variants.some((v) => v.barcode === s),
+      p.product_variants.some((v) => v.barcode?.toLowerCase() === s || v.label_code?.toLowerCase() === s),
     );
   }, [products, deferredSearch]);
 
@@ -59,7 +60,7 @@ function Products() {
         title="Products"
         subtitle="Size-wise stock for every article. Green = in stock, amber = low, red = out. Tap an article for its full profile."
         actions={<div className="flex flex-wrap gap-2">{isOwner && <CsvTools />}{isOwner && <>
-          <Button variant="outline" className="h-11" onClick={async () => { const { error } = await supabase.from("products").update({ catalog_visible: true }).not("image_url", "is", null); if (error) toast.error(error.message); else { toast.success("All products with a photo are now in the catalog"); qc.invalidateQueries({ queryKey: ["stock-all"] }); } }}>Show all with photo</Button>
+          <Button variant="outline" className="h-11" onClick={async () => { const { error } = await supabase.from("products").update({ catalog_visible: true }).not("image_url", "is", null).eq("status", "Active"); if (error) toast.error(error.message); else { toast.success("All products with a photo are now in the catalog"); qc.invalidateQueries({ queryKey: ["stock-all"] }); } }}>Show all with photo</Button>
           <Button variant="outline" className="h-11" onClick={async () => { if (!window.confirm("Hide all products from the catalog?")) return; const { error } = await supabase.from("products").update({ catalog_visible: false }).eq("catalog_visible", true); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["stock-all"] }); }}>Hide all</Button>
         </>}<Button onClick={() => setAdding(true)} className="h-11"><Plus className="h-4 w-4" /> Quick add</Button></div>}
       />
@@ -96,7 +97,7 @@ function Products() {
                     key={v.id}
                     title={v.rack ? `Rack ${v.rack}` : undefined}
                     className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                      v.stock === 0 ? "bg-destructive/15 text-destructive" : v.stock < 3 ? "bg-warning/25 text-warning-foreground" : "bg-success/15 text-success"
+                      v.stock === 0 ? "bg-destructive/15 text-destructive" : isLowStock(v.stock, v.min_stock) ? "bg-warning/25 text-warning-foreground" : "bg-success/15 text-success"
                     }`}
                   >
                     {v.size} · {v.stock}

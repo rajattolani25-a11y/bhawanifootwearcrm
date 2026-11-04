@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { categoryLabel } from "@/lib/product-categories";
 import { LabelSelectionDock } from "@/components/LabelSelectionDock";
 import { createFileRoute } from "@tanstack/react-router";
@@ -37,13 +38,14 @@ const LABEL_CSS = `
 `;
 
 function Barcodes() {
+  const qc=useQueryClient();
   const { data = [] } = useStock();
   const [q, setQ] = useState("");
   const [pick, setPick] = useState<Record<string, number>>({});
   const [layout, setLayout] = useState<Layout>("sheet");
   const [busy, setBusy] = useState(false);
   const s = q.toLowerCase();
-  const list = data.filter((p) => !s || `${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s) || p.product_variants.some((v) => v.barcode?.toLowerCase() === s || v.sku?.toLowerCase() === s)).slice(0, 60);
+  const list = data.filter((p) => !s || `${p.brand} ${p.article} ${p.color}`.toLowerCase().includes(s) || p.product_variants.some((v) => v.barcode?.toLowerCase() === s || v.sku?.toLowerCase() === s || v.label_code?.toLowerCase() === s)).slice(0, 60);
   const normalize = (value:number) => Math.min(500, Math.max(0, Math.floor(Number.isFinite(value) ? value : 0)));
   const selected = data.flatMap(p => p.product_variants.filter(v => normalize(pick[v.id] ?? 0) > 0).map(v => ({ p, v, n:normalize(pick[v.id] ?? 0) })));
   const count = selected.reduce((total, row) => total + row.n, 0);
@@ -56,21 +58,23 @@ function Barcodes() {
       const [{ default: JsBarcode }, { default: QRCode }] = await Promise.all([import("jsbarcode"), import("qrcode")]);
       function svgFor(code: string) {
         const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        JsBarcode(el, code, { format: "CODE128", height: 30, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, margin: 0 });
+        JsBarcode(el, code, { format: "CODE128", height: 40, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, margin: 0, marginLeft: 14, marginRight: 14 });
         return el.outerHTML;
       }
 
       const labels: string[] = [];
       for (const { p, v, n } of selected) {
-        let code = v.barcode || v.sku;
-        if (!code) { const r = await supabase.rpc("ensure_variant_code", { _variant_id: v.id }); if (r.error) throw r.error; code = r.data; }
+        const result = await supabase.rpc("ensure_variant_label_code", { _variant_id: v.id });
+        if (result.error) throw new Error("Apply database update 0035 before printing scan-safe labels. " + result.error.message);
+        const code = result.data;
         if (!code) throw new Error("Could not assign a unique scan code");
-        const qr = await QRCode.toDataURL(code, { margin: 0, width: 120, errorCorrectionLevel: "M" });
+        const qr = await QRCode.toDataURL(code, { margin: 4, width: 192, errorCorrectionLevel: "M" });
         const meta = [categoryLabel(p.category), p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
         const mrp = Number(p.mrp) > Number(p.selling_price) ? `<s>MRP ${esc(rs(p.mrp))}</s>` : `<small>MRP INCL. OF ALL TAXES</small>`;
         const html = `<div class="label"><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
         for (let i = 0; i < n; i++) labels.push(html);
       }
+      void qc.invalidateQueries({queryKey:["stock-all"]});
       printHtml("Footwear box labels", `<div class="${layout}"><div class="grid">${labels.join("")}</div></div>`, LABEL_CSS + (layout === "roll" ? "@page{size:50mm 38mm;margin:0}" : ""));
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   }

@@ -118,6 +118,7 @@ await page.route("**/*", async (r) => {
   if (!path.startsWith("/rest/v1/")) return r.abort();
   requests.push({ path, search: u.search, method });
   const body = method === "POST" ? r.request().postDataJSON() : null;
+  if (path.endsWith("/rpc/operational_safety_version")) return r.fulfill({ json: 40 });
   if (path.endsWith("/rpc/retail_integrity_version")) return r.fulfill({ json: 32 });
   if (path.endsWith("/rpc/expire_catalog_bookings")) return r.fulfill({ json: 0 });
   if (path.endsWith("/rpc/sale_return_positions")) return r.fulfill({ json: positions });

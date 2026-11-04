@@ -1,3 +1,5 @@
+import * as catalogApi from "@/lib/catalog.functions";
+import { CATALOG_ORDER_EVENT, readCatalogOrder, saveCatalogOrder, clearCatalogOrder, type PendingCatalogOrder, type OrderRequest } from "@/lib/catalog-order-recovery";
 import { catalogProductLink, catalogShareText } from "@/lib/catalog-share";
 import { DEPARTMENTS, SUBCATEGORIES, parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
 import { catalogPresentation } from "@/lib/catalog-presentation";
@@ -6,6 +8,8 @@ import { CouponTicket } from "@/components/CouponTicket";
 import { CatalogSpotlight } from "@/components/CatalogSpotlight";
 import { InterfaceMotion } from "@/components/motion/provider";
 import { BlurReveal } from "@/components/motion/blur-reveal";
+import { OrderSuccessMark } from "@/components/motion/order-success-mark";
+import { CatalogPaymentProof } from "@/components/catalog-payment-proof";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
@@ -55,7 +59,42 @@ function Catalog() {
   return <CatalogView data={Route.useLoaderData()} />;
 }
 
-export function CatalogView({ data }: { data: CatalogData }) {
+export function CatalogView({ data: initialData }: { data: CatalogData }) {
+  const [data, setData] = useState(initialData);
+  const snapshotRef = useRef(data);
+  snapshotRef.current = data;
+  const [pendingOrder, setPendingOrder] = useState<PendingCatalogOrder | null>(null);
+  const [recoveryNonce, setRecoveryNonce] = useState(0);
+  useEffect(() => setData(initialData), [initialData]);
+  useEffect(() => {
+    const changed = () => { try { setPendingOrder(readCatalogOrder()); } catch { /* Ordering remains fail-closed on unreadable recovery state. */ } };
+    changed(); window.addEventListener(CATALOG_ORDER_EVENT,changed);
+    return () => window.removeEventListener(CATALOG_ORDER_EVENT,changed);
+  }, []);
+  useEffect(() => {
+    let stopped = false, busy = false;
+    async function refresh() {
+      if (busy || document.hidden || typeof catalogApi.getCatalogSnapshot !== "function") return;
+      busy = true;
+      try {
+        const fresh = await catalogApi.getCatalogSnapshot();
+        if (stopped) return;
+        const previous = snapshotRef.current;
+        const needPhotos = (fresh.products ?? []).some(p => p.image_key && p.image_key !== previous.products?.find(x => x.id===p.id)?.image_key);
+        setData({ ...previous, ...fresh, products: (fresh.products ?? []).map(p => {
+          const old = previous.products?.find(x => x.id===p.id);
+          return { ...p, image: p.image_key && p.image_key===old?.image_key ? old?.image ?? null : null };
+        }) });
+        // Signing is needed only for a new/replaced photo, never for unchanged stock.
+        if (needPhotos) { const full = await getCatalog(); if (!stopped) setData(full); }
+      } catch { /* Keep the usable snapshot; checkout independently validates the quote. */ }
+      finally { busy = false; }
+    }
+    const visible = () => { if (!document.hidden) void refresh(); };
+    const timer = window.setInterval(() => void refresh(),30000);
+    window.addEventListener("focus",visible);window.addEventListener("solestack-catalog-refresh",visible);document.addEventListener("visibilitychange",visible);
+    return () => { stopped=true;clearInterval(timer);window.removeEventListener("focus",visible);window.removeEventListener("solestack-catalog-refresh",visible);document.removeEventListener("visibilitychange",visible); };
+  }, []);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [brand, setBrand] = useState("All");
@@ -83,6 +122,9 @@ export function CatalogView({ data }: { data: CatalogData }) {
   const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
+  useEffect(() => {
+    setOpen(current => current ? products.find(p => p.id===current.id) ?? { ...current, sizes: current.sizes.map(s => ({ ...s, available: false })) } : null);
+  }, [products]);
   const sharedProductHandled = useRef("");
   const [sharedUnavailable, setSharedUnavailable] = useState(false);
   useEffect(() => {
@@ -160,6 +202,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
           </div>
         </div>
       </header>
+      {pendingOrder && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>An earlier order response was not confirmed. Recover it before placing another order.</p><Button variant="outline" onClick={() => { setRecoveryNonce(n=>n+1);setOpen(pendingOrder.product); }}>Recover saved order</Button></div>}
       {data.offer && <button type="button" onClick={() => { if (data.offer?.code) void navigator.clipboard?.writeText(data.offer.code); }} className={styles["offer"]}>
         <span>{data.offer.title}</span>{offerText(data.offer) && <> · {offerText(data.offer)}</>}{data.offer.code && <> · <span>Code</span> <b data-no-translate>{data.offer.code}</b></>}
         {data.offer.code && <Copy aria-hidden="true" />}
@@ -247,7 +290,7 @@ export function CatalogView({ data }: { data: CatalogData }) {
           <Button variant="secondary" className="h-12" onClick={() => { setHelp(false); setTrack(""); }}><Package className="h-4 w-4" /><span>Track order</span></Button>
         </DialogContent>
       </Dialog>
-      <ProductDialog key={open?.id ?? "none"} dark={dark} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={closeProduct} onTrack={(no) => { setOpen(null); setTrack(no); }} />
+      <ProductDialog key={`${open?.id ?? "none"}:${recoveryNonce}`} dark={dark} motionEnabled={presentation.motion_enabled} product={open} all={products} onPick={setOpen} shop={shop} offerCode={data.offer?.code ?? ""} onClose={closeProduct} onTrack={(no) => { setOpen(null); setTrack(no); }} />
       {track !== null && <TrackDialog initial={track} onClose={() => setTrack(null)} />}
     </div>
   );
@@ -261,7 +304,7 @@ const CATALOG_COPY: Record<AppLanguage, { eyebrow: string; heading: string; sear
 
 const STEPS_PICKUP = ["pending", "confirmed", "packed", "picked"];
 const STEPS_DELIVERY = ["pending", "confirmed", "packed", "shipped", "delivered"];
-const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refunded: "Cancelled - refund initiated" };
+const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refund_pending: "Cancelled — refund pending", refunded: "Refund sent (recorded)" };
 const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
 
 function offerText(o: NonNullable<CatalogOffer>) {
@@ -308,7 +351,7 @@ function similarTo(p: CatalogProduct, all: CatalogProduct[]) {
     .sort((a, b) => b.score - a.score).slice(0, 4).map((r) => r.x);
 }
 
-export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode, dark = false }: { dark?: boolean; product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
+export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, offerCode, dark = false, motionEnabled = true }: { dark?: boolean; motionEnabled?: boolean; product: CatalogProduct | null; all: CatalogProduct[]; onPick: (p: CatalogProduct) => void; shop: CatalogShop; offerCode: string; onClose: () => void; onTrack: (no: string) => void }) {
   const { lang, t } = useLang();
   const sizesRef = useRef<HTMLElement>(null);
   const [needsSize, setNeedsSize] = useState(false);
@@ -318,7 +361,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
     if (params.get("product") !== product.id) return null;
     return product.sizes.find((s) => s.available && s.size === params.get("size"))?.id ?? null;
   });
-  const [step, setStep] = useState<"view" | "method" | "form" | "done">("view");
+  const [step, setStep] = useState<"view" | "method" | "form" | "done" | "recover">("view");
   const [method, setMethod] = useState<Fulfillment>("pickup");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -327,12 +370,20 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [res, setRes] = useState<BookingResult | null>(null);
+  useEffect(() => {
+    try {
+      const saved = readCatalogOrder();
+      if (saved && product && saved.product.id===product.id) {
+        setName(saved.data.name);setMobile(saved.data.mobile);setMethod(saved.data.fulfillment);setAddress(saved.data.address);setArea(saved.data.area);setSize(saved.data.variantId);setStep("recover");
+      }
+    } catch (e) { setErr((e as Error).message); }
+  }, [product]);
   const [code, setCode] = useState(offerCode);
   const [disc, setDisc] = useState<{ code: string; amount: number } | null>(null);
   const [cErr, setCErr] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
   const couponRequest = useRef(0);
-  useEffect(() => { couponRequest.current++; setDisc(null); setCErr(""); setCouponBusy(false); }, [product?.id, size, mobile]);
+  useEffect(() => { couponRequest.current++; setDisc(null); setCErr(""); setCouponBusy(false); }, [product?.id, product?.price, size, mobile]);
   if (!product) return null;
   const chosen = product.sizes.find((s) => s.id === size);
   const label = `${product.brand} ${product.article}`;
@@ -353,9 +404,9 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
     setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");
     setStep("method");
   }
-  const charge = (f: Fulfillment) => (f === "pickup" ? 0 : f === "local" ? (shop.free_delivery_above != null && product.price >= shop.free_delivery_above ? 0 : shop.local_charge) : shop.outside_charge);
+  const charge = (f: Fulfillment, amount = product.price) => (f === "pickup" ? 0 : f === "local" ? (shop.free_delivery_above != null && amount >= shop.free_delivery_above ? 0 : shop.local_charge) : shop.outside_charge);
   const net = product.price - (disc?.amount ?? 0);
-  const payNow = method === "pickup" ? Math.ceil(net * shop.advance_percent / 100) : net + (method === "local" && shop.free_delivery_above != null && net >= shop.free_delivery_above ? 0 : charge(method));
+  const payNow = method === "pickup" ? Math.ceil(net * shop.advance_percent / 100) : net + charge(method,net);
   async function applyCoupon() {
     if (!chosen || !code.trim()) return;
     const request = ++couponRequest.current;
@@ -369,15 +420,29 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   const delivery = method !== "pickup";
   const valid = name.trim().length >= 2 && /^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, "")) && (!delivery || address.trim().length >= 10);
 
-  async function order() {
-    if (!chosen) return;
+  async function order(recover = false) {
+    if (!chosen || !product) return;
     setBusy(true); setErr("");
-    try { setRes(await createBooking({ data: { variantId: chosen.id, name, mobile: mobile.replace(/[\s-]/g, ""), fulfillment: method, address: delivery ? address : "", area: delivery ? area : "", coupon: disc?.code ?? "" } })); setStep("done"); }
-    catch (e) { setErr((e as Error).message.replace(/^.*?:\s*/, "")); }
-    finally { setBusy(false); }
+    try {
+      const saved = readCatalogOrder();
+      if (saved && !recover) throw new Error("Recover the saved order before placing another order.");
+      const payload: OrderRequest = recover && saved ? saved.data : { variantId: chosen.id, name, mobile: mobile.replace(/[\s-]/g,""), fulfillment: method, address: delivery ? address : "", area: delivery ? area : "", coupon: disc?.code ?? "", requestId: crypto.randomUUID(), quote: { price: product.price, net, charge: charge(method,net), advance: payNow } };
+      if (!saved) saveCatalogOrder({ product, data: payload });
+      const result = await createBooking({ data: payload });
+      setRes(result); setStep("done");
+      try { clearCatalogOrder(); } catch { /* Saved order remains visible even if device cleanup fails. */ }
+    } catch (e) {
+      const message = (e as Error).message;
+      if (message.includes("ORDER_REJECTED:")) { try { clearCatalogOrder(); } catch { /* Keep exact recovery state if storage fails. */ } setStep("form"); }
+      else { try { if (readCatalogOrder()) setStep("recover"); } catch { /* Show the original failure. */ } }
+      if (message.includes("ORDER_REJECTED:")) window.dispatchEvent(new Event("solestack-catalog-refresh"));
+      setErr(message.replace(/^.*?(?:ORDER_REJECTED|ORDER_UNCONFIRMED):\s*/,""));
+    } finally { setBusy(false); }
   }
+
   const upi = res ? `upi://pay?pa=${encodeURIComponent(res.upi_id)}&pn=${encodeURIComponent(res.shop)}&am=${res.advance}&cu=INR&tn=${encodeURIComponent(res.booking_no)}` : "";
-  const proof = res ? waTo(shop.phone, proofText(lang, { booking_no: res.booking_no, product: res.product, size: res.size, name, price: res.price, advance: res.advance, delivery_charge: res.delivery_charge, fulfillment: res.fulfillment, shop: res.shop, address: delivery ? `${address}${area ? `, ${area}` : ""}` : null })) : null;
+  const paymentProofMessage = res ? proofText(lang, { booking_no: res.booking_no, product: res.product, size: res.size, name, price: res.price, advance: res.advance, delivery_charge: res.delivery_charge, fulfillment: res.fulfillment, shop: res.shop, address: delivery ? `${address}${area ? `, ${area}` : ""}` : null }) : "";
+  const proof = res ? waTo(shop.phone, paymentProofMessage) : null;
   const Opt = ({ f, icon, title, sub, price }: { f: Fulfillment; icon: React.ReactNode; title: string; sub: string; price: string }) => (
     <button onClick={() => setMethod(f)} className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left ${method === f ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card"}`}>
       <span className="text-primary">{icon}</span>
@@ -443,7 +508,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
             <div className="flex justify-between"><span data-no-translate>{label}</span><span><span>Size</span> <b>{chosen.size}</b></span></div>
             <div className="flex justify-between"><span>Price</span><span>{inr(product.price)}</span></div>
             {disc && <div className="flex justify-between text-primary"><span><span>Coupon</span> <span data-no-translate>{disc.code}</span></span><span>− {inr(disc.amount)}</span></div>}
-            {delivery && <div className="flex justify-between"><span>Delivery charge</span><span>{charge(method) ? inr(charge(method)) : <span>Free</span>}</span></div>}
+            {delivery && <div className="flex justify-between"><span>Delivery charge</span><span>{charge(method,net) ? inr(charge(method,net)) : <span>Free</span>}</span></div>}
             <div className="flex justify-between border-t pt-1 text-base font-semibold"><span>{method === "pickup" ? "Advance to pay now" : "Total to pay"}</span><span>{inr(payNow)}</span></div>
             {method === "pickup" && <p className="text-xs text-muted-foreground"><span>Balance at store:</span> {inr(net - payNow)} · <span>Pair kept aside for</span> {shop.hold_hours} <span>hours</span></p>}
           </div>
@@ -460,17 +525,17 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           {disc && <CouponTicket code={disc.code} amount={disc.amount} onRemove={() => { couponRequest.current++; setDisc(null); setCode(""); }} />}
           {cErr && <p className="text-xs text-destructive">{cErr}</p>}
           {err && <p className="text-sm text-destructive">{err}</p>}
-          <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("method")} className="h-11 flex-1">Back</Button><Button disabled={busy || !valid} onClick={order} className="h-11 flex-1">{busy ? "Please wait…" : "Place order"}</Button></div>
+          <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("method")} className="h-11 flex-1">Back</Button><Button disabled={busy || !valid} onClick={() => void order()} className="h-11 flex-1">{busy ? "Please wait…" : "Place order"}</Button></div>
         </div>}
+        {step === "recover" && <div className="space-y-3 text-sm"><p>The order response was interrupted. Recover the original request to avoid booking the pair twice.</p><p data-no-translate>{name} · {mobile}</p>{err && <p role="alert" className="text-destructive">{err}</p>}<Button disabled={busy} onClick={() => void order(true)} className="h-11 w-full">{busy ? "Please wait…" : "Recover saved order"}</Button></div>}
         {step === "done" && res && <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-4 w-4" /></span><p className="text-base font-semibold">Order placed — pair kept aside</p></div>
+          <div className="flex items-center gap-3"><OrderSuccessMark motionEnabled={motionEnabled} /><p role="status" className="min-w-0 text-base font-semibold">Order placed — pair kept aside</p></div>
           <p><span>Order no.</span> <b data-no-translate>{res.booking_no}</b> · <span>{TYPE_LABEL[res.fulfillment]}</span></p>
           <div className="rounded-lg border p-3"><p>{res.fulfillment === "pickup" ? "Advance to pay now" : "Total to pay"}</p><p className="font-display text-2xl font-bold">{inr(res.advance)}</p>{res.fulfillment === "pickup" && <p className="text-xs text-muted-foreground"><span>Balance at store:</span> {inr(res.price - res.advance)}</p>}</div>
           <p className="flex items-center gap-1.5 text-muted-foreground"><Clock className="h-4 w-4" /> Please pay within 30 minutes, otherwise the pair is released.</p>
           <Button asChild className="h-12 w-full"><a href={upi}>Pay with UPI</a></Button>
           <p className="text-center text-xs text-muted-foreground" data-no-translate>UPI: {res.upi_id}</p>
-          {proof && <Button asChild variant="outline" className="h-11 w-full"><a href={proof} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> Send payment screenshot</a></Button>}
-          <p className="text-xs text-muted-foreground">After paying, send the screenshot on WhatsApp. The store confirms your order and you can track it anytime.</p>
+          {proof ? <CatalogPaymentProof language={lang} whatsappUrl={proof} /> : <p className="text-xs text-muted-foreground">After paying, send the screenshot on WhatsApp. The store confirms your order and you can track it anytime.</p>}
           <div className="flex gap-2"><Button variant="secondary" onClick={() => onTrack(res.booking_no)} className="flex-1"><Package className="h-4 w-4" /> Track order</Button><Button variant="ghost" onClick={onClose} className="flex-1"><X className="h-4 w-4" /> Close</Button></div>
         </div>}
       </DialogContent>
@@ -491,7 +556,7 @@ function TrackDialog({ initial, onClose }: { initial: string; onClose: () => voi
     finally { setBusy(false); }
   }
   const steps = r ? (r.fulfillment === "pickup" ? STEPS_PICKUP : STEPS_DELIVERY) : [];
-  const closed = r && ["cancelled", "expired", "refunded"].includes(r.status);
+  const closed = r && ["cancelled", "expired", "refund_pending", "refunded"].includes(r.status);
   const idx = r ? steps.indexOf(r.status) : -1;
   const when = (s: string) => r?.history?.filter((h) => h.status === s).pop()?.at;
   return (

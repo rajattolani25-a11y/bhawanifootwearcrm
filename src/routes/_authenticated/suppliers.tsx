@@ -1,3 +1,6 @@
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
+import { runOperationalRequest } from "@/lib/operational-requests";
+import { requireOwnerRoute } from "@/lib/owner-route";
 import { fetchAll } from "@/lib/fetch-all";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +20,7 @@ import { useShop } from "@/hooks/use-shop";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated/suppliers")({
+  beforeLoad: requireOwnerRoute,
   head: () => ({ meta: [{ title: "Suppliers — SoleStack POS" }, { name: "description", content: "Supplier list, dues and WhatsApp rate-list requests." }, { property: "og:title", content: "Suppliers — SoleStack POS" }, { property: "og:description", content: "Supplier balances and professional rate-list requests." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Suppliers,
 });
@@ -33,7 +37,8 @@ function Suppliers() {
   const { data: purchases = [], error: purchasesError, isPending: purchasesPending } = useQuery({ queryKey: ["purchases-sum"], queryFn: async () => fetchAll((a, b) => supabase.from("purchases").select("id,supplier_id,purchase_date,invoice_no,quantity,purchase_price,total,paid_amount").order("purchase_date", { ascending: false }).order("id").range(a, b)) });
   const { data: payments = [], error: paymentsError, isPending: paymentsPending } = useQuery({ queryKey: ["supplier-payments"], queryFn: async () => fetchAll((a, b) => supabase.from("supplier_payments").select("id,supplier_id,amount,payment_mode,paid_at,note").order("paid_at", { ascending: false }).order("id").range(a, b)) });
   const openingOf = (id: string) => Number(data.find((s) => s.id === id)?.opening_balance ?? 0);
-  const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [openingOf(id), 0]);
+  const initialOf = (id: string) => Number(data.find(s => s.id === id)?.opening_initial ?? openingOf(id));
+  const sum = (id: string) => purchases.filter((p) => p.supplier_id === id).reduce<[number, number]>((a, p) => [a[0] + Number(p.total), a[1] + Number(p.paid_amount ?? 0)], [initialOf(id), initialOf(id) - openingOf(id)]);
 
   async function add() {
     if (!f.name.trim()) { toast.error("Name required"); return; }
@@ -50,9 +55,9 @@ function Suppliers() {
   }
   async function recordPayment() {
     if (!selected || !Number.isFinite(Number(payment.amount)) || Number(payment.amount) <= 0) { toast.error("Enter a positive amount"); return; }
-    const { error } = await supabase.rpc("record_supplier_payment", { _supplier_id: selected, _amount: Number(payment.amount), _mode: payment.mode, _note: payment.note });
+    const { error } = await runOperationalRequest(`supplier-payment:${selected}`, "record_supplier_payment_v2", { _supplier_id: selected, _amount: Number(payment.amount), _mode: payment.mode, _note: payment.note });
     if (error) { toast.error(error.message); return; }
-    toast.success("Supplier payment saved"); setPayment({ amount: "", mode: "Cash", note: "" }); qc.invalidateQueries({ queryKey: ["purchases-sum"] }); qc.invalidateQueries({ queryKey: ["supplier-payments"] }); qc.invalidateQueries({ queryKey: ["acct"] });
+    toast.success("Supplier payment saved"); setPayment({ amount: "", mode: "Cash", note: "" }); refreshOperationalData(qc);
   }
   const current = data.find((s) => s.id === selected);
   function exportPdf() {
@@ -103,7 +108,7 @@ function Suppliers() {
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{current?.name}</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{current?.phone} · {current?.gstin} · {current?.address}</p>
         <div className="grid grid-cols-3 gap-2 border-y py-3 text-sm"><div>Purchased<br /><b>{inr(current ? sum(current.id)[0] : 0)}</b></div><div>Paid<br /><b>{inr(current ? sum(current.id)[1] : 0)}</b></div><div>Due<br /><b>{inr(current ? sum(current.id)[0]-sum(current.id)[1] : 0)}</b></div></div>
-        <div className="flex flex-wrap items-center gap-2 text-sm"><span>Opening balance (included above): <b>{inr(current ? openingOf(current.id) : 0)}</b></span>{isOwner && (ob === null ? <Button size="sm" variant="outline" onClick={() => setOb(String(current ? openingOf(current.id) : 0))}>Edit</Button> : <><Input className="h-8 w-28" type="number" min="0" value={ob} onChange={(e) => setOb(e.target.value)} /><Button size="sm" onClick={async () => { const { error } = await supabase.from("suppliers").update({ opening_balance: Math.max(0, Number(ob) || 0) }).eq("id", selected!); if (error) return void toast.error(error.message); setOb(null); qc.invalidateQueries({ queryKey: ["suppliers"] }); toast.success("Opening balance saved"); }}>Save</Button></>)}</div>
+        <div className="flex flex-wrap items-center gap-2 text-sm"><span>Opening balance remaining (included above): <b>{inr(current ? openingOf(current.id) : 0)}</b></span>{isOwner && (ob === null ? <Button size="sm" variant="outline" onClick={() => setOb(String(current ? initialOf(current.id) : 0))}>Edit</Button> : <><Input className="h-8 w-28" type="number" min="0" aria-label="Original opening balance before recorded repayments" value={ob} onChange={(e) => setOb(e.target.value)} /><Button size="sm" onClick={async () => { const { error } = await supabase.rpc("set_party_opening", { _kind: "supplier", _id: selected!, _amount: Number(ob) }); if (error) return void toast.error(error.message); setOb(null); refreshOperationalData(qc); toast.success("Opening balance saved"); }}>Save</Button></>)}</div>
         <h3 className="font-semibold">Record payment</h3><div className="flex flex-wrap gap-2"><Input className="min-w-28 flex-1" type="number" min="0.01" step="0.01" placeholder="Amount ₹" value={payment.amount} onChange={(e) => setPayment({...payment,amount:e.target.value})}/><select aria-label="Payment mode" className="rounded border bg-background px-2" value={payment.mode} onChange={(e) => setPayment({...payment,mode:e.target.value})}>{["Cash","UPI","Card","Bank"].map((m)=><option key={m}>{m}</option>)}</select><Button onClick={recordPayment}>Save</Button></div><Input placeholder="Note (optional)" value={payment.note} onChange={(e) => setPayment({...payment,note:e.target.value})}/>
         <h3 className="font-semibold">Purchase history</h3><div className="max-h-44 overflow-y-auto text-sm">{purchases.filter((p)=>p.supplier_id===selected).map((p)=><div key={p.id} className="flex justify-between border-t py-2"><span>{new Date(p.purchase_date).toLocaleDateString("en-IN")} · {p.invoice_no || "No invoice"} · {p.quantity} pairs</span><span>{inr(p.total)} · Due {inr(Number(p.total)-Number(p.paid_amount || 0))}</span></div>)}</div>
         <h3 className="font-semibold">Payment history</h3><div className="max-h-36 overflow-y-auto text-sm">{payments.filter((p)=>p.supplier_id===selected).map((p)=><div key={p.id} className="flex justify-between border-t py-2"><span>{new Date(p.paid_at).toLocaleDateString("en-IN")} · {p.payment_mode} {p.note}</span><b>{inr(p.amount)}</b></div>)}</div>
