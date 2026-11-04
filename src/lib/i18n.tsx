@@ -142,8 +142,15 @@ function translateAttrs(el: Element, lang: AppLanguage) {
 function walk(root: Node, lang: AppLanguage) {
   if (root.nodeType === 3) return translateText(root as Text, lang);
   if (root.nodeType !== 1) return;
-  translateAttrs(root as Element, lang);
-  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  const el = root as Element;
+  if (SKIP.has(el.tagName) || el.closest("[data-no-translate]")) return;
+  translateAttrs(el, lang);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+    acceptNode(node) {
+      if (node.nodeType === 1 && (SKIP.has((node as Element).tagName) || (node as Element).hasAttribute("data-no-translate"))) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     if (n.nodeType === 3) translateText(n as Text, lang);
     else translateAttrs(n as Element, lang);

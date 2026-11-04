@@ -70,3 +70,25 @@ test("failed signing does not poison cache; cache storage stays bounded", async 
   await cache.getMany(["a"], sign);
   assert.equal(calls, 2);
 });
+
+test("large photo lists sign at most three batches together, preserving coalescing and every result", async () => {
+  const cache = new SignedImageCache();
+  const paths = Array.from({ length: 701 }, (_, i) => "photo" + i);
+  let active = 0,
+    maximum = 0,
+    calls = 0;
+  const sign = async (batch) => {
+    assert(batch.length <= 100);
+    calls++;
+    active++;
+    maximum = Math.max(maximum, active);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    active--;
+    return new Map(batch.map((path) => [path, "url:" + path]));
+  };
+  const [one, two] = await Promise.all([cache.getMany(paths, sign), cache.getMany(paths, sign)]);
+  assert.equal(maximum, 3);
+  assert.equal(calls, 8);
+  assert.equal(one.size, 701);
+  assert.deepEqual(one, two);
+});

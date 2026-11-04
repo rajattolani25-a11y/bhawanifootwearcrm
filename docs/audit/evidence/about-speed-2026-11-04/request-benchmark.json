@@ -1,0 +1,20 @@
+{
+  "scenario": "Local synthetic upstream,60ms per request; original HEAD read vs optimized helper, no live database calls",
+  "runs": [
+    {
+      "beforeMs": 306.1,
+      "afterMs": 184
+    },
+    {
+      "beforeMs": 303,
+      "afterMs": 181.2
+    },
+    {
+      "beforeMs": 303.1,
+      "afterMs": 181.7
+    }
+  ],
+  "meanBeforeMs": 304.1,
+  "meanAfterMs": 182.3,
+  "reductionPercent": 40
+}

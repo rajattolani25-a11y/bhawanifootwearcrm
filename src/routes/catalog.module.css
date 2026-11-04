@@ -167,7 +167,7 @@
   .discount { left: 7px; top: 7px; font-size: 10px; }
   .limited { left: 7px; bottom: 7px; font-size: 9px; }
   .footer { margin-top: 30px; padding-bottom: 20px; }
-  .bottomNav { position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--catalog-paper); border-top: 1px solid var(--catalog-line); box-shadow: 0 -4px 20px #241a0e05; }
+  .bottomNav { position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--catalog-paper); border-top: 1px solid var(--catalog-line); box-shadow: 0 -4px 20px #241a0e05; }
   .bottomNav > :is(a, button) { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; min-height: 46px; color: var(--catalog-muted); font-size: 11px; font-weight: 600; }
   .bottomNav > a { color: var(--catalog-accent); }
   .bottomNav svg { width: 21px; height: 21px; }

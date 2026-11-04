@@ -1,0 +1,17 @@
+# Bhawani About and performance update
+
+About is accessible from the public catalog's mobile bottom menu and desktop/footer link. It contains only the owner-approved Bhawani Footwear name, Main Road → Near Indore Sweets → Jawahar Nagar → Adhartal → Jabalpur/MP482004 address,10:30AM–10:30PM hours and exact23.2010194,79.9501189 pin. Call/WhatsApp reuse the configured store phone when available. No weekly-off claim, promotional introduction or exchange policy is invented. The approved address, times and pin currently live in CatalogAbout; changing Store settings does not change that fixed location profile.
+
+About is a separate lazy-loaded component. Neither its module nor Google Maps iframe is requested before opening it; closing removes the iframe. The Directions link opens Maps with the exact coordinates. Customer geolocation is not requested by this app. External map availability still depends on Google and the customer's connection; map network access is intercepted in local tests. Initial focus stays on the dialog container, keeping the heading/address visible and avoiding automatic focus inside the map.
+
+Performance changes preserve all products, photos, filters, animations and checkout behavior:
+
+- Existing public catalog metadata remains the required first read. Display settings, offer, hero and product-photo signing then overlap; only hero signing waits for validated hero metadata. Photo paths deduplicate. No SQL definition/RPC/RLS changes, response cache, new permissions or cross-request data cache.
+- Product cards have unchanged markup in a memoized component. About/theme/product-dialog changes do not repeat the full collection's React work when its products/callback are unchanged.
+- Existing30second metadata refresh indexes previous products by ID once, replacing repeated linear lookups. Changed price/size availability still arrives, unchanged signed covers stay reused, and new photos still trigger their existing signed refresh.
+- Across the software, existing photo-signing batches remain100paths each, with at most3 batches per caller concurrently. In-flight deduplication, expiry, bounded memory and logout/reset epoch checks remain intact. Prices/stock are not cached by this image cache.
+- The language tree walker now rejects protected product-data/code subtrees as a whole. English/Hindi/Hinglish and newly mounted text still translate; entered/saved protected content remains untouched.
+
+Measured local evidence, not a promise about live phone speed: the actual previous read implementation and new helper returned identical results under a synthetic60ms-per-request fixture. Three-run means304.1ms→182.3ms (40.0% lower wait). A synthetic3000-row protected subtree required12022 returned-node visits with the former unfiltered walker versus17 with the new walker. This is traversal work, not a claim that the whole app is40% or99% faster.
+
+Verification:44 unit tests (including parallel reads, optional-read failure, fresh price/availability, batch limits, coalescing/logout safety), actual browser About checks at320/390/768/1440px, language subtree checks, plus catalog product actions, reservation/recovery, gallery, themes, Spotlight, shared-stock freshness, navigation and PDF regressions. Tests use synthetic data and never create live orders or edit shop records. Production build, TypeScript and semantic lint are required; the existing i18n Fast Refresh export warning is unchanged.

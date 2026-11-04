@@ -1,0 +1,89 @@
+{
+  "scope": "Controlled local fixtures; no live shop writes, orders, payments or messages. Google map iframe intercepted in tests; Directions coordinates verified.",
+  "typescript": "PASS",
+  "productionBuild": "PASS",
+  "semanticLint": {
+    "errors": 0,
+    "existingWarnings": [
+      "react-refresh/only-export-components in i18n.tsx"
+    ]
+  },
+  "unitTests": {
+    "passed": 44,
+    "failed": 0
+  },
+  "about": {
+    "result": "PASS",
+    "checks": [
+      "About/maps absent before opening; lazy-loaded About opens from mobile menu and desktop footer",
+      "Approved Main Road/Near Indore Sweets address,10:30AM–10:30PM, exact directions pin and existing contact only",
+      "120 products remain available; exact pair opens with its gallery, no live writes",
+      "About fits320/390/768/1440 widths and English/Hindi/Hinglish; customer dark preference"
+    ],
+    "mapRequests": 8,
+    "photoRequests": 1,
+    "errors": [],
+    "productionWrites": 0
+  },
+  "languageWork": {
+    "result": "PASS",
+    "checks": [
+      "English/Hindi/Hinglish and newly mounted text translate correctly",
+      "Protected product data, placeholders and code remain untouched",
+      "Protected subtrees are skipped instead of visiting each nested element"
+    ],
+    "scenario": "Synthetic3000protectedrows; tree-walker returned-node counts, not whole-app speed",
+    "beforeVisits": 12022,
+    "afterVisits": 17,
+    "errors": []
+  },
+  "browserRegressions": [
+    {
+      "test": "catalog-order-recovery-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 17.4
+    },
+    {
+      "test": "catalog-product-gallery-audit.mjs",
+      "exit": 0,
+      "seconds": 10.2
+    },
+    {
+      "test": "catalog-product-actions-audit.mjs",
+      "exit": 0,
+      "seconds": 31.5
+    },
+    {
+      "test": "performance-freshness-audit.mjs",
+      "exit": 0,
+      "seconds": 15.6
+    },
+    {
+      "test": "catalog-theme-audit.mjs",
+      "exit": 0,
+      "seconds": 24.2
+    },
+    {
+      "test": "browser-audit.mjs",
+      "exit": 0,
+      "seconds": 15.3
+    },
+    {
+      "test": "catalog-reservation-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 77.8
+    },
+    {
+      "test": "performance-navigation-audit.mjs",
+      "exit": 0,
+      "seconds": 36.0
+    },
+    {
+      "test": "catalog-spotlight-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 46.9
+    }
+  ],
+  "schemaOrRpcDefinitionChanges": false,
+  "performanceLimit": "Synthetic request benchmark shows40% less data-read wait; this is not a measured guarantee of live phone or whole-app speed."
+}

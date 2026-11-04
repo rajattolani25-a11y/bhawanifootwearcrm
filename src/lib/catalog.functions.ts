@@ -1,7 +1,8 @@
-import { catalogPresentation, PRESENTATION_DEFAULTS, type CatalogPresentation } from "./catalog-presentation";
+import { readPublicCatalog } from "./catalog-read";
+import type { CatalogPresentation } from "./catalog-presentation";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { HERO_BUCKET, type PublicHero } from "./catalog-hero";
+import type { PublicHero } from "./catalog-hero";
 
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
@@ -30,41 +31,7 @@ async function publicClient() {
 
 // Public: only safe fields (no cost, no stock counts) come from the public_catalog DB function.
 export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Promise<CatalogData> => {
-  const sb = await publicClient();
-  const { data, error } = await sb.rpc("public_catalog");
-  if (error) throw new Error("Catalog is not available right now");
-  const d = data as unknown as CatalogData;
-  if (!d.enabled || !d.products) return { enabled: false };
-  // Only public-safe boolean flags; missing storage preserves the working catalog.
-  const presentationRequest = Promise.resolve(sb.from("catalog_presentation_settings").select("*").eq("id", 1).maybeSingle())
-    .then(({ data }) => catalogPresentation(data), () => ({ ...PRESENTATION_DEFAULTS }));
-  const paths = d.products.map((p) => p.image).filter((x): x is string => !!x);
-  const urls = new Map<string, string>();
-  if (paths.length) {
-    const { data: signed } = await sb.storage.from("product-images").createSignedUrls(paths, 6 * 3600);
-    signed?.forEach((s) => s.path && s.signedUrl && urls.set(s.path, s.signedUrl));
-  }
-  if (!d.shop) return { enabled: false };
-  const { data: offer } = await sb.rpc("public_catalog_offer");
-  // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
-  let hero: PublicHero | null = null;
-  try {
-    const { data: raw } = await sb.rpc("public_catalog_hero");
-    const parsed = z.object({
-      image_path: z.string().regex(/^hero\/[0-9a-f-]{36}\.(png|webp)$/),
-      offer_kind: z.enum(["up-to", "percent", "amount", "starting", "custom"]), offer_value: z.coerce.number().positive().max(1000000),
-      custom_text: z.string().min(1).max(40), heading: z.string().min(1).max(60), subtitle: z.string().max(120),
-      button_label: z.string().min(1).max(30), action: z.enum(["collection", "product", "category", "whatsapp"]),
-      product_id: z.string().uuid().nullable(), category: z.enum(["All", "Gents", "Ladies", "Boys", "Girls", "Kids"]),
-      motion: z.boolean(), image_scale: z.number().int().min(65).max(100),
-    }).safeParse(raw);
-    if (parsed.success) {
-      const { image_path, ...settings } = parsed.data;
-      const { data: signed } = await sb.storage.from(HERO_BUCKET).createSignedUrl(image_path, 3600);
-      if (signed?.signedUrl) hero = { ...settings, image: signed.signedUrl };
-    }
-  } catch { /* Existing catalog remains available. */ }
-  return { enabled: true, presentation: await presentationRequest, hero, offer: (offer as unknown as CatalogOffer) ?? null, shop: d.shop, products: d.products.map((p) => ({ ...p, image_key: p.image, image: p.image ? urls.get(p.image) ?? null : null })) };
+  return readPublicCatalog(await publicClient());
 });
 
 /** Public metadata only; existing signed photo URLs are reused when paths are unchanged. */

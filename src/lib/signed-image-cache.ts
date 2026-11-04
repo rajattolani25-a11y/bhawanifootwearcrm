@@ -45,28 +45,34 @@ export class SignedImageCache {
       waiting.set(path, promise);
       missing.push({ path, resolve, promise });
     }
-    for (let i = 0; i < missing.length; i += 100) {
-      const chunk = missing.slice(i, i + 100),
-        started = this.now();
-      let signed = new Map<string, string>();
-      if (epoch === this.epoch) {
-        try {
-          signed = await sign(chunk.map((row) => row.path));
-        } catch {
-          /* Failed URLs are retried next time. */
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < missing.length) {
+        const start = cursor;
+        cursor += 100;
+        const chunk = missing.slice(start, cursor),
+          started = this.now();
+        let signed = new Map<string, string>();
+        if (epoch === this.epoch) {
+          try {
+            signed = await sign(chunk.map((row) => row.path));
+          } catch {
+            /* Failed URLs are retried next time. */
+          }
+        }
+        for (const row of chunk) {
+          const url = epoch === this.epoch ? (signed.get(row.path) ?? null) : null;
+          if (url) {
+            // URLs last one hour; renew at 55 minutes, including request latency.
+            this.urls.set(row.path, { url, until: started + 55 * 60_000 });
+            while (this.urls.size > this.capacity) this.urls.delete(this.urls.keys().next().value!);
+          }
+          if (this.pending.get(row.path) === row.promise) this.pending.delete(row.path);
+          row.resolve(url);
         }
       }
-      for (const row of chunk) {
-        const url = epoch === this.epoch ? (signed.get(row.path) ?? null) : null;
-        if (url) {
-          // URLs last one hour; renew at 55 minutes, including request latency.
-          this.urls.set(row.path, { url, until: started + 55 * 60_000 });
-          while (this.urls.size > this.capacity) this.urls.delete(this.urls.keys().next().value!);
-        }
-        if (this.pending.get(row.path) === row.promise) this.pending.delete(row.path);
-        row.resolve(url);
-      }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, Math.ceil(missing.length / 100)) }, worker));
     const result = new Map<string, string>();
     for (const [path, pending] of waiting) {
       const url = await pending;

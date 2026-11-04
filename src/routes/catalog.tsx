@@ -1,3 +1,4 @@
+import { CatalogProductGrid } from "@/components/CatalogProductGrid";
 import * as catalogApi from "@/lib/catalog.functions";
 import { CATALOG_ORDER_EVENT, readCatalogOrder, saveCatalogOrder, clearCatalogOrder, type PendingCatalogOrder, type OrderRequest } from "@/lib/catalog-order-recovery";
 import { catalogProductLink, catalogShareText } from "@/lib/catalog-share";
@@ -11,8 +12,8 @@ import { BlurReveal } from "@/components/motion/blur-reveal";
 import { CatalogReservation } from "@/components/catalog-reservation";
 import reservationStyles from "@/components/catalog-reservation.module.css";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Info, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { CatalogProductGallery } from "@/components/CatalogProductGallery";
@@ -25,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const CatalogAbout = lazy(() => import("@/components/CatalogAbout").then(module => ({ default: module.CatalogAbout })));
 
 export const Route = createFileRoute("/catalog")({
   loader: () => getCatalog(),
@@ -80,9 +83,10 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         const fresh = await catalogApi.getCatalogSnapshot();
         if (stopped) return;
         const previous = snapshotRef.current;
-        const needPhotos = (fresh.products ?? []).some(p => p.image_key && p.image_key !== previous.products?.find(x => x.id===p.id)?.image_key);
+        const oldProducts = new Map((previous.products ?? []).map(p => [p.id, p]));
+        const needPhotos = (fresh.products ?? []).some(p => p.image_key && p.image_key !== oldProducts.get(p.id)?.image_key);
         setData({ ...previous, ...fresh, products: (fresh.products ?? []).map(p => {
-          const old = previous.products?.find(x => x.id===p.id);
+          const old = oldProducts.get(p.id);
           return { ...p, image: p.image_key && p.image_key===old?.image_key ? old?.image ?? null : null };
         }) });
         // Signing is needed only for a new/replaced photo, never for unchanged stock.
@@ -101,6 +105,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [open, setOpen] = useState<CatalogProduct | null>(null);
   const [track, setTrack] = useState<string | null>(null);
   const [views, setViews] = useState(0);
+  const openProduct = useCallback((product: CatalogProduct) => { setOpen(product); setViews(v => v + 1); }, []);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
   // Catalog has its own customer theme (light by default, customer can switch in footer), independent of the app's setting.
   const [dark, setDark] = useState(false);
@@ -119,6 +124,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [ptype, setPtype] = useState("All");
   const [photo, setPhoto] = useState(false);
   const [help, setHelp] = useState(false);
+  const [about, setAbout] = useState(false);
   const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, ptype: detectType(p.article), sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
@@ -243,33 +249,13 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
             {(ptype !== "All" || brand !== "All" || fsize !== "All") && <button onClick={() => { setPtype("All"); setBrand("All"); setFsize("All"); }} className={styles["clear"]}>Clear</button>}
           </div>
         </div>
-        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${brand}-${ptype}-${fsize}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={product => { setOpen(product); setViews(v => v + 1); }} />}
-        <div className={styles["productGrid"]}>
-          {list.map((p) => {
-            const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
-            const available = p.sizes.filter((size) => size.available);
-            return (
-              <button key={p.id} onClick={() => { setOpen(p); setViews((v) => v + 1); }} className={styles["productCard"]} aria-label={`${p.brand} ${p.article}`}>
-                <div className={styles["productImage"]}>
-                  {p.image ? <img src={p.image} alt={`${p.brand} ${p.article}`} loading="lazy" decoding="async" width="500" height="500" /> : <div className={styles["imageFallback"]}><ShoppingBag aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}
-                  {off > 0 && <span className={styles["discount"]}>{off}% <span>OFF</span></span>}
-                  {p.few_left && <span className={styles["limited"]}>Few sizes left</span>}
-                </div>
-                <div className={styles["productInfo"]}>
-                  <p className={styles["brand"]} data-no-translate>{p.brand}</p>
-                  <h3 data-no-translate>{p.article}</h3>
-                  <p className={styles["price"]}><strong>{inr(p.price)}</strong>{off > 0 && <del>{inr(p.mrp)}</del>}</p>
-                  <div className={styles["sizeSummary"]}><span>Sizes</span><span className={styles["sizeChips"]} data-no-translate>{available.length ? available.map((size) => <span key={size.id}>{size.size}</span>) : "—"}</span></div>
-                  <span className={styles["cardAction"]}><span>{available.length ? "Choose size" : "Out of stock"}</span><ArrowRight aria-hidden="true" /></span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${brand}-${ptype}-${fsize}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
+        <CatalogProductGrid products={list} onOpen={openProduct} />
         {list.length === 0 && <div className={styles["empty"]}><Search aria-hidden="true" /><h3>No designs found.</h3><p>Try another search or category.</p><button onClick={resetFilters} data-no-translate>{copy.reset}</button></div>}
         <footer className={styles["footer"]}>
           <div><p data-no-translate>{shop.name}</p>{shop.address && <span data-no-translate>{shop.address}</span>}</div>
           <div className={styles["footerActions"]}>
+            <button onClick={() => setAbout(true)} data-no-translate>{copy.about}</button>
             <button onClick={() => setHelp(true)} data-no-translate>{copy.help}</button>
             <button onClick={toggleTheme} aria-label="Switch theme">{dark ? <><Sun aria-hidden="true" /><span>Light</span></> : <><Moon aria-hidden="true" /><span>Dark</span></>}</button>
           </div>
@@ -279,7 +265,9 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         <a href="#catalog-collection" aria-current="page"><ShoppingBag aria-hidden="true" /><span data-no-translate>{copy.shop}</span></a>
         <button onClick={() => setTrack("")}><Package aria-hidden="true" /><span data-no-translate>{copy.orders}</span></button>
         <button onClick={() => setHelp(true)}><HelpCircle aria-hidden="true" /><span data-no-translate>{copy.help}</span></button>
+        <button onClick={() => setAbout(true)}><Info aria-hidden="true" /><span data-no-translate>{copy.aboutNav}</span></button>
       </nav>
+      {about && <Suspense fallback={<Dialog open onOpenChange={setAbout}><DialogContent><DialogHeader><DialogTitle data-no-translate>{copy.about}</DialogTitle></DialogHeader><p role="status">Loading…</p></DialogContent></Dialog>}><CatalogAbout shop={shop} onClose={() => setAbout(false)} /></Suspense>}
       <Dialog open={help} onOpenChange={setHelp}>
         <DialogContent className={`${styles["dialog"]} sm:max-w-md`}>
           <DialogHeader><DialogTitle data-no-translate>{copy.help}</DialogTitle></DialogHeader>
@@ -296,10 +284,10 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   );
 }
 
-const CATALOG_COPY: Record<AppLanguage, { eyebrow: string; heading: string; search: string; photo: string; categories: string; reset: string; shop: string; orders: string; help: string; navigation: string }> = {
-  english: { eyebrow: "GOOD FOOTWEAR. EVERY DAY.", heading: "Find your everyday pair.", search: "Search footwear or brand", photo: "Ask about a photo on WhatsApp", categories: "Footwear categories", reset: "Clear all filters", shop: "Shop", orders: "Orders", help: "Help", navigation: "Catalog navigation" },
-  hindi: { eyebrow: "हर दिन, आराम के साथ।", heading: "अपनी पसंद की जोड़ी चुनें।", search: "जूते, चप्पल या ब्रांड खोजें", photo: "फोटो के बारे में WhatsApp पर पूछें", categories: "फुटवियर श्रेणियाँ", reset: "सभी फ़िल्टर हटाएँ", shop: "खरीदें", orders: "ऑर्डर", help: "मदद", navigation: "कैटलॉग नेविगेशन" },
-  hinglish: { eyebrow: "HAR DIN KE LIYE ACHHE FOOTWEAR.", heading: "Apni pasand ki jodi chunein.", search: "Footwear ya brand khojein", photo: "Photo ke baare mein WhatsApp par poochein", categories: "Footwear categories", reset: "Saare filters hatayein", shop: "Shop", orders: "Orders", help: "Madad", navigation: "Catalog navigation" },
+const CATALOG_COPY: Record<AppLanguage, { eyebrow: string; heading: string; search: string; photo: string; categories: string; reset: string; shop: string; orders: string; help: string; about: string; aboutNav: string; navigation: string }> = {
+  english: { eyebrow: "GOOD FOOTWEAR. EVERY DAY.", heading: "Find your everyday pair.", search: "Search footwear or brand", photo: "Ask about a photo on WhatsApp", categories: "Footwear categories", reset: "Clear all filters", shop: "Shop", orders: "Orders", help: "Help", about: "About our store", aboutNav: "About", navigation: "Catalog navigation" },
+  hindi: { eyebrow: "हर दिन, आराम के साथ।", heading: "अपनी पसंद की जोड़ी चुनें।", search: "जूते, चप्पल या ब्रांड खोजें", photo: "फोटो के बारे में WhatsApp पर पूछें", categories: "फुटवियर श्रेणियाँ", reset: "सभी फ़िल्टर हटाएँ", shop: "खरीदें", orders: "ऑर्डर", help: "मदद", about: "हमारी दुकान", aboutNav: "जानकारी", navigation: "कैटलॉग नेविगेशन" },
+  hinglish: { eyebrow: "HAR DIN KE LIYE ACHHE FOOTWEAR.", heading: "Apni pasand ki jodi chunein.", search: "Footwear ya brand khojein", photo: "Photo ke baare mein WhatsApp par poochein", categories: "Footwear categories", reset: "Saare filters hatayein", shop: "Shop", orders: "Orders", help: "Madad", about: "Hamari dukaan", aboutNav: "About", navigation: "Catalog navigation" },
 };
 
 const STEPS_PICKUP = ["pending", "confirmed", "packed", "picked"];
