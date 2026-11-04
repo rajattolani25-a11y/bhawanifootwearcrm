@@ -67,7 +67,9 @@ try {
   assert.equal(aboutModules, 0);
   assert.equal(await p.locator("iframe").count(), 0);
   for (const [width, height] of [
-    [320, 740],
+    [320, 568],
+    [360, 640],
+    [568, 320],
     [390, 844],
     [768, 1024],
     [1440, 1000],
@@ -104,7 +106,33 @@ try {
         box.y + box.height <= height + 1,
       JSON.stringify(box),
     );
-    await about.getByRole("link", { name: "Get Directions", exact: true }).scrollIntoViewIfNeeded();
+    // These actions must be visible and actually hit-testable before scrolling.
+    for (const name of ["WhatsApp", "Get Directions", /Call store/]) {
+      const link = about.getByRole("link", { name, exact: typeof name === "string" });
+      const rect = await link.boundingBox();
+      assert(
+        rect && rect.y >= box.y && rect.y + rect.height <= box.y + box.height + 1,
+        JSON.stringify({ width, height, name: String(name), rect, box }),
+      );
+      assert(
+        await link.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return hit === el || el.contains(hit);
+        }),
+        `Contact action obscured at ${width}x${height}: ${name}`,
+      );
+    }
+    const whatsapp = about.getByRole("link", { name: "WhatsApp", exact: true });
+    const before = await whatsapp.boundingBox();
+    await about.locator("iframe").evaluate((frame) => {
+      frame.parentElement.scrollTop = frame.parentElement.scrollHeight;
+    });
+    assert.equal(
+      (await whatsapp.boundingBox()).y,
+      before.y,
+      "Contact actions must stay still while About content scrolls",
+    );
     await p.screenshot({ path: out + `/about-${width}.png` });
     await p.keyboard.press("Escape");
     await about.waitFor({ state: "detached" });
@@ -146,7 +174,8 @@ try {
         "About/maps absent before opening; lazy-loaded About opens from mobile menu and desktop footer",
         "Approved Main Road/Near Indore Sweets address,10:30AM–10:30PM, exact directions pin and existing contact only",
         "120 products remain available; exact pair opens with its gallery, no live writes",
-        "About fits320/390/768/1440 widths and English/Hindi/Hinglish; customer dark preference",
+        "About fits320/360/390/568/768/1440 widths including short landscape; WhatsApp/Call/Directions hit-testable before scrolling and stay fixed during body scroll",
+        "English/Hindi/Hinglish and customer dark preference",
       ],
       mapRequests,
       photoRequests,

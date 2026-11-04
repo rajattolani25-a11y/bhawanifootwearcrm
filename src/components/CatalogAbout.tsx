@@ -59,7 +59,7 @@ export function CatalogAbout({ shop, onClose }: { shop: CatalogShop; onClose: ()
         data-catalog-about
         data-no-translate
       >
-        <DialogHeader>
+        <DialogHeader className={styles["header"]}>
           <DialogTitle>{copy.title}</DialogTitle>
         </DialogHeader>
         <div className={styles["body"]}>
@@ -88,6 +88,8 @@ export function CatalogAbout({ shop, onClose }: { shop: CatalogShop; onClose: ()
             referrerPolicy="no-referrer-when-downgrade"
             src="https://maps.google.com/maps?q=23.2010194%2C79.9501189&z=17&output=embed"
           />
+        </div>
+        <footer className={styles["actions"]}>
           <Button asChild className="h-auto min-h-12 w-full whitespace-normal">
             <a href={DIRECTIONS} target="_blank" rel="noopener noreferrer">
               <Navigation className="h-4 w-4" />
@@ -111,7 +113,7 @@ export function CatalogAbout({ shop, onClose }: { shop: CatalogShop; onClose: ()
               </Button>
             </div>
           )}
-        </div>
+        </footer>
       </DialogContent>
     </Dialog>
   );
