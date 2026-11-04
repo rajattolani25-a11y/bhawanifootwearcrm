@@ -23,6 +23,7 @@ const product = "10000000-0000-4000-8000-000000000001",
   replacement = "20000000-0000-4000-8000-000000000002",
   saleId = "30000000-0000-4000-8000-000000000001",
   itemId = "40000000-0000-4000-8000-000000000001";
+const profileWrites = [];
 const categoryWrites = [],
   addedProducts = [];
 let wasVoided = false;
@@ -130,12 +131,25 @@ await page.route("**/*", async (r) => {
     const patch = r.request().postDataJSON();
     assert(
       Object.keys(patch).every((k) =>
-        ["category", "article", "brand", "color", "catalog_description"].includes(k),
+        [
+          "category",
+          "article",
+          "brand",
+          "color",
+          "catalog_description",
+          "mrp",
+          "selling_price",
+        ].includes(k),
       ),
     );
     if ("color" in patch) {
       const expected = pair.color === null ? "is.null" : "eq." + pair.color;
-      if (u.searchParams.get("color") !== expected)
+      profileWrites.push(patch);
+      if (
+        u.searchParams.get("color") !== expected ||
+        u.searchParams.get("mrp") !== "eq." + pair.mrp ||
+        u.searchParams.get("selling_price") !== "eq." + pair.selling_price
+      )
         return r.fulfill({
           status: 406,
           json: { code: "PGRST116", message: "Product changed since opening" },
@@ -433,6 +447,62 @@ try {
   await page.getByRole("button", { name: "Save product details", exact: true }).click();
   await page.getByText("Product details saved", { exact: true }).waitFor();
   assert.equal(pair.color, "");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("dialog").evaluate((dialog) => {
+    dialog.scrollTop = 0;
+  });
+  await page.screenshot({ path: out + "/owner-profile-prices-mobile.png", fullPage: true });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),
+    false,
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const beforePrices = profileWrites.length;
+  const price = page.getByRole("textbox", { name: "Product selling price", exact: true });
+  const mrp = page.getByRole("textbox", { name: "Product MRP", exact: true });
+  for (const invalid of ["", "-1", "0", "1200.01", "999.123", "Infinity", "1e3"]) {
+    await price.fill(invalid);
+    await page.getByRole("button", { name: "Save product details", exact: true }).click();
+    await page
+      .getByText(
+        "Enter a selling price above zero and MRP at least equal to it, with up to two decimal places",
+        { exact: true },
+      )
+      .first()
+      .waitFor();
+    assert.equal(profileWrites.length, beforePrices, "Invalid price must not reach the database");
+  }
+  await mrp.fill("1499");
+  await price.fill("1099.50");
+  await page.getByRole("button", { name: "Save product details", exact: true }).click();
+  await page.waitForFunction(
+    () => document.querySelector('[aria-label="Product selling price"]')?.value === "1099.5",
+  );
+  assert.equal(pair.mrp, 1499);
+  assert.equal(pair.selling_price, 1099.5);
+  assert.equal(item.price, 2200, "Old invoice prices must remain unchanged");
+  assert.equal(variants[0].stock, 5, "Changing a profile must not change stock");
+  await page.reload();
+  await page.getByRole("button", { name: "Edit product", exact: true }).first().click();
+  assert.equal(await price.inputValue(), "1099.5");
+  assert.equal(await mrp.inputValue(), "1499");
+  assert.equal(
+    await page.getByRole("textbox", { name: "Product name / article", exact: true }).inputValue(),
+    "Edited Pair",
+  );
+  pair.selling_price = 1150;
+  await price.fill("1100");
+  await page.getByRole("button", { name: "Save product details", exact: true }).click();
+  await page
+    .getByText(
+      "Product could not be saved. Refresh if another owner edited it. Product changed since opening",
+      { exact: true },
+    )
+    .first()
+    .waitFor();
+  assert.equal(pair.selling_price, 1150, "Stale editor cannot overwrite a newer price");
+  await page.reload();
+  await page.getByRole("button", { name: "Edit product", exact: true }).first().click();
 
   await page
     .getByRole("textbox", { name: "Product description", exact: true })
@@ -482,6 +552,12 @@ try {
     0,
   );
   assert.equal(await page.getByRole("textbox", { name: "Product colour", exact: true }).count(), 0);
+  assert.equal(await page.getByRole("textbox", { name: "Product MRP", exact: true }).count(), 0);
+  assert.equal(
+    await page.getByRole("textbox", { name: "Product selling price", exact: true }).count(),
+    0,
+  );
+  assert.equal(await page.getByRole("button", { name: "Edit product", exact: true }).count(), 0);
   // Public catalog: real CatalogView, synthetic products, no backend requests or mutations.
   const cp = await browser.newPage({
     viewport: { width: 390, height: 844 },
@@ -598,7 +674,9 @@ try {
       "six subcategories in dropdown for each adult department",
       "filters reset when switching department",
       "mobile owner and catalog layout",
-      "owner name/colour edit persists, optional colour clears, concurrent edit guard rejects stale writes; description and size editing",
+      "owner article/colour/MRP/selling-price edits persist; invalid amounts blocked and stale colour/price conflicts rejected",
+      "master profile edits preserve historical invoice prices and stock; staff price fields hidden",
+      "description and size editing",
       "owner cancellation confirmation and separate audit history",
       "professional WhatsApp share link and selected-size deep link",
       "unavailable shared product falls back safely",

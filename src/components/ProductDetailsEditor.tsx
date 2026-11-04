@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { CatalogDescriptionEditor } from "./CatalogDescriptionEditor";
 const noPreview = () => {};
 const noEditing = () => {};
@@ -13,17 +14,23 @@ export function ProductDetailsEditor({
   article,
   brand,
   color,
+  mrp,
+  sellingPrice,
 }: {
   id: string;
   article: string;
   brand: string;
   color: string | null;
+  mrp: number;
+  sellingPrice: number;
 }) {
   const { isOwner } = useAuth();
   const qc = useQueryClient();
   const [name, setName] = useState(article);
   const [maker, setMaker] = useState(brand);
   const [colour, setColour] = useState(color ?? "");
+  const [listPrice, setListPrice] = useState(String(mrp));
+  const [price, setPrice] = useState(String(sellingPrice));
   const [busy, setBusy] = useState(false);
   if (!isOwner) return null;
   async function save() {
@@ -38,23 +45,42 @@ export function ProductDetailsEditor({
       );
       return;
     }
+    const nextMrp = Number(listPrice);
+    const nextPrice = Number(price);
+    if (
+      ![listPrice, price].every((value) => /^\d+(?:\.\d{1,2})?$/.test(value.trim())) ||
+      !Number.isFinite(nextMrp) ||
+      !Number.isFinite(nextPrice) ||
+      nextPrice <= 0 ||
+      nextMrp < nextPrice ||
+      nextMrp > Number.MAX_SAFE_INTEGER / 100
+    ) {
+      toast.error(
+        "Enter a selling price above zero and MRP at least equal to it, with up to two decimal places",
+      );
+      return;
+    }
     setBusy(true);
     try {
       const update = supabase
         .from("products")
-        .update({ article: name.trim(), brand: maker.trim().toUpperCase(), color: colour.trim() })
+        .update({
+          article: name.trim(),
+          brand: maker.trim().toUpperCase(),
+          color: colour.trim(),
+          mrp: nextMrp,
+          selling_price: nextPrice,
+        })
         .eq("id", id)
         .eq("article", article)
-        .eq("brand", brand);
-      // Preserve another owner's colour edit instead of overwriting a stale form.
+        .eq("brand", brand)
+        .eq("mrp", mrp)
+        .eq("selling_price", sellingPrice);
+      // Match the original profile and prices so a stale form cannot overwrite another owner.
       const guarded = color === null ? update.is("color", null) : update.eq("color", color);
       const { error } = await guarded.select("id").single();
       if (error) throw error;
-      await Promise.all(
-        ["stock-all", "products", "catalog-studio-products", "hero-product-choices"].map((key) =>
-          qc.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await refreshOperationalData(qc);
       toast.success("Product details saved");
     } catch (error) {
       toast.error(
@@ -98,9 +124,41 @@ export function ProductDetailsEditor({
           onChange={(e) => setColour(e.target.value)}
         />
       </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block min-w-0 space-y-1 text-sm">
+          MRP
+          <Input
+            aria-label="Product MRP"
+            inputMode="decimal"
+            value={listPrice}
+            disabled={busy}
+            onChange={(e) => setListPrice(e.target.value)}
+          />
+        </label>
+        <label className="block min-w-0 space-y-1 text-sm">
+          Selling price
+          <Input
+            aria-label="Product selling price"
+            inputMode="decimal"
+            value={price}
+            disabled={busy}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+        </label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Applies to new bills and catalog. Existing bills keep their saved prices.
+      </p>
       <Button
         variant="outline"
-        disabled={busy || (name === article && maker === brand && colour === (color ?? ""))}
+        disabled={
+          busy ||
+          (name === article &&
+            maker === brand &&
+            colour === (color ?? "") &&
+            listPrice === String(mrp) &&
+            price === String(sellingPrice))
+        }
         onClick={() => void save()}
       >
         Save product details

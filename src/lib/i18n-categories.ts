@@ -1,4 +1,35 @@
 export const CATEGORY_TRANSLATIONS = {
+  "Edit product": { hindi: "प्रोडक्ट बदलें", hinglish: "Product edit karein" },
+  "View product": { hindi: "प्रोडक्ट देखें", hinglish: "Product dekhein" },
+  "Record shop sale": {
+    hindi: "दुकान की बिक्री दर्ज करें",
+    hinglish: "Shop ki sale record karein",
+  },
+  "Show all products": { hindi: "सभी प्रोडक्ट देखें", hinglish: "Saare products dekhein" },
+  "Product MRP": { hindi: "प्रोडक्ट का MRP", hinglish: "Product ka MRP" },
+  "Product selling price": {
+    hindi: "प्रोडक्ट का बिक्री मूल्य",
+    hinglish: "Product ka selling price",
+  },
+  "Selling price": { hindi: "बिक्री मूल्य", hinglish: "Selling price" },
+  "Applies to new bills and catalog. Existing bills keep their saved prices.": {
+    hindi: "नई बिलिंग और कैटलॉग में लागू होगा। पुराने बिलों की कीमतें नहीं बदलेंगी।",
+    hinglish: "Naye bills aur catalog par apply hoga. Purane bills ki prices nahi badlengi.",
+  },
+  "Enter a selling price above zero and MRP at least equal to it, with up to two decimal places": {
+    hindi: "बिक्री मूल्य शून्य से अधिक और MRP उससे कम न रखें। अधिकतम दो दशमलव अंक लिखें।",
+    hinglish:
+      "Selling price zero se zyada aur MRP usse kam na rakhein. Do decimal places tak likhein.",
+  },
+  "Choose size, quantity and payment, then complete the bill.": {
+    hindi: "बिका हुआ साइज़, मात्रा और भुगतान चुनकर बिल पूरा करें।",
+    hinglish: "Bika size, quantity aur payment chunein, phir bill complete karein.",
+  },
+  "Already billed in POS? Do not enter it again.": {
+    hindi: "POS में बिल पहले ही बना है? इसे दोबारा दर्ज न करें।",
+    hinglish: "POS par bill pehle bana hai? Dobara entry na karein.",
+  },
+
   "Product colour": { hindi: "प्रोडक्ट का रंग", hinglish: "Product ka colour" },
   "Save product details": {
     hindi: "प्रोडक्ट की जानकारी सहेजें",

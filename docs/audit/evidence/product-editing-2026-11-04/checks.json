@@ -1,0 +1,77 @@
+{
+  "scope": "Owner article/brand/colour/MRP/selling-price editing and existing-POS shop-sale shortcut",
+  "unit_tests": {
+    "pass": 45,
+    "fail": 0
+  },
+  "typecheck": "passed",
+  "scoped_eslint": "passed",
+  "production_build": "passed",
+  "diff_check": "passed",
+  "browser": {
+    "product_profile_categories": {
+      "result": "PASS",
+      "checks": [
+        "category required on new product",
+        "subcategory required for Men/Women",
+        "sixth Other saved with department",
+        "owner category edit and reload persistence",
+        "staff category edit hidden",
+        "legacy Ladies/Girls in Women and Gents in Men",
+        "six subcategories in dropdown for each adult department",
+        "filters reset when switching department",
+        "mobile owner and catalog layout",
+        "owner article/colour/MRP/selling-price edits persist; invalid amounts blocked and stale colour/price conflicts rejected",
+        "master profile edits preserve historical invoice prices and stock; staff price fields hidden",
+        "description and size editing",
+        "owner cancellation confirmation and separate audit history",
+        "professional WhatsApp share link and selected-size deep link",
+        "unavailable shared product falls back safely"
+      ],
+      "productionWrites": 0
+    },
+    "shop_sale": {
+      "passed": true,
+      "sales": 1,
+      "stockBefore": 10,
+      "stockAfter": 8,
+      "noAutomaticSale": true,
+      "explicitPayment": true,
+      "invalidProductSafe": true,
+      "preservedCart": true,
+      "staleCartPriceBlocked": true,
+      "viewportOverflow": false,
+      "liveWrites": false
+    },
+    "existing_retail_integrity": {
+      "result": "PASS",
+      "checks": [
+        "customer lookup failure stops sale",
+        "paise visible in POS",
+        "lost response + reload recovered same bill",
+        "size swap without new sale; return selected replacement with UPI",
+        "CSV escaped/multiline preview and confirmation",
+        "old pending order reachable on page 3",
+        "ledger and coupons pagination",
+        "orders errors do not display false empty state"
+      ],
+      "liveWrites": 0
+    },
+    "existing_scanner": {
+      "result": "PASS",
+      "checks": [
+        "Label aliases and legacy barcode resolve the exact size; duplicate old codes and zero stock do not add a wrong pair",
+        "USB keyboard scan adds correct size; camera duplicate frames add once and close immediately",
+        "English add-product has no Hinglish leftovers; category hints, placeholder, validation and Hinglish→English switch verified"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    }
+  },
+  "visual_review": [
+    "390px product cards with edit and shop-sale actions",
+    "390px profile with article, brand, colour and independent price fields",
+    "390px exact-product shop-sale guidance, accessible size chips and cart action"
+  ],
+  "limitations": "Browser services were intercepted synthetic fixtures. No live sale, stock edit or message was sent. No backend SQL/RPC definition was changed; live deployment remains the owner action."
+}

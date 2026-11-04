@@ -28,6 +28,7 @@ import { useLang } from "@/lib/i18n";
 import styles from "./pos.module.css";
 
 export const Route = createFileRoute("/_authenticated/pos")({
+  validateSearch: (search: Record<string, unknown>): { product?: string } => (typeof search["product"] === "string" && search["product"] ? { product: search["product"] } : {}),
   head: () => ({ meta: [{ title: "POS Billing — SoleStack POS" }, { name: "description", content: "Fast footwear billing with size chips and loyalty." }, { property: "og:title", content: "POS Billing — SoleStack POS" }, { property: "og:description", content: "Fast footwear billing." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: POS,
 });
@@ -39,6 +40,8 @@ const HOLD_KEY = "solestack-held-bills";
 const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function POS() {
+  const { product: selectedProduct } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const shop = useShop();
   const { user } = useAuth();
   const reduceMotion = useReducedMotion();
@@ -53,6 +56,10 @@ function POS() {
   const [visibleCount, setVisibleCount] = useState(60);
   const [cat, setCat] = useState("All");
   const [brand, setBrand] = useState("All");
+  function showAllProducts() {
+    setQ(""); setCat("All"); setBrand("All");
+    void navigate({ search: {}, replace: true });
+  }
   useEffect(() => setVisibleCount(60), [q, cat, brand]);
   const [cart, setCart] = useState<CartItem[]>([]);
   useEffect(() => {
@@ -128,11 +135,12 @@ function POS() {
     const s = deferredSearch.toLowerCase().trim();
     return products.filter(
       (p) =>
+        (!selectedProduct || p.id === selectedProduct) &&
         (categoryMatches(p.category, cat)) &&
         (brand === "All" || p.brand === brand) &&
         (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s)) || p.product_variants.some((v) => v.sku?.toLowerCase() === s || v.barcode === s || v.label_code?.toLowerCase() === s)),
     );
-  }, [products, deferredSearch, cat, brand]);
+  }, [products, deferredSearch, cat, brand, selectedProduct]);
 
   const addVariant = useCallback((p: (typeof products)[number], v: (typeof products)[number]["product_variants"][number]) => {
     if (v.stock <= 0) {
@@ -426,6 +434,14 @@ function POS() {
           <div><p className={styles["eyebrow"]} data-no-translate>{shop.name}</p><h1>POS Billing</h1><p>Scan, choose size and complete the bill</p></div>
           <span className={styles["status"]} role="status">{productsPending ? "Loading…" : productsError ? "Unavailable" : "Ready"}</span>
         </header>
+        {selectedProduct && <div role="note" className="mx-4 mb-3 rounded-lg border bg-muted/40 p-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold">Record shop sale</p>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={showAllProducts}>Show all products</Button>
+          </div>
+          <p className="mt-2 text-xs">Choose size, quantity and payment, then complete the bill.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Already billed in POS? Do not enter it again.</p>
+        </div>}
         <div className={styles["searchBar"]}>
           <div className={styles["searchInput"]}><Search aria-hidden="true" /><Input ref={searchRef} autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey} aria-label="Search or scan products" placeholder="F2 · Scan barcode or search article" /></div>
           <Button variant="outline" size="icon" title="Scan with phone camera" aria-label="Scan with phone camera" onClick={() => setCameraOpen(true)}><ScanLine className="h-4 w-4" /></Button>

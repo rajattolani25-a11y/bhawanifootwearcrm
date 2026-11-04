@@ -5,11 +5,11 @@ import { categoryLabel } from "@/lib/product-categories";
 import { ProductCategoryEditor } from "@/components/ProductCategoryEditor";
 import { integrityError } from "@/lib/retail-integrity";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, Images, Plus, Search, Upload } from "lucide-react";
+import { Download, Images, Pencil, Plus, Search, ShoppingBag, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,10 @@ function Products() {
                 <p className="text-xs text-muted-foreground">{total} pairs total</p>
                 {isOwner && <label className="flex items-center gap-2 text-xs font-medium"><span>In catalog</span><Switch checked={!!p.catalog_visible} onCheckedChange={async (v) => { const { error } = await supabase.from("products").update({ catalog_visible: v }).eq("id", p.id); if (error) toast.error(error.message); else qc.invalidateQueries({ queryKey: ["stock-all"] }); }} /></label>}
               </div>
+              <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                <Button variant="outline" size="sm" onClick={() => setSelected(p.id)}><Pencil className="h-3.5 w-3.5" />{isOwner ? "Edit product" : "View product"}</Button>
+                {p.status === "Active" && total > 0 && <Button asChild size="sm"><Link to="/pos" search={{ product: p.id }}><ShoppingBag className="h-3.5 w-3.5" />Record shop sale</Link></Button>}
+              </div>
               </div>
             </div>
           );
@@ -117,7 +121,7 @@ function Products() {
       </div>
 
       <QuickAddProduct open={adding} initialArticle={q} onClose={() => setAdding(false)} />
-      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{categoryLabel(p.category)} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><ProductDetailsEditor key={`${p.id}:${p.article}:${p.brand}:${p.color ?? ""}`} id={p.id} article={p.article} brand={p.brand} color={p.color} /><ProductCategoryEditor key={`${p.id}:${p.category}`} id={p.id} category={p.category} /><ProductPhotos key={p.id} productId={p.id} /><ProductLifecycle id={p.id} name={`${p.brand} ${p.article}`} archived={p.status !== "Active"} onDeleted={() => setSelected(null)} /><ProductSizesEditor id={p.id} variants={p.product_variants} /><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
+      <Dialog open={!!selected} onOpenChange={(o)=>!o&&setSelected(null)}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>{products.find((p)=>p.id===selected)?.brand} {products.find((p)=>p.id===selected)?.article}</DialogTitle></DialogHeader>{(() => { const p=products.find((x)=>x.id===selected); if(!p)return null; return <><div className="grid grid-cols-[100px_1fr] gap-3">{p.image_src ? <img src={p.image_src} alt={p.article} className="h-24 w-24 object-contain" /> : <div className="h-24 w-24 bg-muted" />}<div><p>{categoryLabel(p.category)} · {p.color}</p><p>Selling {inr(p.selling_price)} · MRP {inr(p.mrp)}</p>{isOwner && <p>Saved purchase cost: <b>{cost ? inr(cost.purchase_price) : "Not set"}</b></p>}</div></div><ProductDetailsEditor key={`${p.id}:${p.article}:${p.brand}:${p.color ?? ""}:${p.mrp}:${p.selling_price}`} id={p.id} article={p.article} brand={p.brand} color={p.color} mrp={p.mrp} sellingPrice={p.selling_price} /><ProductCategoryEditor key={`${p.id}:${p.category}`} id={p.id} category={p.category} /><ProductPhotos key={p.id} productId={p.id} /><ProductLifecycle id={p.id} name={`${p.brand} ${p.article}`} archived={p.status !== "Active"} onDeleted={() => setSelected(null)} /><ProductSizesEditor id={p.id} variants={p.product_variants} /><h3 className="font-semibold">Sizes & stock</h3><div className="grid grid-cols-2 gap-2">{p.product_variants.map((v)=><div key={v.id} className="border-b py-2 text-sm">Size {v.size} · <b>{v.stock} pairs</b><br />Rack {v.rack || "—"} · Code {v.barcode || "Not assigned"}</div>)}</div>{isOwner && <><h3 className="font-semibold">Recent purchases</h3>{history?.purchases.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.purchase_date).toLocaleDateString("en-IN")} · {x.supplier_name} · {x.quantity} pairs</span><b>{inr(x.purchase_price)} / pair</b></div>)}</>}<h3 className="font-semibold">Stock movement</h3>{history?.movements.map((x)=><div key={x.id} className="flex justify-between border-t py-1 text-sm"><span>{new Date(x.moved_at).toLocaleDateString("en-IN")} · {x.type}</span><b>+{x.qty_in} / −{x.qty_out}</b></div>)}</>; })()}</DialogContent></Dialog>
     </div>
   );
 }
