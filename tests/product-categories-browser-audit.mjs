@@ -130,9 +130,17 @@ await page.route("**/*", async (r) => {
     const patch = r.request().postDataJSON();
     assert(
       Object.keys(patch).every((k) =>
-        ["category", "article", "brand", "catalog_description"].includes(k),
+        ["category", "article", "brand", "color", "catalog_description"].includes(k),
       ),
     );
+    if ("color" in patch) {
+      const expected = pair.color === null ? "is.null" : "eq." + pair.color;
+      if (u.searchParams.get("color") !== expected)
+        return r.fulfill({
+          status: 406,
+          json: { code: "PGRST116", message: "Product changed since opening" },
+        });
+    }
     Object.assign(pair, patch);
     if (patch.category) categoryWrites.push(pair.category);
     return r.fulfill({ json: pair });
@@ -398,9 +406,34 @@ try {
   await page
     .getByRole("textbox", { name: "Product name / article", exact: true })
     .fill("Edited Pair");
-  await page.getByRole("button", { name: "Save product name", exact: true }).click();
-  await page.getByText("Product name saved", { exact: true }).waitFor();
+  await page.getByRole("textbox", { name: "Product colour", exact: true }).fill("Olive / Black");
+  await page.getByRole("button", { name: "Save product details", exact: true }).click();
+  await page.getByText("Product details saved", { exact: true }).waitFor();
   assert.equal(pair.article, "Edited Pair");
+  assert.equal(pair.color, "Olive / Black");
+  await page.reload();
+  await page.getByRole("button", { name: "Photos", exact: true }).first().click();
+  assert.equal(
+    await page.getByRole("textbox", { name: "Product colour", exact: true }).inputValue(),
+    "Olive / Black",
+  );
+  pair.color = "Updated elsewhere";
+  await page.getByRole("textbox", { name: "Product colour", exact: true }).fill("Red");
+  await page.getByRole("button", { name: "Save product details", exact: true }).click();
+  await page
+    .getByText(
+      "Product could not be saved. Refresh if another owner edited it. Product changed since opening",
+      { exact: true },
+    )
+    .waitFor();
+  assert.equal(pair.color, "Updated elsewhere");
+  await page.reload();
+  await page.getByRole("button", { name: "Photos", exact: true }).first().click();
+  await page.getByRole("textbox", { name: "Product colour", exact: true }).fill("");
+  await page.getByRole("button", { name: "Save product details", exact: true }).click();
+  await page.getByText("Product details saved", { exact: true }).waitFor();
+  assert.equal(pair.color, "");
+
   await page
     .getByRole("textbox", { name: "Product description", exact: true })
     .fill("Soft cushioning for everyday comfort.");
@@ -448,6 +481,7 @@ try {
     await page.getByRole("combobox", { name: "Product category", exact: true }).count(),
     0,
   );
+  assert.equal(await page.getByRole("textbox", { name: "Product colour", exact: true }).count(), 0);
   // Public catalog: real CatalogView, synthetic products, no backend requests or mutations.
   const cp = await browser.newPage({
     viewport: { width: 390, height: 844 },
@@ -564,7 +598,7 @@ try {
       "six subcategories in dropdown for each adult department",
       "filters reset when switching department",
       "mobile owner and catalog layout",
-      "owner name, description and size editing",
+      "owner name/colour edit persists, optional colour clears, concurrent edit guard rejects stale writes; description and size editing",
       "owner cancellation confirmation and separate audit history",
       "professional WhatsApp share link and selected-size deep link",
       "unavailable shared product falls back safely",

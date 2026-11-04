@@ -1,0 +1,11 @@
+# Catalog Spotlight and product colour editing
+
+Spotlight reuses only products in the current public catalog/filter result. It shuffles product IDs in the browser on each visit, avoiding the previous opening pair when session storage is available. It stores one product ID on the device; no database writes, additional catalog query or new uploaded asset is required. Fresh field values replace existing cards without reshuffling on an ordinary data refresh.
+
+With owner catalog motion enabled, Spotlight advances every3seconds. Every automatic cycle gets a fresh shuffled order; the next cycle cannot start with the pair that just ended. Navigation remains left/right arrows and swipe only, as requested; no Pause/Play controls. Manual traversal retains its current order. Hover, keyboard focus within the section, an active touch, an offscreen section and a hidden tab suspend the timer. Owner motion OFF or reduced-motion preferences disable automatic movement; changes to the device preference take effect immediately. Only three photos are mounted and the next photo is warmed for a smoother transition. The currently displayed product remains the one opened by its button.
+
+The catalog category scrollbar is hidden with scoped browser CSS. Horizontal overflow, swipe and keyboard focus remain available.
+
+Owner colour editing is at Products → open a product (Photos/details) → Product details → Colour → Save product details. It uses the existing optional `products.color` field alongside name/brand; blank colour is allowed. The update checks the original name, brand and colour (including NULL) so a stale form cannot overwrite another owner's edit. Product/catalog/hero choices refresh after save. Price, stock, sizes, scan identities and historical bill descriptions are unchanged. Staff cannot see the editor. No migration/RPC change is needed.
+
+Local verification: `tests/catalog-spotlight-browser-audit.mjs` covers repeated visits, three-second advance, cycle boundary, unique manual traversal, exact product opening, visibility/hover/reduced-motion/master OFF, filtered membership,320px category scrolling and restricted device storage. `tests/product-categories-browser-audit.mjs` also covers colour persistence, clearing and a rejected concurrent colour update. Tests intercept synthetic data; no live product or order is changed.

@@ -1,0 +1,88 @@
+{
+  "scope": "Local synthetic browser fixtures only; no live product writes or orders",
+  "typescript": "PASS",
+  "semanticLint": "PASS",
+  "productionBuild": "PASS",
+  "browserChecks": {
+    "spotlight": {
+      "result": "PASS",
+      "checks": [
+        "New shuffled opener across5reloads, no immediate repeat; no Pause/Play controls",
+        "Automatic3second advance with at most3images; manual arrows visit each eligible pair once and open exact product",
+        "Mouse hover, hidden tab and offscreen pause; owner motionOFF and reduced motion stop autoplay",
+        "Women filter restricts spotlight; one-result search hides it;320px category strip scrolls with no scrollbar",
+        "Restricted session storage retains working carousel"
+      ],
+      "openers": [
+        "p0",
+        "p7",
+        "p5",
+        "p7",
+        "p6"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "ownerProductEditing": {
+      "result": "PASS",
+      "checks": [
+        "category required on new product",
+        "subcategory required for Men/Women",
+        "sixth Other saved with department",
+        "owner category edit and reload persistence",
+        "staff category edit hidden",
+        "legacy Ladies/Girls in Women and Gents in Men",
+        "six subcategories in dropdown for each adult department",
+        "filters reset when switching department",
+        "mobile owner and catalog layout",
+        "owner name/colour edit persists, optional colour clears, concurrent edit guard rejects stale writes; description and size editing",
+        "owner cancellation confirmation and separate audit history",
+        "professional WhatsApp share link and selected-size deep link",
+        "unavailable shared product falls back safely"
+      ],
+      "productionWrites": 0
+    },
+    "catalogThemes": {
+      "palettes": 7,
+      "publicTheme": "ivory",
+      "previewOnly": true,
+      "heroSizes": [
+        {
+          "width": 320,
+          "heroHeight": 273.609375
+        },
+        {
+          "width": 390,
+          "heroHeight": 221.546875
+        },
+        {
+          "width": 768,
+          "heroHeight": 294
+        },
+        {
+          "width": 1440,
+          "heroHeight": 294
+        }
+      ],
+      "viewportBottomNavigation": [
+        {
+          "scrollY": 0,
+          "bottom": 844
+        },
+        {
+          "scrollY": 400,
+          "bottom": 844
+        },
+        {
+          "scrollY": 1113,
+          "bottom": 844
+        }
+      ],
+      "allWidthsFit": true,
+      "noLiveWrites": true,
+      "errors": []
+    }
+  },
+  "databaseChanges": false,
+  "reviewFix": "Spotlight uses a live reduced-motion listener so changing the device preference immediately stops automatic advance."
+}

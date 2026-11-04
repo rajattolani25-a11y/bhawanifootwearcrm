@@ -1,4 +1,17 @@
 export const CATEGORY_TRANSLATIONS = {
+  "Product colour": { hindi: "प्रोडक्ट का रंग", hinglish: "Product ka colour" },
+  "Save product details": {
+    hindi: "प्रोडक्ट की जानकारी सहेजें",
+    hinglish: "Product details save karein",
+  },
+  "Product details saved": {
+    hindi: "प्रोडक्ट की जानकारी सेव हो गई",
+    hinglish: "Product details save ho gayi",
+  },
+  "Enter a product name up to 150 characters, and brand and colour up to 80 characters": {
+    hindi: "प्रोडक्ट का नाम 150 अक्षर तक और ब्रांड व रंग 80 अक्षर तक लिखें",
+    hinglish: "Product ka naam 150 characters tak aur brand aur colour 80 characters tak likhein",
+  },
   "Share product on WhatsApp": {
     hindi: "WhatsApp पर प्रोडक्ट शेयर करें",
     hinglish: "WhatsApp par product share karein",
