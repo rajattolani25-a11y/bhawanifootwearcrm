@@ -22,11 +22,16 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     ({ data }) => (data as unknown as CatalogOffer) ?? null,
     () => null,
   );
+  let heroUnavailable = false;
   const heroRequest = (async (): Promise<PublicHero | null> => {
     // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
     let hero: PublicHero | null = null;
     try {
-      const { data: raw } = await sb.rpc("public_catalog_hero");
+      const { data: raw, error } = await sb.rpc("public_catalog_hero");
+      if (error) {
+        heroUnavailable = true;
+        return null;
+      }
       const parsed = z
         .object({
           image_path: z.string().regex(/^hero\/[0-9a-f-]{36}\.(png|webp)$/),
@@ -49,8 +54,10 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
           .from(HERO_BUCKET)
           .createSignedUrl(image_path, 3600);
         if (signed?.signedUrl) hero = { ...settings, image: signed.signedUrl };
-      }
+        else heroUnavailable = true;
+      } else if (raw !== null && raw !== undefined) heroUnavailable = true;
     } catch {
+      heroUnavailable = true;
       /* Existing catalog remains available. */
     }
 
@@ -73,6 +80,7 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     enabled: true,
     presentation,
     hero,
+    ...(heroUnavailable ? { heroUnavailable: true } : {}),
     offer,
     shop: d.shop,
     products: d.products.map((p) => ({

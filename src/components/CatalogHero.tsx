@@ -1,3 +1,4 @@
+import { decodeImage } from "@/lib/decode-image";
 import { BlurReveal } from "@/components/motion/blur-reveal";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { heroOfferText, type PublicHero } from "@/lib/catalog-hero";
@@ -21,12 +22,35 @@ export function CatalogHero({
   const imageRef = useRef<HTMLImageElement>(null);
   const [visible, setVisible] = useState(true);
   const [activeTab, setActiveTab] = useState(true);
+  const [image, setImage] = useState(hero.image);
+  const workingImage = useRef<string | null>(null);
   const [failedImage, setFailedImage] = useState<string | null>(null);
+  const failed = failedImage !== null && (!workingImage.current || failedImage === hero.image);
   useEffect(() => {
-    // SSR image errors can happen before React attaches onError.
-    if (imageRef.current?.complete && imageRef.current.naturalWidth === 0)
-      setFailedImage(hero.image);
-  }, [hero.image]);
+    if (image === hero.image) {
+      // Recover errors that happened before hydration attached onError.
+      if (imageRef.current?.complete) {
+        if (imageRef.current.naturalWidth > 0) workingImage.current = image;
+        else setFailedImage(hero.image);
+      }
+      return;
+    }
+    let active = true;
+    void decodeImage(hero.image).then((ready) => {
+      if (!active) return;
+      if (ready) {
+        setFailedImage(null);
+        setImage(hero.image);
+      } else {
+        const path = (url: string) => url.split("?")[0];
+        // A token-renewal failure cannot erase a working copy of the same image.
+        if (!workingImage.current || path(image) !== path(hero.image)) setFailedImage(hero.image);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [hero.image, image]);
   useEffect(() => {
     const sync = () => setActiveTab(!document.hidden);
     sync();
@@ -40,8 +64,8 @@ export function CatalogHero({
       observer?.disconnect();
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [hero.image]);
-  if (failedImage === hero.image) return <>{fallback}</>;
+  }, [failed]);
+  if (failed) return <>{fallback}</>;
   const ivory = theme === "ivory";
   return (
     <section
@@ -61,13 +85,16 @@ export function CatalogHero({
         <div className={styles["stage"]}>
           <img
             ref={imageRef}
-            src={hero.image}
+            src={image}
             width="1200"
             height="900"
             alt="Featured footwear"
             fetchPriority="high"
             decoding="async"
             style={{ width: `${hero.image_scale}%` }}
+            onLoad={() => {
+              workingImage.current = image;
+            }}
             onError={() => setFailedImage(hero.image)}
           />
         </div>

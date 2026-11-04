@@ -1,0 +1,75 @@
+{
+  "scope": "Local synthetic fixtures; no live database writes/orders/messages",
+  "typescript": "PASS",
+  "semanticLint": "PASS",
+  "productionBuild": "PASS",
+  "unitTests": {
+    "passed": 45,
+    "failed": 0
+  },
+  "heroAndOverlap": {
+    "result": "PASS",
+    "checks": [
+      "Three delayed token renewals keep the same hero node and old decoded frame until replacement is ready",
+      "Failed token renewal/temporary optional read keeps working hero; late response cannot overwrite newer photo; owner OFF still removes hero",
+      "Retained3photo pool has overlapping650ms slide/fade, no empty central frame and no layout overflow at320/768/1440",
+      "Reduced motion disables transition"
+    ],
+    "motion": {
+      "incoming": 0.717421,
+      "outgoing": 0.282579,
+      "transition": "0.65s, 0.65s",
+      "images": 3,
+      "height": 373.390625
+    },
+    "productionWrites": 0,
+    "errors": []
+  },
+  "spotlightControls": {
+    "result": "PASS",
+    "checks": [
+      "New shuffled opener across5reloads, no immediate repeat; no Pause/Play controls",
+      "Automatic3second advance with at most3images; manual arrows visit each eligible pair once and open exact product",
+      "Mouse hover, hidden tab and offscreen pause; owner motionOFF and reduced motion stop autoplay",
+      "Women filter restricts spotlight; one-result search hides it;320px category strip scrolls with no scrollbar",
+      "Restricted session storage retains working carousel"
+    ],
+    "openers": [
+      "p6",
+      "p1",
+      "p5",
+      "p0",
+      "p3"
+    ],
+    "productionWrites": 0,
+    "errors": []
+  },
+  "adjacentBrowserSuites": [
+    {
+      "test": "ivory-background-audit.mjs",
+      "exit": 0,
+      "seconds": 13.5
+    },
+    {
+      "test": "catalog-theme-audit.mjs",
+      "exit": 0,
+      "seconds": 14.1
+    },
+    {
+      "test": "catalog-order-recovery-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 14.7
+    },
+    {
+      "test": "catalog-about-speed-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 10.5
+    },
+    {
+      "test": "catalog-product-actions-audit.mjs",
+      "exit": 0,
+      "seconds": 13.4
+    }
+  ],
+  "sqlOrRpcDefinitionChanges": false
+}

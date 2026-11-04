@@ -146,3 +146,21 @@ test("disabled catalog never signs photos or reads optional display data", async
     ["end", "public_catalog"],
   ]);
 });
+
+test("temporary hero-read failure is distinguishable from an owner-disabled hero", async () => {
+  const { sb } = catalogFixture();
+  const rpc = sb.rpc.bind(sb);
+  sb.rpc = (name) =>
+    name === "public_catalog_hero"
+      ? Promise.resolve({ data: null, error: { message: "temporarily unavailable" } })
+      : rpc(name);
+  const unavailable = await readPublicCatalog(sb);
+  assert.equal(unavailable.hero, null);
+  assert.equal(unavailable.heroUnavailable, true);
+  assert.equal(unavailable.products.length, 2);
+  sb.rpc = (name) =>
+    name === "public_catalog_hero" ? Promise.resolve({ data: null, error: null }) : rpc(name);
+  const disabled = await readPublicCatalog(sb);
+  assert.equal(disabled.hero, null);
+  assert.equal(disabled.heroUnavailable, undefined);
+});

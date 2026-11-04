@@ -68,7 +68,8 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   snapshotRef.current = data;
   const [pendingOrder, setPendingOrder] = useState<PendingCatalogOrder | null>(null);
   const [recoveryNonce, setRecoveryNonce] = useState(0);
-  useEffect(() => setData(initialData), [initialData]);
+  useEffect(() => setData(previous => initialData.enabled && initialData.heroUnavailable && previous.hero
+    ? { ...initialData, hero: previous.hero } : initialData), [initialData]);
   useEffect(() => {
     const changed = () => { try { setPendingOrder(readCatalogOrder()); } catch { /* Ordering remains fail-closed on unreadable recovery state. */ } };
     changed(); window.addEventListener(CATALOG_ORDER_EVENT,changed);
@@ -90,7 +91,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
           return { ...p, image: p.image_key && p.image_key===old?.image_key ? old?.image ?? null : null };
         }) });
         // Signing is needed only for a new/replaced photo, never for unchanged stock.
-        if (needPhotos) { const full = await getCatalog(); if (!stopped) setData(full); }
+        if (needPhotos) { const full = await getCatalog(); if (!stopped) setData(previous => full.enabled && full.heroUnavailable && previous.hero ? { ...full, hero: previous.hero } : full); }
       } catch { /* Keep the usable snapshot; checkout independently validates the quote. */ }
       finally { busy = false; }
     }
@@ -214,7 +215,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         {data.offer.code && <Copy aria-hidden="true" />}
       </button>}
 
-      {data.hero ? <CatalogHero key={data.hero.image} theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
+      {data.hero ? <CatalogHero theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
 
       <div className={styles["discovery"]}>
         <div className={styles["discoveryInner"]}>

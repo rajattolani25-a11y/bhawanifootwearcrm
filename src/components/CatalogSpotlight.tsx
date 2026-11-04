@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
-import { m } from "motion/react";
+import { decodeImage } from "@/lib/decode-image";
 import type { CatalogProduct } from "@/lib/catalog.functions";
 import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
@@ -32,8 +32,19 @@ export function CatalogSpotlight({
   onOpen: (product: CatalogProduct) => void;
   motionEnabled?: boolean;
 }) {
-  const [active, setActive] = useState(0),
-    [direction, setDirection] = useState(1);
+  const [active, setActive] = useState(0);
+  const request = useRef(0);
+  const [outgoing, setOutgoing] = useState<CatalogProduct | null>(null);
+  const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const readyImages = useRef(new Set<string>());
+  const pendingImages = useRef(new Map<string, Promise<boolean>>());
+  useEffect(
+    () => () => {
+      request.current++;
+      clearTimeout(settle.current);
+    },
+    [],
+  );
   const section = useRef<HTMLElement>(null);
   const initialized = useRef("");
   const [order, setOrder] = useState<string[]>([]);
@@ -50,6 +61,9 @@ export function CatalogSpotlight({
   useEffect(() => {
     if (initialized.current === identities) return;
     initialized.current = identities;
+    request.current++;
+    clearTimeout(settle.current);
+    setOutgoing(null);
     let previous: string | null = null;
     try {
       previous = sessionStorage.getItem(LAST_PAIR_KEY);
@@ -96,37 +110,74 @@ export function CatalogSpotlight({
   const canPlay = motionEnabled && !reduce && pairs.length > 1;
   const running =
     canPlay && order.length > 0 && !focused && !touching && !hovered && visible && inView;
+  const mayAdvance = useRef(running);
+  mayAdvance.current = running;
+  const present = useCallback(
+    async (target: number, nextOrder?: string[], automatic = false) => {
+      const selected = nextOrder ? products.find((p) => p.id === nextOrder[target]) : pairs[target];
+      if (!selected) return;
+      const latest = ++request.current;
+      const url = selected.image;
+      if (url && !readyImages.current.has(url) && !failedImages[url]) {
+        let loading = pendingImages.current.get(url);
+        if (!loading) {
+          loading = decodeImage(url);
+          pendingImages.current.set(url, loading);
+        }
+        const ready = await loading;
+        pendingImages.current.delete(url);
+        if (latest !== request.current) return;
+        if (ready) readyImages.current.add(url);
+        else setFailedImages((failed) => ({ ...failed, [url]: true }));
+      }
+      if (latest !== request.current || (automatic && !mayAdvance.current)) return;
+      clearTimeout(settle.current);
+      const nextPairs = nextOrder ?? pairs.map((p) => p.id);
+      const nearby = [-1, 0, 1].map(
+        (offset) => nextPairs[(target + offset + nextPairs.length) % nextPairs.length],
+      );
+      setOutgoing(!nearby.includes(pairs[index]!.id) ? pairs[index]! : null);
+      if (nextOrder) setOrder(nextOrder);
+      setActive(target);
+      settle.current = setTimeout(() => setOutgoing(null), 680);
+    },
+    [pairs, products, failedImages, index],
+  );
   useEffect(() => {
     if (!running) return;
     const timer = window.setTimeout(() => {
-      setDirection(1);
       if (index === pairs.length - 1) {
-        setOrder(
+        void present(
+          0,
           mixedIds(
             pairs.map((p) => p.id),
             pairs[index]!.id,
           ),
+          true,
         );
-        setActive(0);
-      } else setActive(index + 1);
+      } else void present(index + 1, undefined, true);
     }, ADVANCE_MS);
     return () => window.clearTimeout(timer);
-  }, [running, index, pairs]);
+  }, [running, index, pairs, present]);
   if (!current) return null;
   const move = (step: number) => {
-    if (pairs.length < 2) return;
-    setDirection(step);
-    setActive((index + step + pairs.length) % pairs.length);
+    if (pairs.length > 1) void present((index + step + pairs.length) % pairs.length);
   };
-  const photo = (product: CatalogProduct, preload = false) =>
+  const photo = (product: CatalogProduct) =>
     product.image && !failedImages[product.image] ? (
       <img
         src={product.image}
         alt={`${product.brand} ${product.article}`}
-        loading={preload ? "eager" : "lazy"}
+        loading="eager"
         decoding="async"
         draggable={false}
-        onError={() => setFailedImages((failed) => ({ ...failed, [product.image!]: true }))}
+        onLoad={(event) => {
+          if (event.currentTarget.naturalWidth > 0) readyImages.current.add(product.image!);
+        }}
+        onError={() => {
+          readyImages.current.delete(product.image!);
+          setFailedImages((failed) => ({ ...failed, [product.image!]: true }));
+        }}
       />
     ) : (
       <div className={styles["placeholder"]}>
@@ -141,6 +192,7 @@ export function CatalogSpotlight({
       aria-label={t("Product spotlight")}
       data-spotlight-product={current.id}
       data-autoplay={running}
+      data-transitions={motionEnabled && !reduce}
       style={{ visibility: order.length ? undefined : "hidden" }}
       onPointerEnter={(e) => {
         if (e.pointerType === "mouse") setHovered(true);
@@ -191,28 +243,33 @@ export function CatalogSpotlight({
             onClick={() => move(-1)}
             aria-label={t("Previous product")}
           >
-            {pairs.length > 2 && photo(pairs[(index - 1 + pairs.length) % pairs.length]!)}
             <ArrowLeft aria-hidden="true" />
           </button>
         )}
-        <m.div
-          key={current.id}
-          className={styles["featured"]}
-          initial={
-            motionEnabled && !reduce ? { x: direction * 32, opacity: 0.6, scale: 0.97 } : false
-          }
-          animate={{ x: 0, opacity: 1, scale: 1 }}
-          transition={{ duration: !motionEnabled || reduce ? 0 : 0.36, ease: "easeOut" }}
-        >
+        <div className={styles["featured"]}>
+          {(pairs.length > 2 ? [-1, 0, 1] : [0, 1]).map((offset) => {
+            const product =
+              offset === -1 && outgoing
+                ? outgoing
+                : pairs[(index + offset + pairs.length) % pairs.length]!;
+            return (
+              <div
+                key={product.id}
+                className={styles["slide"]}
+                data-slot={offset === 0 ? "current" : offset < 0 ? "previous" : "next"}
+                aria-hidden={offset !== 0}
+              >
+                {photo(product)}
+              </div>
+            );
+          })}
           <button
             type="button"
             onClick={() => onOpen(current)}
             className={styles["mainPhoto"]}
             aria-label={`${t("View pair")}: ${current.brand} ${current.article}`}
-          >
-            {photo(current, true)}
-          </button>
-        </m.div>
+          />
+        </div>
         {pairs.length > 1 && (
           <button
             type="button"
@@ -220,7 +277,6 @@ export function CatalogSpotlight({
             onClick={() => move(1)}
             aria-label={t("Next product")}
           >
-            {photo(pairs[(index + 1) % pairs.length]!, true)}
             <ArrowRight aria-hidden="true" />
           </button>
         )}
