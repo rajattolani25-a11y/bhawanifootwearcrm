@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useLang } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { addProductPhoto, MAX_PRODUCT_PHOTOS, validateProductPhoto } from "@/lib/product-images";
 import { sizeSort } from "@/lib/stock";
@@ -48,7 +49,7 @@ const SIZE_CHART: Record<"Men" | "Women" | "Boys" | "Kids", Chart> = {
     all: range(6, 12),
     sets: [
       ["6-10", range(6, 10), "Regular"],
-      ["11-12", range(11, 12), "Bade size"],
+      ["11-12", range(11, 12), "Large sizes"],
     ],
   },
   Women: {
@@ -62,9 +63,9 @@ const SIZE_CHART: Record<"Men" | "Women" | "Boys" | "Kids", Chart> = {
   Kids: {
     all: range(1, 13),
     sets: [
-      ["1-5", range(1, 5), "Chhote"],
+      ["1-5", range(1, 5), "Small"],
       ["6-10", range(6, 10), "Medium"],
-      ["11-13", range(11, 13), "Bade"],
+      ["11-13", range(11, 13), "Large"],
       ["All", range(1, 13), "1-13"],
     ],
   },
@@ -84,6 +85,7 @@ export function QuickAddProduct({
   initialArticle?: string;
 }) {
   const qc = useQueryClient();
+  const { t } = useLang();
   const { isOwner } = useAuth();
   const [f, setF] = useState({
     brand: "",
@@ -138,17 +140,23 @@ export function QuickAddProduct({
     if (saving.current) return;
     const sp = Number(f.selling_price);
     if (!f.article.trim()) {
-      toast.error("Article name likho");
+      toast.error(t("Enter an article name"));
       return;
     }
-    if (!f.category) { toast.error("Choose a product category"); return; }
-    if (SUBCATEGORIES[f.category] && !SUBCATEGORIES[f.category]!.includes(f.subcategory)) { toast.error("Choose a subcategory, or select Other"); return; }
+    if (!f.category) {
+      toast.error(t("Choose a product category"));
+      return;
+    }
+    if (SUBCATEGORIES[f.category] && !SUBCATEGORIES[f.category]!.includes(f.subcategory)) {
+      toast.error(t("Choose a subcategory, or select Other"));
+      return;
+    }
     if (!(sp > 0)) {
-      toast.error("Selling price likho");
+      toast.error(t("Enter a selling price"));
       return;
     }
     if (!sizes.length) {
-      toast.error("Kam se kam ek size do");
+      toast.error(t("Select at least one size"));
       return;
     }
     const rows = sizes.map((s) => ({
@@ -189,9 +197,15 @@ export function QuickAddProduct({
       toast.success(
         `${f.brand.toUpperCase()} ${f.article} ready — ${rows.reduce((a, x) => a + x.qty, 0)} pairs added`,
       );
-      ["products", "stock-all", "pos-products", "dashboard", "ledger", "catalog-studio-products", "hero-product-choices"].forEach((k) =>
-        qc.invalidateQueries({ queryKey: [k] }),
-      );
+      [
+        "products",
+        "stock-all",
+        "pos-products",
+        "dashboard",
+        "ledger",
+        "catalog-studio-products",
+        "hero-product-choices",
+      ].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
       onAdded?.({
         ...r,
         name: `${f.brand.trim().toUpperCase()} ${f.article.trim()}`.trim(),
@@ -241,15 +255,17 @@ export function QuickAddProduct({
           <DialogTitle>Quick add product</DialogTitle>
           <DialogDescription>
             {mode === "purchase"
-              ? "Naya article banao, phir sizes purchase list mein aa jayenge."
-              : "Article aur sizes turant stock mein — scan code apne aap ban jayega."}
+              ? "Create a new article, then sizes will appear in the purchase list."
+              : "Article and sizes immediately in stock — scan code will be generated automatically."}
           </DialogDescription>
         </DialogHeader>
         <fieldset disabled={busy} className="contents">
           <div className="grid grid-cols-2 gap-2.5">
             {fields.map(([k, l]) => (
               <div key={k} className="space-y-1">
-                <Label htmlFor={`quick-product-${mode}-${k}`} className="text-xs">{l}</Label>
+                <Label htmlFor={`quick-product-${mode}-${k}`} className="text-xs">
+                  {l}
+                </Label>
                 <Input
                   id={`quick-product-${mode}-${k}`}
                   value={f[k]}
@@ -274,7 +290,27 @@ export function QuickAddProduct({
               </button>
             ))}
           </div>
-          {!!SUBCATEGORIES[f.category]?.length && <div className="space-y-1"><Label htmlFor="quick-add-subcategory" className="text-xs">Subcategory (required)</Label><select id="quick-add-subcategory" required value={f.subcategory} onChange={(e) => setF({ ...f, subcategory: e.target.value })} className="h-10 w-full rounded-md border bg-background px-2 text-sm"><option value="" disabled>Choose subcategory</option>{SUBCATEGORIES[f.category]!.map((c) => <option key={c}>{c}</option>)}</select></div>}
+          {!!SUBCATEGORIES[f.category]?.length && (
+            <div className="space-y-1">
+              <Label htmlFor="quick-add-subcategory" className="text-xs">
+                Subcategory (required)
+              </Label>
+              <select
+                id="quick-add-subcategory"
+                required
+                value={f.subcategory}
+                onChange={(e) => setF({ ...f, subcategory: e.target.value })}
+                className="h-10 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="" disabled>
+                  Choose subcategory
+                </option>
+                {SUBCATEGORIES[f.category]!.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs">Quick set</Label>
             <div className="flex gap-1.5">
@@ -287,14 +323,14 @@ export function QuickAddProduct({
                 >
                   {g}
                   <span className="block text-[10px] font-normal leading-tight opacity-80">
-                    {hint}
+                    {t(hint)}
                   </span>
                 </button>
               ))}
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Cut sizes — sirf jo aaye hain unpe tap karo</Label>
+            <Label className="text-xs">Select only the sizes received</Label>
             <div className="flex flex-wrap gap-1.5">
               {chart.all.map((s) => (
                 <button
@@ -315,7 +351,7 @@ export function QuickAddProduct({
                 value={extraSizes}
                 onChange={(e) => setExtraSizes(e.target.value)}
                 className="h-9"
-                placeholder="jaise 13 ya 4"
+                placeholder={t("For example: 13 or 4")}
               />
             </div>
             {mode !== "purchase" && (
@@ -352,7 +388,7 @@ export function QuickAddProduct({
 
           {mode !== "purchase" && isOwner && !(Number(f.cost) > 0) && (
             <p className="text-xs text-warning-foreground">
-              Cost khaali hai — profit report mein "cost missing" dikhega.
+              {t('Cost is empty — "cost missing" will appear in the profit report.')}
             </p>
           )}
           {isOwner && (

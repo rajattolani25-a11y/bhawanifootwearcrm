@@ -1,3 +1,13 @@
+import assert from "node:assert/strict";
+const {
+  BinaryBitmap,
+  HybridBinarizer,
+  RGBLuminanceSource,
+  MultiFormatReader,
+  BarcodeFormat,
+  DecodeHintType,
+} = await import(new URL("../node_modules/@zxing/library/cjs/index.js", import.meta.url));
+const { PNG } = await import(new URL("../node_modules/pngjs/lib/png.js", import.meta.url));
 // Optional browser checks: install Playwright separately; start npm run dev on port8080.
 // PLAYWRIGHT_MODULE may point to its index.mjs. All shop data in route checks is mocked.
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
@@ -6,7 +16,7 @@ const b = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
   args: ["--no-sandbox"],
 });
-const p = await b.newPage({ viewport: { width: 390, height: 844 } });
+const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 203 / 96 });
 const failures = [];
 let role = "owner";
 const writes = [];
@@ -84,12 +94,12 @@ await p.route("**/*", async (r) => {
         business_address: "",
       };
     if (u.pathname.includes("/rpc/")) data = null;
-    if (u.pathname.endsWith("/rpc/ensure_variant_label_code")) data="SS1234567890";
+    if (u.pathname.endsWith("/rpc/ensure_variant_label_code")) data = "SS1234567890";
     return r.fulfill({ json: data, headers: { "content-range": "0-0/0" } });
   }
   return r.abort();
 });
-await p.goto("http://localhost:8080/auth");
+await p.goto("http://127.0.0.1:3000/auth");
 await p.waitForTimeout(1500);
 const token =
   Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url") +
@@ -119,13 +129,14 @@ const errors = [];
 p.on("pageerror", (e) => errors.push(e.message));
 const out = "/tmp/solestack-audit/catalog-release";
 await fs.mkdir(out, { recursive: true });
-await p.goto("http://localhost:8080/barcodes");
+await p.goto("http://127.0.0.1:3000/barcodes");
 await p.getByRole("checkbox", { name: "Select Demo Article0000 labels", exact: true }).waitFor();
 await p.getByRole("checkbox", { name: "Select Demo Article0000 labels", exact: true }).check();
 const dock = p.getByRole("complementary", { name: "Selected label actions" });
 await dock.getByText("1 article selected", { exact: true }).waitFor();
 const initialDock = await dock.boundingBox();
-if (!initialDock || initialDock.y < 0 || initialDock.y + initialDock.height > 844) throw Error("Dock hidden on long inventory list");
+if (!initialDock || initialDock.y < 0 || initialDock.y + initialDock.height > 844)
+  throw Error("Dock hidden on long inventory list");
 await p.getByPlaceholder("Article or scan code", { exact: true }).fill("Article0019");
 await p.getByRole("checkbox", { name: "Select Demo Article0019 labels", exact: true }).check();
 await dock.getByText("2 articles selected", { exact: true }).waitFor();
@@ -149,8 +160,99 @@ await p.waitForFunction(
     document.querySelector("#print-preview iframe")?.contentDocument?.querySelectorAll(".label")
       .length === 2,
 );
+async function inspectLabel(kind) {
+  const frame = p.frameLocator("#print-preview iframe");
+  const label = frame.locator(".label").first();
+  await frame
+    .locator(".codes img")
+    .first()
+    .evaluate((img) => img.decode());
+  const dimensions = await label.evaluate((el) => {
+    const label = el.getBoundingClientRect(),
+      qr = el.querySelector(".codes img").getBoundingClientRect();
+    const size = el.querySelector(".size").getBoundingClientRect(),
+      codes = el.querySelector(".codes").getBoundingClientRect();
+    const text = el.querySelector(".price").getBoundingClientRect();
+    const barcode = el.querySelector(".codes svg").getBoundingClientRect();
+    return {
+      width: label.width,
+      height: label.height,
+      barcodeX: barcode.x - label.x,
+      barcodeY: barcode.y - label.y,
+      barcodeWidth: barcode.width,
+      barcodeHeight: barcode.height,
+      qrX: qr.x - label.x,
+      qrY: qr.y - label.y,
+      qrWidth: qr.width,
+      qrHeight: qr.height,
+      qrBottom: qr.bottom,
+      labelBottom: label.bottom,
+      sizeBottom: size.bottom,
+      codesTop: codes.top,
+      priceBottom: text.bottom,
+    };
+  });
+  assert(Math.abs(dimensions.qrWidth - (16 * 96) / 25.4) < 1, JSON.stringify(dimensions));
+  assert(dimensions.qrBottom <= dimensions.labelBottom + 0.5, JSON.stringify(dimensions));
+  assert(
+    dimensions.sizeBottom <= dimensions.codesTop + 0.5 &&
+      dimensions.priceBottom <= dimensions.codesTop + 0.5,
+    JSON.stringify(dimensions),
+  );
+  for (const [name, selector] of [
+    ["qr", ".codes img"],
+    ["barcode", ".codes svg"],
+  ]) {
+    const image = await label
+      .locator(selector)
+      .screenshot({ path: out + `/label-${kind}-${name}.png` });
+    const png = PNG.sync.read(image),
+      gray = new Uint8ClampedArray(png.width * png.height);
+    for (let n = 0; n < gray.length; n++)
+      gray[n] = (png.data[n * 4] + 2 * png.data[n * 4 + 1] + png.data[n * 4 + 2]) / 4;
+    const reader = new MultiFormatReader();
+    reader.setHints(
+      new Map([
+        [
+          DecodeHintType.POSSIBLE_FORMATS,
+          [name === "qr" ? BarcodeFormat.QR_CODE : BarcodeFormat.CODE_128],
+        ],
+        [DecodeHintType.TRY_HARDER, true],
+      ]),
+    );
+    assert.equal(
+      reader
+        .decodeWithState(
+          new BinaryBitmap(
+            new HybridBinarizer(new RGBLuminanceSource(gray, png.width, png.height)),
+          ),
+        )
+        .getText(),
+      "SS1234567890",
+      `${kind} ${name} cannot decode`,
+    );
+  }
+  await fs.writeFile(out + `/label-${kind}-geometry.json`, JSON.stringify(dimensions));
+  await label.screenshot({ path: out + `/label-${kind}.png` });
+  await p.getByText("PDF ready. Download or share it.", { exact: true }).waitFor();
+  const downloaded = p.waitForEvent("download");
+  await p.getByRole("button", { name: "Download PDF", exact: true }).click();
+  const file = await downloaded;
+  await file.saveAs(out + `/label-${kind}.pdf`);
+}
+await inspectLabel("sheet");
 await p.getByRole("button", { name: "Close", exact: true }).click();
-await p.goto("http://localhost:8080/catalog-studio");
+await p.getByRole("button", { name: "Label roll · 50×38mm", exact: true }).click();
+await dock.getByRole("button", { name: "Print selected labels", exact: true }).click();
+await p.waitForFunction(
+  () =>
+    document
+      .querySelector("#print-preview iframe")
+      ?.contentDocument?.querySelectorAll(".roll .label").length === 2,
+);
+await inspectLabel("roll");
+await p.getByRole("button", { name: "Close", exact: true }).click();
+await p.goto("http://127.0.0.1:3000/catalog-studio");
 await p.getByRole("tab", { name: "Orders & delivery", exact: true }).click();
 await p.getByRole("button", { name: "Save catalog settings", exact: true }).waitFor();
 await p
@@ -162,9 +264,10 @@ await p.getByRole("button", { name: "Save catalog settings", exact: true }).clic
 await p.waitForTimeout(350);
 if (!writes.some((x) => x.local_charge === 0)) throw Error("Free delivery charge save failed");
 role = "staff";
-await p.goto("http://localhost:8080/settings");
+await p.goto("http://127.0.0.1:3000/settings");
 await p.getByText("Only the Owner can open Settings.", { exact: true }).waitFor();
-if (await p.getByRole("button", { name: "Save catalog settings", exact: true }).count()) throw Error("Staff can see catalog controls");
+if (await p.getByRole("button", { name: "Save catalog settings", exact: true }).count())
+  throw Error("Staff can see catalog controls");
 if (errors.length) throw Error(errors.join("\n"));
 const result = {
   selectionSurvivesSearch: true,
@@ -172,6 +275,8 @@ const result = {
   clearSelection: true,
   countClampedTo500: true,
   twoLabelPreview: true,
+  qr16mmAndCode128DecodedAt203dpiBothLayouts: true,
+  losslessLabelPDFDownloadedBothLayouts: true,
   ownerFreeDeliverySave: true,
   longListDockVisible: true,
   staffSettingsBlocked: true,

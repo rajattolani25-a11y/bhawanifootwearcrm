@@ -40,6 +40,7 @@ const bookings = ["outside", "pickup", "cancel"].map((kind, i) => ({
   area: null,
   note: null,
 }));
+let failNextMove = false;
 page.on("pageerror", (e) => errors.push(e.message));
 await page.routeWebSocket("**/*", (s) => s.close());
 await page.route("**/*", async (r) => {
@@ -63,6 +64,17 @@ await page.route("**/*", async (r) => {
     const b = bookings.find((b) => b.id === r.request().postDataJSON()._id);
     b.receipt_recorded = true;
     b.status = "confirmed";
+    data = null;
+  }
+  if (u.pathname.endsWith("/rpc/update_catalog_order_status")) {
+    if (failNextMove) {
+      failNextMove = false;
+      return r.fulfill({ status: 400, json: { message: "Demo status save failed" } });
+    }
+    const body = r.request().postDataJSON();
+    if (body._status === "shipped" && !bookings.find((b) => b.id === body._id)?.receipt_recorded)
+      return r.fulfill({ status: 400, json: { message: "Payment not verified" } });
+    bookings.find((b) => b.id === body._id).status = body._status;
     data = null;
   }
   if (u.pathname.endsWith("/rpc/complete_catalog_booking")) {
@@ -111,6 +123,20 @@ const card = (no) =>
   page
     .locator("div.rounded-lg.border.bg-card.p-4")
     .filter({ has: page.getByText(no, { exact: true }) });
+async function checkUpdate(expected, orderNo) {
+  const d = page.locator("[data-order-update-prompt]");
+  await d.waitFor();
+  const link = d.getByRole("link", { name: "Send on WhatsApp", exact: true });
+  const url = new URL(await link.getAttribute("href"));
+  assert(url.href.startsWith("https://wa.me/919999999999?text="));
+  assert(url.searchParams.get("text").includes(expected));
+  assert(url.searchParams.get("text").includes(orderNo));
+  assert((await d.locator("pre").innerText()).includes(expected));
+  if (expected === "Your order is complete.")
+    assert(!url.searchParams.get("text").includes("Balance at store"));
+  await d.getByRole("button", { name: "Not now", exact: true }).click();
+  await d.waitFor({ state: "hidden" });
+}
 try {
   await page.goto("http://127.0.0.1:3000/auth");
   const token =
@@ -131,8 +157,23 @@ try {
   }, token);
   await go();
   page.on("dialog", (d) => d.accept("Customer requested cancellation"));
+  const pendingMessage = new URL(
+    await card("DEMO-OUTSIDE")
+      .getByRole("link", { name: "WhatsApp update", exact: true })
+      .getAttribute("href"),
+  ).searchParams.get("text");
+  assert(pendingMessage.includes("Payment due") && !pendingMessage.includes("Amount paid"));
   await card("DEMO-OUTSIDE").getByRole("button", { name: "Payment received", exact: true }).click();
+  await checkUpdate("We have received your payment.", "DEMO-OUTSIDE");
   await page.getByRole("button", { name: "To fulfil", exact: true }).click();
+  failNextMove = true;
+  await card("DEMO-OUTSIDE").getByRole("button", { name: "Packed", exact: true }).click();
+  await page.getByText("Demo status save failed", { exact: true }).waitFor();
+  assert.equal(await page.locator("[data-order-update-prompt]").count(), 0);
+  await card("DEMO-OUTSIDE").getByRole("button", { name: "Packed", exact: true }).click();
+  await checkUpdate("Your pair is packed", "DEMO-OUTSIDE");
+  await card("DEMO-OUTSIDE").getByRole("button", { name: "Out for delivery", exact: true }).click();
+  await checkUpdate("Your order is out for delivery", "DEMO-OUTSIDE");
   await card("DEMO-OUTSIDE")
     .getByRole("button", { name: "Delivered — make bill", exact: true })
     .click();
@@ -141,7 +182,7 @@ try {
   await page.waitForTimeout(100);
   assert.equal(await d.getByLabel("GST % (price includes GST)").inputValue(), "0");
   await d.getByRole("button", { name: "Complete bill", exact: true }).click();
-  await d.waitFor({ state: "hidden" });
+  await checkUpdate("Your order is complete.", "DEMO-OUTSIDE");
   assert.equal(completed[0]._sale.total, 1080);
   assert.equal(completed[0]._sale.delivery_charge, 80);
   assert.equal(completed[0]._items[0].price, 1000);
@@ -153,12 +194,13 @@ try {
   await card("DEMO-PICKUP").getByRole("button", { name: "Make bill", exact: true }).click();
   d = page.getByRole("dialog");
   await d.getByRole("button", { name: "Complete bill", exact: true }).click();
-  await d.waitFor({ state: "hidden" });
+  await checkUpdate("Your order is complete.", "DEMO-PICKUP");
   assert.equal(completed[1]._sale.payment_mode, "Split");
   assert.equal(completed[1]._sale.split_cash, 700);
   assert.equal(completed[1]._sale.total, 1000);
   checks.push("Pickup:300UPI prepaid plus700Cash generates one correctly split invoice");
   await card("DEMO-CANCEL").getByRole("button", { name: "Cancel", exact: true }).click();
+  await checkUpdate("Your refund is pending", "DEMO-CANCEL");
   await page.getByRole("button", { name: "Cancelled", exact: true }).click();
   await card("DEMO-CANCEL")
     .getByRole("button", { name: "Record completed refund", exact: true })
@@ -168,11 +210,19 @@ try {
   await d.getByRole("textbox").fill("DEMO-UTR-321");
   await d.getByRole("checkbox").check();
   await d.getByRole("button", { name: "Record refund", exact: true }).click();
-  await d.waitFor({ state: "hidden" });
+  await checkUpdate("Your refund has been sent", "DEMO-CANCEL");
   assert.equal(refunds[0]._reference, "DEMO-UTR-321");
   assert.match(refunds[0]._request_id, /^[a-f0-9-]{36}$/i);
   checks.push(
     "Paid cancel requires refund-pending stage, owner confirmation/reference and deduplicated saved request",
+  );
+  assert(
+    await card("DEMO-CANCEL")
+      .getByRole("link", { name: "WhatsApp update", exact: true })
+      .isVisible(),
+  );
+  checks.push(
+    "Failed save has no false prompt; successful confirm/pack/dispatch/complete/cancel/refund opens accurate WhatsApp preview, with explicit send link and persistent resend action; no message sent by tests",
   );
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ result: "PASS", checks, productionWrites: 0, errors }));

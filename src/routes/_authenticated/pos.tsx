@@ -1,3 +1,4 @@
+import { CameraScanner } from "@/components/CameraScanner";
 import { parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
 import { useAuth } from "@/hooks/use-auth";
 import { requireRetailIntegrity } from "@/lib/retail-integrity";
@@ -153,16 +154,29 @@ function POS() {
     beep(true);
   }, []);
 
+  const scanIndex = useMemo(() => {
+    const index = new Map<string, { p: (typeof products)[number]; v: (typeof products)[number]["product_variants"][number] } | null>();
+    for (const p of products) for (const v of p.product_variants) for (const code of [v.barcode, v.sku, v.label_code]) {
+      const key = code?.trim().toLowerCase();
+      if (!key) continue;
+      if (index.has(key) && index.get(key)?.v.id !== v.id) index.set(key, null);
+      else if (!index.has(key)) index.set(key, { p, v });
+    }
+    return index;
+  }, [products]);
   const scanCode = useCallback((code: string) => {
-    const key = code.trim().toLowerCase();
-    for (const p of products) for (const v of p.product_variants) if (v.barcode?.toLowerCase() === key || v.sku?.toLowerCase() === key || v.label_code?.toLowerCase() === key) { addVariant(p,v); setQ(""); return true; }
-    beep(false); toast.error("No product with this scan code"); return false;
-  }, [products,addVariant]);
+    const match = scanIndex.get(code.trim().toLowerCase());
+    if (match) {
+      if (match.v.stock <= 0) { beep(false); toast.error(`Size ${match.v.size} is out of stock`); return false; }
+      addVariant(match.p, match.v); setQ(""); return true;
+    }
+    beep(false); toast.error(match === null ? "This code matches multiple sizes. Select the correct size or print its unique label." : "No product with this scan code"); return false;
+  }, [scanIndex,addVariant]);
 
   useEffect(() => {
     let buffer = ""; let last = 0; let rapid = 0;
     const handle = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || cameraOpen) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || cameraOpen || document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"], #print-preview')) return;
       const el = e.target as HTMLElement;
       const editing = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || el.isContentEditable;
       const now = performance.now();
@@ -177,7 +191,7 @@ function POS() {
 
   // Barcode scanner: scanners type the code + Enter into the search box
   function onSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
+    if (e.key !== "Enter" || e.repeat) return;
     if (q.trim()) scanCode(q);
   }
 
@@ -599,19 +613,9 @@ function POS() {
       </Dialog>
       <Dialog open={retryPending}><DialogContent onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}><DialogHeader><DialogTitle>Confirm the last bill</DialogTitle></DialogHeader><p>The connection interrupted billing. Retry the same request to retrieve its bill safely. Do not start a second bill for this purchase.</p><Button disabled={busy} onClick={() => void complete()}>Retry / recover bill</Button></DialogContent></Dialog>
       <QuickAddProduct open={quickOpen} initialArticle={q && !/^[A-Z0-9]{8,}$/i.test(q) ? q : ""} onClose={() => setQuickOpen(false)} onAdded={(r) => { const first = r.variants.find((v) => (r.qty[v.size] ?? 0) > 0); toast.message(first ? "Ab size tap karke bill mein daalo" : "Stock 0 hai — pehle pairs add karo"); }} />
-      <Dialog open={cameraOpen} onOpenChange={setCameraOpen}><DialogContent><DialogHeader><DialogTitle>Scan box label</DialogTitle></DialogHeader>{cameraOpen && <CameraScanner onScan={(code)=>{if(scanCode(code))setCameraOpen(false);}} />}</DialogContent></Dialog>
+      <Dialog open={cameraOpen} onOpenChange={setCameraOpen}><DialogContent><DialogHeader><DialogTitle>Scan box label</DialogTitle></DialogHeader>{cameraOpen && <CameraScanner onScan={(code)=>{const accepted=scanCode(code);if(accepted)setCameraOpen(false);return accepted;}} />}</DialogContent></Dialog>
     </div>
   );
-}
-
-function CameraScanner({onScan}:{onScan:(code:string)=>void}) {
-  const video=useRef<HTMLVideoElement>(null);
-  const [error,setError]=useState("");
-  useEffect(()=>{let active=true; let controls:{stop:()=>void}|undefined;
-    import("@zxing/browser").then(async ({BrowserMultiFormatReader})=>{if(!active)return;const reader=new BrowserMultiFormatReader();try{const target=video.current;if(!target)return;controls=await reader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}}},target,(result)=>{if(result&&active)onScan(result.getText());});if(!active)controls.stop();}catch(e){if(active)setError((e as Error).message);}}).catch(e=>setError((e as Error).message));
-    return()=>{active=false;controls?.stop();};
-  },[onScan]);
-  return <div><video ref={video} muted playsInline className="aspect-video w-full bg-muted object-cover"/>{error&&<p role="alert" className="mt-2 text-sm text-destructive">Camera unavailable: {error}</p>}</div>;
 }
 
 function Row({ k, v }: { k: string; v: string }) {

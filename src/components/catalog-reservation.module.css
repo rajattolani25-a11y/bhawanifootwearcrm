@@ -12,7 +12,7 @@
   height: 100dvh;
   max-height: 100dvh;
   display: block;
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   margin: 0;
   padding: 0;
@@ -82,7 +82,10 @@
 .experience {
   position: relative;
   isolation: isolate;
-  min-height: 100svh;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .silk {
@@ -128,7 +131,12 @@
 }
 .content {
   max-width: 460px;
-  margin: auto;
+  margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px 25px 20px;
   text-align: center;
 }
@@ -354,98 +362,107 @@
   vector-effect: non-scaling-stroke;
 }
 .animate .box-lid {
-  animation: lid 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: lid 5.6s ease-in-out infinite;
 }
 .animate .box-body {
-  animation: box 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: box 5.6s ease-in-out infinite;
 }
 .animate .shoe {
-  animation: shoe 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: shoe 5.6s ease-in-out infinite;
 }
 .animate .seal {
-  animation: seal 0.65s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: seal 5.6s ease-in-out infinite;
 }
 .animate .seal .tick {
-  animation: tick 0.4s 0.35s ease both;
+  animation: tick 5.6s ease-in-out infinite;
 }
 .animate .glint {
-  animation: glint 1.2s ease both;
+  animation: glint 5.6s ease-in-out infinite;
   transform-origin: 50% 60%;
 }
 .animate .halo {
-  animation: halo 1.15s ease-out both;
+  animation: halo 5.6s ease-in-out infinite;
   transform-origin: 50% 60%;
 }
+.experience.animate[data-animation-paused="true"] * {
+  animation-play-state: paused;
+}
 @keyframes lid {
-  from {
-    transform: translateY(22px) scaleY(0.18);
-    opacity: 0.15;
+  0%,
+  100% {
+    transform: translateY(12px) scaleY(0.75);
   }
-  to {
+  20%,
+  82% {
     transform: none;
-    opacity: 1;
   }
 }
 @keyframes box {
-  from {
-    transform: translateY(10px);
-    opacity: 0.2;
+  0%,
+  100% {
+    transform: translateY(4px);
   }
-  to {
+  20%,
+  82% {
     transform: none;
-    opacity: 1;
   }
 }
 @keyframes shoe {
-  from {
-    transform: translateY(18px) scale(0.96);
-    opacity: 0;
+  0%,
+  100% {
+    transform: translateY(14px);
   }
-  to {
+  24%,
+  78% {
     transform: none;
-    opacity: 1;
   }
 }
 @keyframes seal {
-  from {
-    transform: scale(0.85);
-    opacity: 0;
+  0%,
+  100% {
+    transform: scale(0.95);
   }
-  to {
+  18%,
+  82% {
     transform: scale(1);
-    opacity: 1;
   }
 }
 @keyframes tick {
-  from {
+  0%,
+  100% {
     stroke-dashoffset: 35;
   }
-  to {
+  18%,
+  85% {
     stroke-dashoffset: 0;
   }
 }
 @keyframes glint {
-  0% {
+  0%,
+  12% {
     opacity: 0;
     transform: translateX(-30px);
   }
-  35% {
-    opacity: 0.85;
+  22% {
+    opacity: 0.7;
   }
+  35%,
   100% {
     opacity: 0;
     transform: translateX(70px);
   }
 }
 @keyframes halo {
-  from {
+  0%,
+  100% {
     opacity: 0;
-    transform: scale(0.85);
+    transform: scale(0.9);
   }
-  35% {
-    opacity: 0.5;
+  22% {
+    opacity: 0.45;
   }
-  to {
+  42%,
+  95% {
     opacity: 0;
     transform: scale(1.08);
   }
@@ -661,4 +678,98 @@
 }
 .experience .track {
   font-size: 12px;
+}
+
+/* Artwork scrolls at its approved size; actions stay in the viewport. */
+.topbar {
+  flex-shrink: 0;
+}
+.experience .motion-toggle {
+  position: absolute;
+  left: max(15px, env(safe-area-inset-left));
+  top: 15px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--cream);
+  color: var(--ink);
+}
+.motion-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.payment-dock {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 4;
+  padding: 10px max(16px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  background: var(--cream);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 25px #193d2e0b;
+}
+.dock-inner {
+  max-width: 460px;
+  margin: 0 auto;
+}
+.dock-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.dock-status strong {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.dock-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.dock-buttons .pay,
+.dock-buttons .proof-wrapper a {
+  min-height: 58px;
+  height: 100%;
+  font-size: 13px;
+  line-height: 1.35;
+  padding: 10px;
+  white-space: normal;
+  text-align: center;
+  gap: 6px;
+}
+.dock-buttons .pay svg {
+  flex-shrink: 0;
+}
+.dock-buttons .proof-wrapper {
+  margin: 0;
+}
+.dock-buttons .proof-wrapper > [data-payment-proof] {
+  height: 100%;
+}
+.dock-buttons .proof-wrapper a {
+  display: flex;
+  border-radius: 11px;
+}
+.dock-note {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+.payment-dock .actions {
+  gap: 8px;
+}
+.payment-dock .helper {
+  margin: 0;
+  font-size: 11px;
 }

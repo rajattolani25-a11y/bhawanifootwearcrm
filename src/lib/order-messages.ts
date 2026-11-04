@@ -7,7 +7,7 @@ export type OrderInfo = { booking_no: string; product: string; size: string; nam
 const L = {
   english: {
     hi: (n: string) => `Dear ${n},`, hello: (s: string) => `Hello ${s},`, thanks: "Thank you for shopping with us.", regards: "Warm regards,",
-    order: "Order no.", item: "Item", size: "Size", amount: "Amount", paid: "Amount paid", balance: "Balance at store", delivery: "Delivery", address: "Address",
+    order: "Order no.", item: "Item", size: "Size", amount: "Amount", paid: "Amount paid", due: "Payment due", balance: "Balance at store", delivery: "Delivery", address: "Address",
     type: { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" } as Record<string, string>,
     ask: (p: string, sz: string) => `I saw *${p}*${sz ? ` (size ${sz})` : ""} in your online catalog. Is it available? I would like to visit the store.`,
     policy: "Note: No cash refund or return. Size exchange within 7 days with bill.", proof: "I have completed the UPI payment for my order. Please verify the payment screenshot and confirm my order.", name: "Name",
@@ -25,7 +25,7 @@ const L = {
   },
   hindi: {
     hi: (n: string) => `प्रिय ${n} जी,`, hello: (s: string) => `नमस्ते ${s},`, thanks: "हमारे साथ खरीदारी करने के लिए धन्यवाद।", regards: "सादर,",
-    order: "ऑर्डर नं.", item: "सामान", size: "साइज़", amount: "राशि", paid: "भुगतान किया", balance: "दुकान पर बाकी", delivery: "डिलीवरी", address: "पता",
+    order: "ऑर्डर नं.", item: "सामान", size: "साइज़", amount: "राशि", paid: "भुगतान किया", due: "भुगतान बाकी", balance: "दुकान पर बाकी", delivery: "डिलीवरी", address: "पता",
     type: { pickup: "दुकान से लेना", local: "लोकल डिलीवरी", outside: "जबलपुर के बाहर डिलीवरी" } as Record<string, string>,
     ask: (p: string, sz: string) => `मैंने आपके ऑनलाइन कैटलॉग में *${p}*${sz ? ` (साइज़ ${sz})` : ""} देखा। क्या यह उपलब्ध है? मैं दुकान आना चाहता/चाहती हूँ।`,
     policy: "नोट: पैसे वापस या रिटर्न नहीं। बिल के साथ 7 दिन में साइज़ एक्सचेंज।", proof: "मैंने अपने ऑर्डर का UPI भुगतान कर दिया है। कृपया भुगतान के स्क्रीनशॉट की जाँच करके मेरा ऑर्डर पक्का करें।", name: "नाम",
@@ -43,7 +43,7 @@ const L = {
   },
   hinglish: {
     hi: (n: string) => `Dear ${n} ji,`, hello: (s: string) => `Namaste ${s},`, thanks: "Humare saath shopping karne ke liye dhanyavaad.", regards: "Saadar,",
-    order: "Order no.", item: "Saman", size: "Size", amount: "Amount", paid: "Payment kiya", balance: "Dukaan pe baaki", delivery: "Delivery", address: "Address",
+    order: "Order no.", item: "Saman", size: "Size", amount: "Amount", paid: "Payment kiya", due: "Payment baaki", balance: "Dukaan pe baaki", delivery: "Delivery", address: "Address",
     type: { pickup: "Dukaan se lena", local: "Local delivery", outside: "Jabalpur ke bahar delivery" } as Record<string, string>,
     ask: (p: string, sz: string) => `Maine aapke online catalog mein *${p}*${sz ? ` (size ${sz})` : ""} dekha. Kya ye available hai? Main dukaan aana chahta/chahti hoon.`,
     policy: "Note: Cash refund ya return nahi. Bill ke saath 7 din mein size exchange.", proof: "Maine apne order ki UPI payment kar di hai. Kripya payment screenshot verify karke mera order confirm karein.", name: "Naam",
@@ -61,9 +61,9 @@ const L = {
   },
 };
 
-const lines = (t: (typeof L)["english"], o: OrderInfo) => {
-  const out = [`*${t.order}:* ${o.booking_no}`, `*${t.item}:* ${o.product}`, `*${t.size}:* ${o.size}`, `*${t.delivery}:* ${t.type[o.fulfillment] ?? o.fulfillment}`, `*${t.paid}:* ${inr(o.advance)}`];
-  if (o.fulfillment === "pickup" && o.price > o.advance) out.push(`*${t.balance}:* ${inr(o.price - o.advance)}`);
+const lines = (t: (typeof L)["english"], o: OrderInfo, paid = true, balance = true) => {
+  const out = [`*${t.order}:* ${o.booking_no}`, `*${t.item}:* ${o.product}`, `*${t.size}:* ${o.size}`, `*${t.delivery}:* ${t.type[o.fulfillment] ?? o.fulfillment}`, `*${paid ? t.paid : t.due}:* ${inr(o.advance)}`];
+  if (balance && o.fulfillment === "pickup" && o.price > o.advance) out.push(`*${t.balance}:* ${inr(o.price - o.advance)}`);
   if (o.address) out.push(`*${t.address}:* ${o.address}`);
   return out.join("\n");
 };
@@ -83,6 +83,6 @@ export function proofText(lang: AppLanguage, o: OrderInfo) {
 /** Shop -> customer: status update for an order. */
 export function statusText(lang: AppLanguage, o: OrderInfo, status: string, trackUrl?: string) {
   const t = L[lang];
-  const key = status === "packed" && o.fulfillment === "pickup" ? "packed_pickup" : status === "picked" || status === "delivered" ? "done" : status;
-  return `${t.hi(o.name)}\n\n${t.st[key] ?? ""}\n\n${lines(t, o)}${trackUrl ? `\n\n${trackUrl}` : ""}\n\n${t.thanks}\n${t.regards}\n*${o.shop}*`;
+  const key = status === "packed" && o.fulfillment === "pickup" ? "packed_pickup" : status === "picked" || status === "delivered" ? "done" : status === "expired" ? "cancelled" : status;
+  return `${t.hi(o.name)}\n\n${t.st[key] ?? ""}\n\n${lines(t, o, !["pending", "cancelled", "expired"].includes(status), !["refund_pending", "refunded", "cancelled", "expired"].includes(status))}${trackUrl ? `\n\n${trackUrl}` : ""}\n\n${t.thanks}\n${t.regards}\n*${o.shop}*`;
 }

@@ -60,21 +60,23 @@ export function previewDocument(title: string, html: string) {
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas-pro"), import("jspdf")]);
       await doc.fonts.ready;
       await Promise.all(Array.from(doc.images, (img) => img.decode().catch(() => undefined)));
+      const labelDocument = !!doc.querySelector(".label .codes");
       const labels = Array.from(doc.querySelectorAll<HTMLElement>(".roll .label"));
-      const node = labels[0] ?? doc.querySelector<HTMLElement>(".thermal") ?? doc.body;
+      const sheet = labelDocument ? doc.querySelector<HTMLElement>(".sheet") : null;
+      const node = labels[0] ?? sheet ?? doc.querySelector<HTMLElement>(".thermal") ?? doc.body;
       const width = Math.max(node.scrollWidth, node.getBoundingClientRect().width, 1);
       const height = Math.max(node.scrollHeight, node === doc.body ? doc.documentElement.scrollHeight : node.offsetHeight, 200);
       const thermal = !!doc.querySelector(".thermal, .roll");
-      const pageHeight = labels.length ? node.getBoundingClientRect().height : thermal ? Math.min(1122, height) : Math.floor(width * 297 / 210);
+      const pageHeight = labels.length ? node.getBoundingClientRect().height : thermal ? Math.min(1122, height) : sheet ? Math.floor(width * 289 / 202) : Math.floor(width * 297 / 210);
       const pdf = thermal
         ? new jsPDF({ orientation: width > pageHeight ? "landscape" : "portrait", unit: "px", format: [width, pageHeight], hotfixes: ["px_scaling"] })
         : new jsPDF({ unit: "mm", format: "a4" });
       // Render bounded page tiles; never allocate one enormous mobile canvas.
-      const scale = Math.min(2, Math.sqrt(4_000_000 / (width * pageHeight)));
+      const scale = Math.min(labelDocument ? 300 / 96 : 2, Math.sqrt(4_000_000 / (width * pageHeight)));
       const tiles = labels.map(label => ({ node: label, y: 0, height: label.getBoundingClientRect().height }));
       if (!labels.length) {
         const origin = node === doc.body ? 0 : node.getBoundingClientRect().top;
-        const rows = Array.from(node.querySelectorAll("tr"), row => {
+        const rows = Array.from(node.querySelectorAll(sheet ? ".label" : "tr"), row => {
           const r = row.getBoundingClientRect(); return { top: r.top - origin, bottom: r.bottom - origin };
         });
         for (let y = 0; y < height;) {
@@ -90,8 +92,9 @@ export function previewDocument(title: string, html: string) {
         const canvas = await html2canvas(tile.node, { scale, backgroundColor: "#ffffff", useCORS: true,
           width, height: tileHeight, x: 0, y: tile.y, scrollX: 0, scrollY: 0, windowWidth: width, logging: false });
         if (index) pdf.addPage();
-        const pw = pdf.internal.pageSize.getWidth();
-        pdf.addImage(canvas.toDataURL("image/jpeg", .95), "JPEG", 0, 0, pw, tileHeight * pw / width);
+        const pw = sheet ? 202 : pdf.internal.pageSize.getWidth();
+        // Labels need lossless edges: JPEG ringing can merge small barcode/QR modules.
+        pdf.addImage(canvas.toDataURL(labelDocument ? "image/png" : "image/jpeg", .95), labelDocument ? "PNG" : "JPEG", sheet ? 4 : 0, sheet ? 4 : 0, pw, tileHeight * pw / width, undefined, labelDocument ? "FAST" : undefined);
         canvas.width = canvas.height = 0;
       }
       file = new File([pdf.output("blob")], fileName, { type: "application/pdf" });

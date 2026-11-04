@@ -32,6 +32,7 @@ const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirme
 
 function Bookings() {
   const { isOwner } = useAuth();
+  const [update, setUpdate] = useState<{ booking: Booking; status: string } | null>(null);
   const [refunding, setRefunding] = useState<Booking | null>(null);
   const qc = useQueryClient();
   const shop = useShop();
@@ -56,11 +57,12 @@ function Bookings() {
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
   const list = result?.rows ?? [];
-  const msg = (b: Booking, st: string) => waLink(b.mobile, statusText(lang, { booking_no: b.booking_no, product: b.product_name, size: b.size, name: b.customer_name, price: b.price, advance: b.advance, delivery_charge: b.delivery_charge, fulfillment: b.fulfillment, shop: shop.name, address: b.fulfillment === "pickup" ? null : [b.address, b.area].filter(Boolean).join(", ") }, st, `${window.location.origin}/catalog?track=${b.booking_no}`));
+  const msg = (b: Booking, st: string) => waLink(b.mobile, statusText(lang, { booking_no: b.booking_no, product: b.product_name, size: b.size, name: b.customer_name, price: b.price, advance: ["picked", "delivered"].includes(st) ? Number(b.price) + Number(b.delivery_charge || 0) : b.advance, delivery_charge: b.delivery_charge, fulfillment: b.fulfillment, shop: shop.name, address: b.fulfillment === "pickup" ? null : [b.address, b.area].filter(Boolean).join(", ") }, st, `${window.location.origin}/catalog?track=${b.booking_no}`));
   async function move(b: Booking, st: "packed" | "shipped") {
     const { error } = await supabase.rpc("update_catalog_order_status", { _id: b.id, _status: st });
     if (error) { toast.error(error.message); return; }
     toast.success(STATUS_LABEL[st]); refresh();
+    setUpdate({ booking: b, status: st });
 
   }
   const refresh = () => { void refreshOperationalData(qc); };
@@ -70,6 +72,7 @@ function Bookings() {
     const { error } = await supabase.rpc("confirm_catalog_booking", { _id: b.id });
     if (error) { toast.error(error.message); return; }
     toast.success("Payment received — pair is on hold"); refresh();
+    setUpdate({ booking: b, status: "confirmed" });
 
   }
   async function cancel(b: Booking) {
@@ -78,6 +81,7 @@ function Bookings() {
     const { error } = await supabase.rpc("cancel_catalog_booking", { _id: b.id, _note: note });
     if (error) { toast.error(error.message); return; }
     toast.success("Booking cancelled — stock returned"); refresh();
+    setUpdate({ booking: b, status: b.status === "pending" ? "cancelled" : "refund_pending" });
     if (b.status !== "pending") toast.info("Refund is pending. Send it outside the app, then record the payment reference.");
   }
   const copyLink = () => { void navigator.clipboard.writeText(`${window.location.origin}/catalog`); toast.success("Catalog link copied"); };
@@ -104,12 +108,10 @@ function Bookings() {
               {b.status === "confirmed" && <Button size="sm" variant="secondary" onClick={() => move(b, "packed")}><Package className="h-4 w-4" /> {b.fulfillment === "pickup" ? "Ready for pickup" : "Packed"}</Button>}
               {b.fulfillment !== "pickup" && (b.status === "confirmed" || b.status === "packed") && <Button size="sm" variant="secondary" onClick={() => move(b, "shipped")}><Truck className="h-4 w-4" /> Out for delivery</Button>}
               {b.receipt_recorded && ["confirmed", "packed", "shipped"].includes(b.status) && <Button size="sm" onClick={() => setBilling(b)}><Receipt className="h-4 w-4" /> {b.fulfillment === "pickup" ? "Make bill" : "Delivered — make bill"}</Button>}
-              {["pending", "confirmed", "packed", "shipped"].includes(b.status) && <>
-                <Button size="sm" variant="outline" asChild><a href={msg(b, b.status)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp</a></Button>
-                <Button size="sm" variant="ghost" onClick={() => cancel(b)}><X className="h-4 w-4" /> Cancel</Button>
-              </>}
+              <Button size="sm" variant="outline" asChild><a href={msg(b, b.status)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp update</a></Button>
+              {["pending", "confirmed", "packed", "shipped"].includes(b.status) &&
+                <Button size="sm" variant="ghost" onClick={() => cancel(b)}><X className="h-4 w-4" /> Cancel</Button>}
               {b.status === "refund_pending" && b.receipt_recorded && isOwner && <Button size="sm" onClick={() => setRefunding(b)}>Record completed refund</Button>}
-              {["refund_pending","refunded"].includes(b.status) && <Button size="sm" variant="outline" asChild><a href={msg(b,b.status)} target="_blank" rel="noreferrer">WhatsApp update</a></Button>}
               {b.refund_reference && <p className="text-xs" data-no-translate>{b.refund_reference}</p>}
             </div>
           </div>
@@ -117,8 +119,9 @@ function Bookings() {
         {!isPending && !error && list.length === 0 && <p className="text-sm text-muted-foreground">No bookings here.</p>}
       </div>
       <ListPagination page={page} pageSize={pageSize} total={result?.count ?? 0} busy={isPending} onPage={setPage} />
-      {refunding && <RefundOrder b={refunding} onClose={() => setRefunding(null)} onDone={refresh} />}
-      {billing && <PickupBill b={billing} onClose={() => setBilling(null)} onDone={refresh} />}
+      {update && <OrderUpdatePrompt url={msg(update.booking, update.status)} bookingNo={update.booking.booking_no} onClose={() => setUpdate(null)} />}
+      {refunding && <RefundOrder b={refunding} onClose={() => setRefunding(null)} onDone={() => { refresh(); setUpdate({ booking: refunding, status: "refunded" }); }} />}
+      {billing && <PickupBill b={billing} onClose={() => setBilling(null)} onDone={() => { refresh(); setUpdate({ booking: billing, status: billing.fulfillment === "pickup" ? "picked" : "delivered" }); }} />}
     </div>
   );
 }
@@ -188,5 +191,25 @@ function RefundOrder({ b, onClose, onDone }: { b: Booking; onClose: () => void; 
       setBusy(true);
       try {const r=await runOperationalRequest(`order-refund:${b.id}`,"record_catalog_refund",{_id:b.id,_mode:mode,_reference:reference.trim()});if(r.error)throw r.error;toast.success("Refund recorded");onDone();onClose();}catch(e){toast.error((e as Error).message);}finally{setBusy(false);}
     }}>{busy ? "Saving…" : "Record refund"}</Button>
+  </DialogContent></Dialog>;
+}
+
+/** Saved status only. The owner explicitly opens WhatsApp and taps Send there. */
+function OrderUpdatePrompt({ url, bookingNo, onClose }: { url: string; bookingNo: string; onClose: () => void }) {
+  const { lang } = useLang();
+  const copy = {
+    english: { title: "Send customer an order update", saved: "Status saved. Send this update to the customer on WhatsApp.", send: "Send on WhatsApp", later: "Not now", note: "WhatsApp opens with this message. Tap Send there to deliver it." },
+    hindi: { title: "ग्राहक को ऑर्डर की जानकारी भेजें", saved: "स्थिति सेव हो गई है। ग्राहक को WhatsApp पर यह जानकारी भेजें।", send: "WhatsApp पर भेजें", later: "अभी नहीं", note: "यह संदेश WhatsApp में खुलेगा। वहाँ भेजें दबाएँ।" },
+    hinglish: { title: "Customer ko order update bhejein", saved: "Status save ho gaya. Customer ko WhatsApp par yeh update bhejein.", send: "WhatsApp par bhejein", later: "Abhi nahi", note: "WhatsApp mein yeh message khulega. Wahan Send dabayein." },
+  }[lang];
+  const message = new URL(url).searchParams.get("text") ?? "";
+  return <Dialog open onOpenChange={open => !open && onClose()}><DialogContent data-order-update-prompt data-no-translate>
+    <DialogHeader><DialogTitle>{copy.title}</DialogTitle></DialogHeader>
+    <p className="text-sm">{copy.saved}</p>
+    <p className="text-xs font-semibold">{bookingNo}</p>
+    <pre className="max-h-[35dvh] overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/30 p-3 font-sans text-sm">{message}</pre>
+    <p className="text-xs text-muted-foreground">{copy.note}</p>
+    <Button asChild className="h-auto min-h-11 whitespace-normal"><a href={url} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4 shrink-0" />{copy.send}</a></Button>
+    <Button variant="ghost" onClick={onClose}>{copy.later}</Button>
   </DialogContent></Dialog>;
 }

@@ -20,8 +20,8 @@ const rs = (n: number) => "₹" + Number(n || 0).toLocaleString("en-IN", { maxim
 
 const LABEL_CSS = `
 *{box-sizing:border-box}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.grid{display:grid;grid-template-columns:repeat(3,64mm);gap:2mm;padding:3mm}
-.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:1mm;overflow:hidden;display:grid;grid-template-rows:1fr 13mm;page-break-inside:avoid;background:#fff}
+.sheet{width:202mm}.grid{display:grid;grid-template-columns:repeat(3,64mm);gap:2mm;padding:3mm}
+.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:1mm;overflow:hidden;display:grid;grid-template-rows:1fr 17mm;page-break-inside:avoid;background:#fff}
 .mid{display:grid;grid-template-columns:1fr 15mm;gap:1.5mm;padding:1.2mm 2mm 0}
 .brand{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#111;border-bottom:0.2mm solid #aaa;padding-bottom:.6mm;margin-bottom:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .art{font-size:13px;font-weight:800;line-height:1.05;margin:.3mm 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
@@ -29,12 +29,12 @@ const LABEL_CSS = `
 .price{display:flex;align-items:baseline;gap:1.5mm;margin-top:.8mm}.price b{font-size:14px;font-weight:900}.price s{font-size:7px;color:#777}.price small{font-size:5.5px;color:#777;letter-spacing:.6px}
 .size{border:0.5mm solid #111;border-radius:1mm;text-align:center;display:flex;flex-direction:column;justify-content:center;height:14mm}
 .size span{font-size:5.5px;letter-spacing:1.4px;font-weight:700}.size b{font-size:17px;line-height:1;font-weight:900}
-.codes{display:grid;grid-template-columns:1fr 12mm;gap:1.5mm;align-items:center;padding:0 2mm 1mm;border-top:0.2mm dashed #999}
-.codes svg{width:100%;height:11mm}.codes img{width:12mm;height:12mm}
+.codes{display:grid;grid-template-columns:minmax(0,1fr) 16mm;gap:1.5mm;align-items:center;padding:0 2mm 1mm;border-top:0.2mm dashed #999}
+.codes>div{min-width:0}.codes svg{display:block;width:100%;height:11mm}.codes img{display:block;width:16mm;height:16mm;background:#fff}
 .roll .grid{grid-template-columns:50mm;gap:0;padding:0}.roll .label{width:50mm;height:38mm;border-radius:0;border:0;border-bottom:0.2mm dashed #bbb}
 .roll .mid{grid-template-columns:1fr 12mm}.roll .art{font-size:11px}.roll .size b{font-size:14px}
 @page{size:A4;margin:4mm}
-@media(max-width:650px){.grid{grid-template-columns:repeat(2,64mm)}}
+
 `;
 
 function Barcodes() {
@@ -58,7 +58,7 @@ function Barcodes() {
       const [{ default: JsBarcode }, { default: QRCode }] = await Promise.all([import("jsbarcode"), import("qrcode")]);
       function svgFor(code: string) {
         const el = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        JsBarcode(el, code, { format: "CODE128", height: 40, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, margin: 0, marginLeft: 14, marginRight: 14 });
+        JsBarcode(el, code, { format: "CODE128", height: 40, width: 1.3, displayValue: true, fontSize: 9, font: "monospace", textMargin: 1, lineColor: "#000000", background: "#ffffff", margin: 0, marginLeft: 14, marginRight: 14 });
         return el.outerHTML;
       }
 
@@ -68,7 +68,9 @@ function Barcodes() {
         if (result.error) throw new Error("Apply database update 0035 before printing scan-safe labels. " + result.error.message);
         const code = result.data;
         if (!code) throw new Error("Could not assign a unique scan code");
-        const qr = await QRCode.toDataURL(code, { margin: 4, width: 192, errorCorrectionLevel: "M" });
+        // Vector modules stay sharp at any printer resolution; retain a full four-module quiet zone.
+        const qrSvg = await QRCode.toString(code, { type: "svg", width: 256, margin: 4, errorCorrectionLevel: "M", color: { dark: "#000000ff", light: "#ffffffff" } });
+        const qr = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(qrSvg);
         const meta = [categoryLabel(p.category), p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
         const mrp = Number(p.mrp) > Number(p.selling_price) ? `<s>MRP ${esc(rs(p.mrp))}</s>` : `<small>MRP INCL. OF ALL TAXES</small>`;
         const html = `<div class="label"><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
@@ -89,6 +91,7 @@ function Barcodes() {
         </div>
         {count > 0 && <Button variant="ghost" size="sm" onClick={() => setPick({})}>Clear</Button>}
       </div>
+      <p className="mb-3 text-xs text-muted-foreground">For clear scans: print at 100% / Actual size, use the matching label paper size and a clean, high-quality print. Avoid Fit to page.</p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {list.map((p) => (
           <div key={p.id} className={`rounded-lg border bg-card p-3 ${p.product_variants.some(v => normalize(pick[v.id] ?? 0) > 0) ? "ring-1 ring-primary bg-primary/5" : ""}`}>

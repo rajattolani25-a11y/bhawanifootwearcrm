@@ -27,18 +27,20 @@ const COPY = {
 export function CatalogPaymentProof({
   language,
   whatsappUrl,
+  compact = false,
 }: {
   language: AppLanguage;
   whatsappUrl: string;
+  compact?: boolean;
 }) {
   const copy = COPY[language];
   return (
     <section
       data-payment-proof
-      className="space-y-3 rounded-xl border bg-muted/30 p-3"
+      className={compact ? "h-full" : "space-y-3 rounded-xl border bg-muted/30 p-3"}
       data-no-translate
     >
-      <div>
+      <div className={compact ? "sr-only" : undefined}>
         <h3 className="text-sm font-semibold">{copy.title}</h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{copy.note}</p>
       </div>
@@ -52,7 +54,9 @@ export function CatalogPaymentProof({
           {copy.action}
         </a>
       </Button>
-      <p className="text-xs leading-relaxed text-muted-foreground">{copy.verification}</p>
+      <p className={compact ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}>
+        {copy.verification}
+      </p>
     </section>
   );
 }

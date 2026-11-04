@@ -102,11 +102,12 @@ await p.route("**/*", async (r) => {
         business_address: "",
       };
     if (u.pathname.includes("/rpc/")) data = null;
+    if (u.pathname.endsWith("/rpc/ensure_variant_label_code")) data = "SS1234567890";
     return r.fulfill({ json: data, headers: { "content-range": "0-0/0" } });
   }
   return r.abort();
 });
-await p.goto("http://localhost:8080/auth");
+await p.goto("http://127.0.0.1:3000/auth");
 await p.waitForTimeout(1500);
 const token =
   Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url") +
@@ -135,7 +136,7 @@ await p.evaluate(
 const errors = [];
 p.on("pageerror", (e) => errors.push(e.message));
 try {
-  await p.goto("http://localhost:8080/pos");
+  await p.goto("http://127.0.0.1:3000/pos");
   await p.getByLabel("Search or scan products", { exact: true }).waitFor();
   await p.getByText("Perf Pair 0", { exact: true }).first().waitFor();
   await p.getByRole("link", { name: "Products", exact: true }).click();

@@ -143,6 +143,8 @@ try {
     [430, 932],
     [390, 844],
     [320, 740],
+    [320, 568],
+    [740, 360],
     [768, 1024],
     [1440, 1000],
   ]) {
@@ -168,27 +170,69 @@ try {
       JSON.stringify(metrics),
     );
     assert(!metrics.overflow);
-    await dialog()
-      .getByRole("link", { name: "Pay with UPI", exact: true })
-      .scrollIntoViewIfNeeded();
-    assert(await dialog().getByRole("link", { name: "Pay with UPI", exact: true }).isVisible());
+    const pay = dialog().getByRole("link", { name: "Pay with UPI", exact: true });
+    const proof = page.locator("[data-payment-proof]").getByRole("link");
+    for (const action of [pay, proof]) {
+      const r = await action.boundingBox();
+      assert(r && r.y >= 0 && r.y + r.height <= height, JSON.stringify({ width, height, r }));
+      assert(r.height >= 44);
+    }
+    const originalY = (await pay.boundingBox()).y;
+    await success
+      .locator("section")
+      .first()
+      .evaluate((el) => (el.scrollTop = el.scrollHeight));
+    assert.equal((await pay.boundingBox()).y, originalY);
     assert.equal(await page.locator("[data-payment-proof] input[type=file]").count(), 0);
-    await dialog().evaluate((el) => (el.scrollTop = 0));
-    await page.screenshot({ path: out + `/reservation-${width}.png` });
+    await success
+      .locator("section")
+      .first()
+      .evaluate((el) => (el.scrollTop = 0));
+    await page.screenshot({ path: out + `/reservation-${width}x${height}.png` });
   }
   checks.push(
-    "Real fullscreen viewport bounds at320/390/430/768/1440; no horizontal overflow; payment/WhatsApp accessible by scroll; no screenshot picker",
+    "Real fullscreen viewport bounds at320/390/430/768/1440; no horizontal overflow; payment/WhatsApp pinned without scrolling even at320x568/740x360; no screenshot picker",
   );
   await page.waitForTimeout(1300);
-  assert.equal(
-    await success.evaluate(
+  const running = () =>
+    success.evaluate(
       (el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,
+    );
+  assert((await running()) > 0);
+  assert(
+    await success.evaluate((el) =>
+      el
+        .getAnimations({ subtree: true })
+        .every((a) => a.effect.getTiming().iterations === Infinity),
     ),
-    0,
   );
-  checks.push("Finite animation settles within1.3s; no loop or artificial payment delay");
+  await success.getByRole("button", { name: "Pause animation", exact: true }).click();
+  assert.equal(await running(), 0);
+  await success.getByRole("button", { name: "Resume animation", exact: true }).click();
+  assert((await running()) > 0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.waitForTimeout(50);
+  assert.equal(await running(), 0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.waitForTimeout(50);
+  assert((await running()) > 0);
+  await page.waitForTimeout(5700);
+  assert((await running()) > 0);
+  assert.equal(await page.evaluate(() => window.__catalogOrderCalls.length), 1);
+  checks.push(
+    "5.6s infinite art loop repeats without new orders; pause/resume and hidden-tab pause work; actions/text do not animate",
+  );
   await page.setViewportSize({ width: 430, height: 932 });
-  await dialog().evaluate((el) => (el.scrollTop = 0));
+  await success
+    .locator("section")
+    .first()
+    .evaluate((el) => (el.scrollTop = 0));
   await page.screenshot({ path: out + "/reservation-settled.png" });
   for (const [lang, heading] of [
     ["hindi", "आपकी जोड़ी आरक्षित है।"],
@@ -197,6 +241,14 @@ try {
   ]) {
     await page.locator("select[aria-label=Language]").selectOption(lang, { force: true });
     await dialog().getByRole("heading", { name: heading, exact: true }).waitFor();
+    await page.setViewportSize({ width: 320, height: 568 });
+    for (const link of await page.locator("[data-reservation-payment-actions] a").all()) {
+      const r = await link.boundingBox();
+      assert(
+        r && r.y >= 0 && r.y + r.height <= 568 && r.x >= 0 && r.x + r.width <= 320,
+        JSON.stringify(r),
+      );
+    }
   }
   checks.push("Reservation and existing proof actions respond to English/Hindi/Hinglish language");
   await page.setViewportSize({ width: 390, height: 844 });

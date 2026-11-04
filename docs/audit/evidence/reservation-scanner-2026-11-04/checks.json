@@ -1,0 +1,260 @@
+{
+  "scope": "Local browser fixtures and intercepted synthetic backends. No production sale, reset, stock write, refund, payment or message executed.",
+  "static": {
+    "typescript": "PASS",
+    "semanticLint": "PASS",
+    "productionBuild": "PASS",
+    "unitTests": {
+      "passed": 39,
+      "failed": 0
+    }
+  },
+  "browserAndArtifactSuites": {
+    "fullscreenReservation": {
+      "result": "PASS",
+      "checks": [
+        "Only after saved response: selected real photo/size, authoritative999/500/499 amounts, pending-payment status, UPI and tracking immediately usable",
+        "Real fullscreen viewport bounds at320/390/430/768/1440; no horizontal overflow; payment/WhatsApp pinned without scrolling even at320x568/740x360; no screenshot picker",
+        "5.6s infinite art loop repeats without new orders; pause/resume and hidden-tab pause work; actions/text do not animate",
+        "Reservation and existing proof actions respond to English/Hindi/Hinglish language",
+        "Owner motion OFF and device reduced-motion retain static artwork with no animations",
+        "Opaque photo uses framed fallback; failed cover falls back to branded box without blocking payment",
+        "Customer dark preference retains a readable dark reservation screen",
+        "Delivery and coupon reservation displays original999, discount100, fee30 and payable929; no fictitious pickup balance"
+      ],
+      "errors": [],
+      "external": [],
+      "productionWrites": 0
+    },
+    "orderRecovery": {
+      "result": "PASS",
+      "checks": [
+        "Interrupted response retains exact order request and quote; no false success",
+        "Reload recovers one original order; direct shop WhatsApp includes order reference, with no app screenshot upload",
+        "Recovered order immediately provides pinned UPI/WhatsApp/tracking while decorative art loops",
+        "Open catalog and product view refresh current price/stock without re-signing unchanged photos; sold-out checkout blocked"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "productActions": {
+      "result": "PASS",
+      "scope": "Real UI; fixture product/price and mocked order. No live messages/payments/writes.",
+      "checks": [
+        "description only after product open",
+        "pinned header/footer across 5 viewport sizes",
+        "44px touch targets and no overlapping content",
+        "size-required focus prompt",
+        "sold-out sizes blocked",
+        "WhatsApp carries chosen size",
+        "pickup flow keeps chosen variant",
+        "delivery-only default works",
+        "owner ordering-off hides purchase button",
+        "blank description hidden",
+        "dark theme in product portal"
+      ],
+      "screenshots": "/workspace/review/catalog-product-actions",
+      "errors": [],
+      "liveWrites": 0
+    },
+    "gallery": {
+      "widths": [
+        320,
+        390,
+        768,
+        1440
+      ],
+      "galleryThreeAngles": true,
+      "missingMigrationCoverFallback": true,
+      "productDialog": true,
+      "realWrites": 0,
+      "errors": []
+    },
+    "catalogThemes": {
+      "palettes": 7,
+      "publicTheme": "ivory",
+      "previewOnly": true,
+      "heroSizes": [
+        {
+          "width": 320,
+          "heroHeight": 273.609375
+        },
+        {
+          "width": 390,
+          "heroHeight": 221.546875
+        },
+        {
+          "width": 768,
+          "heroHeight": 294
+        },
+        {
+          "width": 1440,
+          "heroHeight": 294
+        }
+      ],
+      "viewportBottomNavigation": [
+        {
+          "scrollY": 0,
+          "bottom": 844
+        },
+        {
+          "scrollY": 400,
+          "bottom": 844
+        },
+        {
+          "scrollY": 1113,
+          "bottom": 844
+        }
+      ],
+      "allWidthsFit": true,
+      "noLiveWrites": true,
+      "errors": []
+    },
+    "ivoryBackground": {
+      "foregroundStatic": true,
+      "liquidBackgroundMoves": true,
+      "threeDecorativeLoopsOnly": true,
+      "motionOffStops": true,
+      "reducedMotionStops": true,
+      "offscreenPauses": true,
+      "backgroundHandlerPauses": true,
+      "ctaResponds": true,
+      "widths": [
+        320,
+        390,
+        768,
+        1440
+      ],
+      "realWrites": 0,
+      "errors": []
+    },
+    "ownerOrderMessages": {
+      "result": "PASS",
+      "checks": [
+        "Outside delivery: manual receipt → no-GST default bill1080 including80delivery; original physical item1000",
+        "Pickup:300UPI prepaid plus700Cash generates one correctly split invoice",
+        "Paid cancel requires refund-pending stage, owner confirmation/reference and deduplicated saved request",
+        "Failed save has no false prompt; successful confirm/pack/dispatch/complete/cancel/refund opens accurate WhatsApp preview, with explicit send link and persistent resend action; no message sent by tests"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "cameraLifecycle": {
+      "result": "PASS",
+      "checks": [
+        "Rear720p camera and180ms retry; capability-gated continuous autofocus and torch",
+        "Parent callback rerenders keep one camera; accepted frame latched; unknown-code toast throttled",
+        "Background/unmount stops camera; resume restarts; permission retry and late-start cleanup work"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "posScanAndLanguage": {
+      "result": "PASS",
+      "checks": [
+        "Label aliases and legacy barcode resolve the exact size; duplicate old codes and zero stock do not add a wrong pair",
+        "USB keyboard scan adds correct size; camera duplicate frames add once and close immediately",
+        "English add-product has no Hinglish leftovers; category hints, placeholder, validation and Hinglish→English switch verified"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "printLabels": {
+      "selectionSurvivesSearch": true,
+      "mobileDockVisible": true,
+      "clearSelection": true,
+      "countClampedTo500": true,
+      "twoLabelPreview": true,
+      "qr16mmAndCode128DecodedAt203dpiBothLayouts": true,
+      "losslessLabelPDFDownloadedBothLayouts": true,
+      "ownerFreeDeliverySave": true,
+      "longListDockVisible": true,
+      "staffSettingsBlocked": true,
+      "mockedWrites": 1,
+      "realWrites": 0,
+      "errors": []
+    },
+    "actualPdfDecoding": {
+      "result": "PASS",
+      "checks": [
+        "QR and Code128 both decoded from actual downloaded sheet/roll PDFs rasterized at203dpi",
+        "16mm QR physical size preserved on A4 sheet and50x38mm roll"
+      ],
+      "results": [
+        {
+          "layout": "sheet",
+          "physicalQrWidthMm": 16.07
+        },
+        {
+          "layout": "roll",
+          "physicalQrWidthMm": 15.94
+        }
+      ]
+    },
+    "retailRegression": {
+      "result": "PASS",
+      "checks": [
+        "customer lookup failure stops sale",
+        "paise visible in POS",
+        "lost response + reload recovered same bill",
+        "size swap without new sale; return selected replacement with UPI",
+        "CSV escaped/multiline preview and confirmation",
+        "old pending order reachable on page 3",
+        "ledger and coupons pagination",
+        "orders errors do not display false empty state"
+      ],
+      "liveWrites": 0
+    },
+    "productCategories": {
+      "result": "PASS",
+      "checks": [
+        "category required on new product",
+        "subcategory required for Men/Women",
+        "sixth Other saved with department",
+        "owner category edit and reload persistence",
+        "staff category edit hidden",
+        "legacy Ladies/Girls in Women and Gents in Men",
+        "six subcategories in dropdown for each adult department",
+        "filters reset when switching department",
+        "mobile owner and catalog layout",
+        "owner name, description and size editing",
+        "owner cancellation confirmation and separate audit history",
+        "professional WhatsApp share link and selected-size deep link",
+        "unavailable shared product falls back safely"
+      ],
+      "productionWrites": 0
+    },
+    "pdfRegression": {
+      "languageSwitches": "English → Hindi → Hinglish → English passed",
+      "mobileWidth": 390,
+      "ledgerPages": 4,
+      "downloadBytes": 472996,
+      "share": {
+        "active": true,
+        "name": "Ledger-test.pdf",
+        "bytes": 472996
+      },
+      "shareFailureFallback": "download received",
+      "thermal": "download received",
+      "pageErrors": []
+    },
+    "lazyToolsAndNavigation": {
+      "scope": "120 synthetic products,101 unique photo paths; warm client navigation POS→Products→Posters; no real writes",
+      "productReads": 1,
+      "signCalls": 2,
+      "signedPaths": 101,
+      "productBytes": 45382,
+      "errors": [],
+      "incrementalListAndSearch": true,
+      "lazyBarcodeAndQrTools": true,
+      "logoutLoginRenewsImages": true,
+      "sameBrowserContextAuthReset": true
+    }
+  },
+  "reviewFixes": [
+    "Pause selector specificity corrected after animation inspection.",
+    "QR SVG explicit dimensions fixed real PDF clipping; lossless PNG fast compression retains readable edges.",
+    "Actual-size A4 PDF uses202mm content and4mm margins; decoded QR widths16.07mm and15.94mm at203dpi."
+  ],
+  "physicalDeviceLimit": "Camera lifecycle uses controlled camera fixtures. Actual printed phone-camera scan quality still depends on the device, printer, paper and light."
+}

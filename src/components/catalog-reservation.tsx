@@ -1,6 +1,6 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useReducedMotion } from "motion/react";
-import { ArrowUpRight, Clock, Package } from "lucide-react";
+import { ArrowUpRight, Clock, Package, Pause, Play } from "lucide-react";
 import { DialogTitle } from "@/components/ui/dialog";
 import { CatalogPaymentProof } from "@/components/catalog-payment-proof";
 import type { CatalogProduct, BookingResult } from "@/lib/catalog.functions";
@@ -14,6 +14,11 @@ const COPY = {
     title: "Your pair is reserved.",
     subtitle: "Complete payment to confirm your order.",
     pending: "PAYMENT PENDING",
+    notConfirmed: "Order is not confirmed yet",
+    instructions:
+      "Pay, then send the screenshot on WhatsApp. The store will verify and confirm your order.",
+    pause: "Pause animation",
+    resume: "Resume animation",
     order: "Order no.",
     size: "Selected size",
     price: "Product price",
@@ -41,6 +46,10 @@ const COPY = {
     title: "आपकी जोड़ी आरक्षित है।",
     subtitle: "ऑर्डर पक्का करने के लिए भुगतान करें।",
     pending: "भुगतान बाकी है",
+    notConfirmed: "ऑर्डर अभी पक्का नहीं हुआ है",
+    instructions: "भुगतान करके WhatsApp पर स्क्रीनशॉट भेजें। दुकान जाँच के बाद ऑर्डर पक्का करेगी।",
+    pause: "एनिमेशन रोकें",
+    resume: "एनिमेशन चलाएँ",
     order: "ऑर्डर नं.",
     size: "चुना गया साइज़",
     price: "प्रोडक्ट की कीमत",
@@ -68,6 +77,11 @@ const COPY = {
     title: "Aapka pair reserved hai.",
     subtitle: "Order confirm karne ke liye payment karein.",
     pending: "PAYMENT BAAKI HAI",
+    notConfirmed: "Order abhi confirm nahi hua hai",
+    instructions:
+      "Pay karke WhatsApp par screenshot bhejein. Dukaan verify karke order confirm karegi.",
+    pause: "Animation rokein",
+    resume: "Animation chalayen",
     order: "Order no.",
     size: "Selected size",
     price: "Product ki price",
@@ -121,6 +135,14 @@ export function CatalogReservation({
   const [failedPhoto, setFailedPhoto] = useState(false);
   const [opaque, setOpaque] = useState(true);
   const [cors, setCors] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const update = () => setHidden(document.hidden);
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
   const shop = result.shop.trim() || "Footwear Store";
   const split = /^(.+?)\s+footwear$/i.exec(shop);
   const name = split?.[1] ?? shop;
@@ -152,6 +174,7 @@ export function CatalogReservation({
       className={css["experience"] + (motion ? " " + css["animate"] : "")}
       data-order-success
       data-motion={motion}
+      data-animation-paused={paused || hidden}
       data-theme={dark ? "dark" : "light"}
       data-no-translate
     >
@@ -202,6 +225,17 @@ export function CatalogReservation({
       </svg>
       <div className={css["cream-light"]} aria-hidden="true" />
       <header className={css["topbar"]}>
+        {motion && (
+          <button
+            type="button"
+            className={css["motion-toggle"]}
+            aria-label={paused ? copy.resume : copy.pause}
+            aria-pressed={paused}
+            onClick={() => setPaused((p) => !p)}
+          >
+            {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+          </button>
+        )}
         <div className={css["wordmark"]}>
           {name}
           {subtitle && <span>{subtitle}</span>}
@@ -395,34 +429,45 @@ export function CatalogReservation({
           <Clock aria-hidden="true" />
           {copy.deadline}
         </p>
-        {result.upi_id && upi ? (
-          <a className={css["pay"]} href={upi} aria-label={copy.pay}>
-            <span>
-              {copy.pay} · {inr(Number(result.advance))}
-            </span>
-            <ArrowUpRight aria-hidden="true" />
-          </a>
-        ) : (
-          <p role="alert" className={css["helper"]}>
-            {copy.paymentMissing}
-          </p>
-        )}
-        <div className={css["proof-wrapper"]}>
-          {proof ? (
-            <CatalogPaymentProof language={lang} whatsappUrl={proof} />
-          ) : (
-            <p className={css["helper"]}>{copy.proofMissing}</p>
-          )}
-        </div>
-        <div className={css["actions"]}>
-          <button type="button" className={css["track"]} onClick={onTrack}>
-            {copy.track}
-          </button>
-          <button type="button" className={css["track"]} onClick={onClose}>
-            {copy.close}
-          </button>
-        </div>
       </section>
+      <footer className={css["payment-dock"]} data-reservation-payment-actions>
+        <div className={css["dock-inner"]}>
+          <div className={css["dock-status"]}>
+            <span>{copy.notConfirmed}</span>
+            <strong>{inr(Number(result.advance))}</strong>
+          </div>
+          <div className={css["dock-buttons"]}>
+            {result.upi_id && upi ? (
+              <a className={css["pay"]} href={upi} aria-label={copy.pay}>
+                <span>
+                  {copy.pay} · {inr(Number(result.advance))}
+                </span>
+                <ArrowUpRight aria-hidden="true" />
+              </a>
+            ) : (
+              <p role="alert" className={css["helper"]}>
+                {copy.paymentMissing}
+              </p>
+            )}
+            <div className={css["proof-wrapper"]}>
+              {proof ? (
+                <CatalogPaymentProof language={lang} whatsappUrl={proof} compact />
+              ) : (
+                <p className={css["helper"]}>{copy.proofMissing}</p>
+              )}
+            </div>
+          </div>
+          <p className={css["dock-note"]}>{copy.instructions}</p>
+          <div className={css["actions"]}>
+            <button type="button" className={css["track"]} onClick={onTrack}>
+              {copy.track}
+            </button>
+            <button type="button" className={css["track"]} onClick={onClose}>
+              {copy.close}
+            </button>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

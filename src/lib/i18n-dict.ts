@@ -1,5 +1,15 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Large sizes": {"hindi": "बड़े साइज़", "hinglish": "Bade size"},
+"Small": {"hindi": "छोटे", "hinglish": "Chhote"},
+"Large": {"hindi": "बड़े", "hinglish": "Bade"},
+"For example: 13 or 4": {"hindi": "जैसे 13 या 4", "hinglish": "Jaise 13 ya 4"},
+"Enter an article name": {"hindi": "आर्टिकल का नाम लिखें", "hinglish": "Article ka naam likhein"},
+"Enter a selling price": {"hindi": "बिक्री की कीमत लिखें", "hinglish": "Selling price likhein"},
+"Select at least one size": {"hindi": "कम से कम एक साइज़ चुनें", "hinglish": "Kam se kam ek size chunein"},
+"This code matches multiple sizes. Select the correct size or print its unique label.": {"hindi": "यह कोड कई साइज़ से जुड़ा है। सही साइज़ चुनें या उसका अलग लेबल प्रिंट करें।", "hinglish": "Yeh code kai sizes se juda hai. Sahi size chunein ya uska unique label print karein."},
+
+"For clear scans: print at 100% / Actual size, use the matching label paper size and a clean, high-quality print. Avoid Fit to page.": {"hindi": "साफ़ स्कैन के लिए 100% / Actual size पर, सही लेबल पेपर साइज़ और अच्छी गुणवत्ता में प्रिंट करें। Fit to page न चुनें।", "hinglish": "Saaf scan ke liye 100% / Actual size par, sahi label paper size aur achhi quality mein print karein. Fit to page na chunein."},
 "Last reset: database allocation": {"hindi": "पिछला रीसेट: डेटाबेस की आवंटित जगह", "hinglish": "Pichla reset: database allocation"},
 "Reclaimed allocation:": {"hindi": "वापस खाली की गई जगह:", "hinglish": "Reclaim hui jagah:"},
 "Base tables, saved setup and maintenance records still use some space. Photo cleanup is reported separately.": {"hindi": "बुनियादी टेबल, सेव सेटअप और रखरखाव रिकॉर्ड कुछ जगह इस्तेमाल करते हैं। फोटो सफाई की स्थिति अलग दिखाई जाती है।", "hinglish": "Base tables, saved setup aur maintenance records kuch jagah use karte hain. Photo cleanup ka status alag dikhaya jata hai."},

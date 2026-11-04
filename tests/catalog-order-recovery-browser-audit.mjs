@@ -160,16 +160,15 @@ try {
   );
   assert(await dialog().getByRole("link", { name: "Pay with UPI", exact: true }).isVisible());
   await page.waitForTimeout(1300);
-  assert.equal(
-    await page
+  assert(
+    (await page
       .locator("[data-order-success]")
       .evaluate(
         (el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,
-      ),
-    0,
+      )) > 0,
   );
   checks.push(
-    "Recovered order immediately provides UPI/tracking; success flourish settles within1.3seconds",
+    "Recovered order immediately provides pinned UPI/WhatsApp/tracking while decorative art loops",
   );
   await dialog().getByRole("button", { name: "Close", exact: true }).first().click();
   await page.evaluate(() => {
