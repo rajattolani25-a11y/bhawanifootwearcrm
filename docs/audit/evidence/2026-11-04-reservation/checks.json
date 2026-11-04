@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-04",
+  "scope": "Local pre-push verification; synthetic intercepted APIs, no production writes",
+  "browser": [
+    {
+      "test": "catalog-order-recovery-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 12.3
+    },
+    {
+      "test": "catalog-product-actions-audit.mjs",
+      "exit": 0,
+      "seconds": 23.9
+    },
+    {
+      "test": "catalog-product-gallery-audit.mjs",
+      "exit": 0,
+      "seconds": 13.3
+    },
+    {
+      "test": "catalog-theme-audit.mjs",
+      "exit": 0,
+      "seconds": 8.7
+    },
+    {
+      "test": "ivory-background-audit.mjs",
+      "exit": 0,
+      "seconds": 9.1
+    },
+    {
+      "test": "catalog-reservation-browser-audit.mjs",
+      "exit": 0,
+      "seconds": 35.4
+    }
+  ],
+  "reservation": {
+    "result": "PASS",
+    "checks": [
+      "Only after saved response: selected real photo/size, authoritative999/500/499 amounts, pending-payment status, UPI and tracking immediately usable",
+      "Real fullscreen viewport bounds at320/390/430/768/1440; no horizontal overflow; payment/WhatsApp accessible by scroll; no screenshot picker",
+      "Finite animation settles within1.3s; no loop or artificial payment delay",
+      "Reservation and existing proof actions respond to English/Hindi/Hinglish language",
+      "Owner motion OFF and device reduced-motion retain static artwork with no animations",
+      "Opaque photo uses framed fallback; failed cover falls back to branded box without blocking payment",
+      "Customer dark preference retains a readable dark reservation screen",
+      "Delivery and coupon reservation displays original999, discount100, fee30 and payable929; no fictitious pickup balance"
+    ],
+    "errors": [],
+    "external": [],
+    "productionWrites": 0
+  },
+  "unitTestsPassed": 39,
+  "typescript": "PASS",
+  "productionBuild": "PASS",
+  "semanticLint": "PASS",
+  "newMigrationRequired": false,
+  "newDependencies": false,
+  "websiteIntroIncluded": false
+}

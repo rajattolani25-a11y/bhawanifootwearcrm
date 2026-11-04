@@ -176,7 +176,7 @@ try {
   await page.getByPlaceholder("Your name", { exact: true }).fill("Demo Customer");
   await page.getByPlaceholder("Mobile number", { exact: true }).fill("9999999999");
   await page.getByRole("button", { name: "Place order", exact: true }).click();
-  await page.getByText("Order placed — pair kept aside", { exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Your pair is reserved.", exact: true }).waitFor();
   const orders = await page.evaluate(() => window.__catalogOrderCalls);
   assert.equal(orders.length, 1);
   assert.equal(orders[0].variantId, products[0].sizes[0].id);

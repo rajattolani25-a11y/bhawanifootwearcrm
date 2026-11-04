@@ -159,7 +159,7 @@ try {
     "Reload recovers one original order; direct shop WhatsApp includes order reference, with no app screenshot upload",
   );
   assert(await dialog().getByRole("link", { name: "Pay with UPI", exact: true }).isVisible());
-  await page.waitForTimeout(850);
+  await page.waitForTimeout(1300);
   assert.equal(
     await page
       .locator("[data-order-success]")
@@ -169,7 +169,7 @@ try {
     0,
   );
   checks.push(
-    "Recovered order immediately provides UPI/tracking; success flourish settles within1second",
+    "Recovered order immediately provides UPI/tracking; success flourish settles within1.3seconds",
   );
   await dialog().getByRole("button", { name: "Close", exact: true }).first().click();
   await page.evaluate(() => {

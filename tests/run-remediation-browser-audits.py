@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor,as_completed
 import subprocess,os,json,time
 root=Path(__file__).resolve().parents[1]
 out=Path(os.environ.get('AUDIT_OUT','/tmp/solestack-audit/remediation-run'));out.mkdir(parents=True,exist_ok=True)
-names=['product-photos-browser-audit.mjs','retail-integrity-browser-audit.mjs','presentation-settings-audit.mjs','store-maintenance-browser-audit.mjs','label-dock-audit.mjs','poster-studio-audit.mjs','catalog-theme-audit.mjs','browser-audit.mjs','storage-meter-browser-audit.mjs','catalog-product-gallery-audit.mjs','ivory-background-audit.mjs','catalog-product-actions-audit.mjs','sales-financial-browser-audit.mjs','operations-safety-browser-audit.mjs','receipts-financial-browser-audit.mjs','catalog-order-recovery-browser-audit.mjs','order-fulfillment-browser-audit.mjs']
+names=['product-photos-browser-audit.mjs','retail-integrity-browser-audit.mjs','presentation-settings-audit.mjs','store-maintenance-browser-audit.mjs','label-dock-audit.mjs','poster-studio-audit.mjs','catalog-theme-audit.mjs','browser-audit.mjs','storage-meter-browser-audit.mjs','catalog-product-gallery-audit.mjs','ivory-background-audit.mjs','catalog-product-actions-audit.mjs','sales-financial-browser-audit.mjs','operations-safety-browser-audit.mjs','receipts-financial-browser-audit.mjs','catalog-order-recovery-browser-audit.mjs','order-fulfillment-browser-audit.mjs','catalog-reservation-browser-audit.mjs']
 def audit(name):
  original=root/'tests'/name
  source=original.read_text().replace('http://localhost:8080/','http://127.0.0.1:3000/').replace('import.meta.url',json.dumps(original.as_uri()))
