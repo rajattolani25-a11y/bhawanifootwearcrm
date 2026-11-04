@@ -1,3 +1,4 @@
+import { catalogStyleValue, type CatalogStyleGroup } from "@/lib/catalog-style-options";
 import { catalogSizeValue, type CatalogSizeGroup } from "@/lib/catalog-size-options";
 import { X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
@@ -7,6 +8,8 @@ export type CatalogSort = "default" | "price-asc" | "price-desc" | "name" | "dis
 const COPY = {
   english: {
     title: "Filters & sort",
+    style: "Style",
+    allStyles: "All styles",
     size: "Size",
     anySize: "Any size",
     sort: "Sort by",
@@ -19,6 +22,8 @@ const COPY = {
   },
   hindi: {
     title: "फ़िल्टर और क्रम",
+    style: "स्टाइल",
+    allStyles: "सभी स्टाइल",
     size: "साइज़",
     anySize: "कोई भी साइज़",
     sort: "क्रम चुनें",
@@ -31,6 +36,8 @@ const COPY = {
   },
   hinglish: {
     title: "Filters & sort",
+    style: "Style",
+    allStyles: "Saare styles",
     size: "Size",
     anySize: "Koi bhi size",
     sort: "Sort by",
@@ -50,8 +57,14 @@ export function CatalogCollectionFilters({
   sort,
   setSort,
   onClear,
+  styleGroups,
+  selectedStyle,
+  setStyle,
 }: {
   groups: CatalogSizeGroup[];
+  styleGroups: CatalogStyleGroup[];
+  selectedStyle: string;
+  setStyle: (value: string) => void;
   size: string;
   setSize: (value: string) => void;
   sort: CatalogSort;
@@ -60,7 +73,30 @@ export function CatalogCollectionFilters({
 }) {
   const { lang, t } = useLang();
   const copy = COPY[lang];
-  const refined = size !== "All" || sort !== "default";
+  const shortSort = {
+    english: {
+      default: "Default",
+      "price-asc": "Low–High",
+      "price-desc": "High–Low",
+      name: "A–Z",
+      discount: "Discount ↓",
+    },
+    hindi: {
+      default: "सामान्य",
+      "price-asc": "कम–ज़्यादा",
+      "price-desc": "ज़्यादा–कम",
+      name: "A–Z",
+      discount: "छूट ↓",
+    },
+    hinglish: {
+      default: "Default",
+      "price-asc": "Kam–Zyada",
+      "price-desc": "Zyada–Kam",
+      name: "A–Z",
+      discount: "Discount ↓",
+    },
+  }[lang];
+  const refined = size !== "All" || sort !== "default" || selectedStyle !== "All";
   const selected = groups.flatMap((group) =>
     group.sizes.map((value) => catalogSizeValue(group.department, value)),
   );
@@ -71,6 +107,20 @@ export function CatalogCollectionFilters({
       unavailable = `${t(department)} · ${value}`;
     } catch {
       unavailable = size;
+    }
+  }
+  let missingStyle = "";
+  if (
+    selectedStyle !== "All" &&
+    !styleGroups.some((group) =>
+      group.styles.some((style) => catalogStyleValue(group.department, style) === selectedStyle),
+    )
+  ) {
+    try {
+      const [department, style] = JSON.parse(selectedStyle) as [string, string];
+      missingStyle = `${t(department)} · ${t(style)}`;
+    } catch {
+      missingStyle = selectedStyle;
     }
   }
   return (
@@ -110,9 +160,34 @@ export function CatalogCollectionFilters({
             onChange={(event) => setSort(event.target.value as CatalogSort)}
           >
             {(["default", "price-asc", "price-desc", "name", "discount"] as const).map((value) => (
-              <option key={value} value={value}>
-                {copy[value]}
+              <option key={value} value={value} aria-label={copy[value]}>
+                {shortSort[value]}
               </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles["filter"]}>
+          <span>{copy.style}</span>
+          <select
+            aria-label={copy.style}
+            value={selectedStyle}
+            disabled={!styleGroups.length && selectedStyle === "All"}
+            onChange={(event) => setStyle(event.target.value)}
+          >
+            <option value="All">{copy.allStyles}</option>
+            {missingStyle && (
+              <option value={selectedStyle} disabled>
+                {missingStyle}
+              </option>
+            )}
+            {styleGroups.map((group) => (
+              <optgroup key={group.department} label={t(group.department)}>
+                {group.styles.map((style) => (
+                  <option key={style} value={catalogStyleValue(group.department, style)}>
+                    {t(style)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>

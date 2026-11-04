@@ -24,7 +24,8 @@ export const Route = createFileRoute("/_authenticated/bookings")({
   component: Bookings,
 });
 
-type Booking = { id: string; booking_no: string; variant_id: string; product_name: string; size: string; customer_name: string; mobile: string; price: number; advance: number; status: string; receipt_recorded?: boolean | null; refund_paid_at?: string | null; refund_reference?: string | null; note: string | null; expires_at: string; created_at: string; fulfillment: string; delivery_charge: number; address: string | null; area: string | null };
+type Booking = { id: string; booking_no: string; variant_id: string; product_name: string; size: string; customer_name: string; mobile: string; price: number; advance: number; status: string; receipt_recorded?: boolean | null; refund_paid_at?: string | null; refund_reference?: string | null; product_variants?: { products: { color: string | null } | null } | null; note: string | null; expires_at: string; created_at: string; fulfillment: string; delivery_charge: number; address: string | null; area: string | null };
+const bookingProductName = (booking: Booking) => `${booking.product_name}${booking.product_variants?.products?.color ? ` · ${booking.product_variants.products.color}` : ""}`;
 const TABS = [["pending", "Pending payment"], ["active", "To fulfil"], ["done", "Completed"], ["closed", "Cancelled"]] as const;
 const GROUP: Record<string, string> = { pending: "pending", confirmed: "active", packed: "active", shipped: "active", picked: "done", delivered: "done", cancelled: "closed", expired: "closed", refund_pending: "closed", refunded: "closed" };
 const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
@@ -47,7 +48,7 @@ function Bookings() {
       const expired = await supabase.rpc("expire_catalog_bookings");
       if (expired.error) throw expired.error;
       const statuses = Object.keys(GROUP).filter((status) => GROUP[status] === tab);
-      const { data, error, count } = await supabase.from("catalog_bookings").select("*", { count: "exact" }).in("status", statuses).order("created_at", { ascending: false }).order("id").range(page * pageSize,(page + 1) * pageSize - 1);
+      const { data, error, count } = await supabase.from("catalog_bookings").select("*,product_variants(products(color))", { count: "exact" }).in("status", statuses).order("created_at", { ascending: false }).order("id").range(page * pageSize,(page + 1) * pageSize - 1);
       if (error) throw error;
       return { rows: data as Booking[], count: count ?? 0 };
     },
@@ -57,7 +58,7 @@ function Bookings() {
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
   const list = result?.rows ?? [];
-  const msg = (b: Booking, st: string) => waLink(b.mobile, statusText(lang, { booking_no: b.booking_no, product: b.product_name, size: b.size, name: b.customer_name, price: b.price, advance: ["picked", "delivered"].includes(st) ? Number(b.price) + Number(b.delivery_charge || 0) : b.advance, delivery_charge: b.delivery_charge, fulfillment: b.fulfillment, shop: shop.name, address: b.fulfillment === "pickup" ? null : [b.address, b.area].filter(Boolean).join(", ") }, st, `${window.location.origin}/catalog?track=${b.booking_no}`));
+  const msg = (b: Booking, st: string) => waLink(b.mobile, statusText(lang, { booking_no: b.booking_no, product: bookingProductName(b), size: b.size, name: b.customer_name, price: b.price, advance: ["picked", "delivered"].includes(st) ? Number(b.price) + Number(b.delivery_charge || 0) : b.advance, delivery_charge: b.delivery_charge, fulfillment: b.fulfillment, shop: shop.name, address: b.fulfillment === "pickup" ? null : [b.address, b.area].filter(Boolean).join(", ") }, st, `${window.location.origin}/catalog?track=${b.booking_no}`));
   async function move(b: Booking, st: "packed" | "shipped") {
     const { error } = await supabase.rpc("update_catalog_order_status", { _id: b.id, _status: st });
     if (error) { toast.error(error.message); return; }
@@ -97,7 +98,7 @@ function Bookings() {
       <div className="grid gap-3 md:grid-cols-2">
         {list.map((b) => (
           <div key={b.id} className="rounded-lg border bg-card p-4">
-            <div className="flex justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><p className="text-xs font-semibold text-primary" data-no-translate>{b.booking_no}</p><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{TYPE_LABEL[b.fulfillment] ?? b.fulfillment}</span><span className="rounded-full border px-2 py-0.5 text-[11px]">{STATUS_LABEL[b.status] ?? b.status}</span></div><p className="font-semibold" data-no-translate>{b.product_name}</p><p className="text-sm"><span>Size</span> {b.size}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">{b.fulfillment === "pickup" ? "Advance" : "Paid"}</p><p className="font-display text-lg font-bold">{inr(b.advance)}</p>{b.fulfillment === "pickup" ? <p className="text-xs text-muted-foreground"><span>of</span> {inr(b.price)}</p> : b.delivery_charge > 0 && <p className="text-xs text-muted-foreground"><span>incl. delivery</span> {inr(b.delivery_charge)}</p>}</div></div>
+            <div className="flex justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><p className="text-xs font-semibold text-primary" data-no-translate>{b.booking_no}</p><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{TYPE_LABEL[b.fulfillment] ?? b.fulfillment}</span><span className="rounded-full border px-2 py-0.5 text-[11px]">{STATUS_LABEL[b.status] ?? b.status}</span></div><p className="font-semibold" data-no-translate>{b.product_name}</p><p className="text-sm"><span>Size</span> {b.size}{b.product_variants?.products?.color && <span data-no-translate> · {b.product_variants.products.color}</span>}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">{b.fulfillment === "pickup" ? "Advance" : "Paid"}</p><p className="font-display text-lg font-bold">{inr(b.advance)}</p>{b.fulfillment === "pickup" ? <p className="text-xs text-muted-foreground"><span>of</span> {inr(b.price)}</p> : b.delivery_charge > 0 && <p className="text-xs text-muted-foreground"><span>incl. delivery</span> {inr(b.delivery_charge)}</p>}</div></div>
             <p className="mt-2 text-sm"><span data-no-translate>{b.customer_name}</span> · {b.mobile}</p>
             <p className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleString("en-IN")}{b.status === "pending" && <> · <span>Releases at</span> {new Date(b.expires_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</>}</p>
             {b.address && <p className="mt-1 rounded bg-muted p-2 text-xs" data-no-translate>{b.address}{b.area ? `, ${b.area}` : ""}</p>}
@@ -149,7 +150,7 @@ function PickupBill({ b, onClose, onDone }: { b: Booking; onClose: () => void; o
         _sale: { payment_mode: mode === "Cash" && rest > 0 ? "Split" : "UPI", split_cash: mode === "Cash" ? rest : 0,
           bill_type: Number(rate) ? "gst" : "simple", tax_mode: "inclusive", subtotal: bill.subtotal, discount: 0, taxable: bill.taxable, gst_rate: bill.rate, gst_amount: bill.gst,
           total: bill.total, paid_amount: bill.total, due_amount: 0, give_stamp: true, delivery_charge: Number(b.delivery_charge || 0) },
-        _items: [{ variant_id: b.variant_id, product_name: b.product_name, size: b.size, sku: null, price: b.price, qty: 1, discount: 0 }],
+        _items: [{ variant_id: b.variant_id, product_name: bookingProductName(b), size: b.size, sku: null, price: b.price, qty: 1, discount: 0 }],
       });
       if (error) throw error;
       const billNo = (data as { bill_no: string }).bill_no;

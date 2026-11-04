@@ -1,0 +1,156 @@
+{
+  "scope": "Owner colour photos/stock and compact department-specific Style beside Size/Sort",
+  "browser_suites": {
+    "owner_colours": {
+      "pass": true,
+      "inheritedDetailsAndPrices": true,
+      "zeroOpeningStock": true,
+      "separatePhotoFolder": true,
+      "guardedColourStock": true,
+      "billingDeductsSelectedColourOnly": true,
+      "ownerCatalogPublish": true,
+      "parentStockUnchanged": true,
+      "duplicateColourBlocked": true,
+      "staffAddHidden": true,
+      "productionWrites": 0
+    },
+    "public_colours": {
+      "pass": true,
+      "colourPhotosSwitch": true,
+      "correctGalleryFolder": true,
+      "correctColourSizes": true,
+      "selectionResets": true,
+      "correctOrderVariantAndPrice": true,
+      "colourInShareAndInquiry": true,
+      "unrelatedProductsExcluded": true,
+      "productionWrites": 0
+    },
+    "collection_style": {
+      "passed": true,
+      "countRemoved": true,
+      "fiveSortOrders": true,
+      "photoInquiryWithoutFilePicker": true,
+      "whatsappHandoffIncludesSelectedCategoryAndSize": true,
+      "photoInquiryResetAndThreeLanguages": true,
+      "categorySizeGroups": true,
+      "overlappingSizeLabelsSeparated": true,
+      "spotlightBeforeControls": true,
+      "brandRemoved": true,
+      "styleAlongsideSizeAndSort": true,
+      "separateMenWomenStyles": true,
+      "blankBrandProductRetained": true,
+      "noBlankSizeOptionOnStockRefresh": true,
+      "correctProductOpens": true,
+      "livePriceRefreshReorders": true,
+      "languages": 3,
+      "layouts": [
+        {
+          "width": 320,
+          "height": 568,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 1440,
+          "height": 1000,
+          "aligned": true,
+          "noOverflow": true
+        }
+      ],
+      "errors": [],
+      "productionWrites": 0
+    },
+    "scanner": {
+      "result": "PASS",
+      "checks": [
+        "Label aliases and legacy barcode resolve the exact size; duplicate old codes and zero stock do not add a wrong pair",
+        "USB keyboard scan adds correct size; camera duplicate frames add once and close immediately",
+        "English add-product has no Hinglish leftovers; category hints, placeholder, validation and Hinglish→English switch verified"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "owner_product_categories": {
+      "result": "PASS",
+      "checks": [
+        "category required on new product",
+        "subcategory required for Men/Women",
+        "sixth Other saved with department",
+        "owner category edit and reload persistence",
+        "staff category edit hidden",
+        "legacy Ladies/Girls in Women and Gents in Men",
+        "owner subcategory dropdowns retained; public Style/Brand filters removed",
+        "category-specific grouped sizes; Women and legacy Girls labelled separately; size resets between departments",
+        "mobile owner and catalog layout",
+        "owner article/colour/MRP/selling-price edits persist; invalid amounts blocked and stale colour/price conflicts rejected",
+        "master profile edits preserve historical invoice prices and stock; staff price fields hidden",
+        "description and size editing",
+        "owner cancellation confirmation and separate audit history",
+        "professional WhatsApp share link and selected-size deep link",
+        "unavailable shared product falls back safely"
+      ],
+      "productionWrites": 0
+    },
+    "retail_integrity": {
+      "result": "PASS",
+      "checks": [
+        "customer lookup failure stops sale",
+        "paise visible in POS",
+        "lost response + reload recovered same bill",
+        "size swap without new sale; return selected replacement with UPI",
+        "CSV escaped/multiline preview and confirmation",
+        "old pending order reachable on page 3",
+        "ledger and coupons pagination",
+        "orders errors do not display false empty state"
+      ],
+      "liveWrites": 0
+    },
+    "order_fulfilment": {
+      "result": "PASS",
+      "checks": [
+        "Outside delivery: manual receipt → no-GST default bill1080 including80delivery; original physical item1000",
+        "Pickup:300UPI prepaid plus700Cash generates one correctly split invoice",
+        "Paid cancel requires refund-pending stage, owner confirmation/reference and deduplicated saved request",
+        "Failed save has no false prompt; successful confirm/pack/dispatch/complete/cancel/refund opens accurate WhatsApp preview, with explicit send link and persistent resend action; no message sent by tests"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    },
+    "order_recovery": {
+      "result": "PASS",
+      "checks": [
+        "Interrupted response retains exact order request and quote; no false success",
+        "Reload recovers one original order; direct shop WhatsApp includes order reference, with no app screenshot upload",
+        "Recovered order immediately provides pinned UPI/WhatsApp/tracking while decorative art loops",
+        "Open catalog and product view refresh current price/stock without re-signing unchanged photos; sold-out checkout blocked"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    }
+  },
+  "unit_tests": {
+    "passed": 45,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "scoped_eslint": "passed",
+  "production_build": "passed",
+  "visual_review": [
+    "Owner Add colour inherits metadata/prices and supports photo picker with no quantity entry",
+    "Catalog White selection has its actual price, gallery and available sizes",
+    "Collection retains Spotlight before controls"
+  ],
+  "limits": "Synthetic intercepted browser services only; no live database/stock/sale/payment/message write. Existing schema, backend functions and policies unchanged; colours reuse independent existing product/variant IDs."
+}

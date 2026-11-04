@@ -679,7 +679,7 @@ try {
       "owner category edit and reload persistence",
       "staff category edit hidden",
       "legacy Ladies/Girls in Women and Gents in Men",
-      "owner subcategory dropdowns retained; public Style/Brand filters removed",
+      "owner subcategory dropdowns retained; public Brand filter removed",
       "category-specific grouped sizes; Women and legacy Girls labelled separately; size resets between departments",
       "mobile owner and catalog layout",
       "owner article/colour/MRP/selling-price edits persist; invalid amounts blocked and stale colour/price conflicts rejected",

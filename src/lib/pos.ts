@@ -2,6 +2,7 @@ export type CartItem = {
   variant_id: string;
   product_name: string;
   brand: string;
+  colour?: string | null;
   size: string;
   sku: string | null;
   price: number;

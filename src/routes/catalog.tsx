@@ -1,3 +1,5 @@
+import { catalogStyleGroups, catalogStyleMatches } from "@/lib/catalog-style-options";
+import { CatalogColourOptions } from "@/components/CatalogColourOptions";
 import { catalogSizeGroups, catalogSizeMatches } from "@/lib/catalog-size-options";
 import { CatalogCollectionFilters, type CatalogSort } from "@/components/CatalogCollectionFilters";
 import { CatalogProductGrid } from "@/components/CatalogProductGrid";
@@ -128,6 +130,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [about, setAbout] = useState(false);
   const { lang } = useLang();
   const [fsize, setFsize] = useState("All");
+  const [fstyle, setFstyle] = useState("All");
   const [sort, setSort] = useState<CatalogSort>("default");
   const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
   useEffect(() => {
@@ -148,10 +151,11 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
     link.searchParams.delete("product"); link.searchParams.delete("size");
     window.history.replaceState(window.history.state,"",link.toString());
   };
-  const sizeGroups = useMemo(() => catalogSizeGroups(products, filter), [products, filter]);
+  const sizeGroups = useMemo(() => catalogSizeGroups(products.filter(product => catalogStyleMatches(product.category, fstyle)), filter), [products, filter, fstyle]);
+  const styleGroups = useMemo(() => catalogStyleGroups(products, filter), [products, filter]);
   const list = useMemo(() => {
     const s = q.toLowerCase().trim();
-    const filtered = products.filter((p) => categoryMatches(p.category, filter) &&
+    const filtered = products.filter((p) => categoryMatches(p.category, filter) && catalogStyleMatches(p.category, fstyle) &&
       (fsize === "All" || p.sizes.some((x) => x.available && catalogSizeMatches(p.category, x.size, fsize))) &&
       (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s))));
     if (sort === "price-asc") filtered.sort((a, b) => a.price - b.price);
@@ -162,14 +166,14 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       filtered.sort((a, b) => discount(b) - discount(a));
     }
     return filtered;
-  }, [products, q, filter, fsize, sort]);
+  }, [products, q, filter, fsize, fstyle, sort]);
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
   const presentation = catalogPresentation(data.presentation);
 
   const copy = CATALOG_COPY[lang];
-  const resetFilters = () => { setQ(""); setFilter("All"); setFsize("All"); setSort("default"); };
+  const resetFilters = () => { setQ(""); setFilter("All"); setFsize("All"); setFstyle("All"); setSort("default"); };
   const heroAction = () => {
     const hero = data.hero;
     if (!hero) return;
@@ -233,7 +237,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
             <button type="button" onClick={() => setPhoto(true)} aria-label="Ask about a photo" title={copy.photo}><Camera aria-hidden="true" /></button>
           </div>
           <nav className={styles["categories"]} aria-label={copy.categories}>
-            {FILTERS.map((f) => <button key={f} onClick={() => { setFilter(f); setFsize("All"); }} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
+            {FILTERS.map((f) => <button key={f} onClick={() => { setFilter(f); setFsize("All"); setFstyle("All"); }} aria-pressed={filter === f} className={filter === f ? styles["activeCategory"] : styles["category"]}>
               {f === "All" && <ShoppingBag aria-hidden="true" />}<span>{f}</span>
             </button>)}
           </nav>
@@ -243,12 +247,13 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
 
       {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
-        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
+        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${fstyle}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
         <div className={styles["collectionHeader"]}>
           <h2>Shop the collection</h2>
         </div>
         <CatalogCollectionFilters groups={sizeGroups} size={fsize} setSize={setFsize} sort={sort} setSort={setSort}
-          onClear={() => { setFsize("All"); setSort("default"); }} />
+          styleGroups={styleGroups} selectedStyle={fstyle} setStyle={value => { setFstyle(value); setFsize("All"); }}
+          onClear={() => { setFsize("All"); setFstyle("All"); setSort("default"); }} />
         <CatalogProductGrid products={list} onOpen={openProduct} />
         {list.length === 0 && <div className={styles["empty"]}><Search aria-hidden="true" /><h3>No designs found.</h3><p>Try another search or category.</p><button onClick={resetFilters} data-no-translate>{copy.reset}</button></div>}
         <footer className={styles["footer"]}>
@@ -375,9 +380,9 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   useEffect(() => { couponRequest.current++; setDisc(null); setCErr(""); setCouponBusy(false); }, [product?.id, product?.price, size, mobile]);
   if (!product) return null;
   const chosen = product.sizes.find((s) => s.id === size);
-  const label = `${product.brand} ${product.article}`;
+  const label = `${product.brand} ${product.article}${product.color?.trim() ? ` · ${product.color.trim()}` : ""}`;
   const shareUrl = typeof window === "undefined" ? "" : catalogProductLink(window.location.origin, product.id, chosen?.size);
-  const shareText = catalogShareText({ shop: shop.name, brand: product.brand, article: product.article, price: product.price, url: shareUrl, ...(chosen ? { size: chosen.size } : {}), language: lang });
+  const shareText = catalogShareText({ shop: shop.name, brand: product.brand, article: `${product.article}${product.color?.trim() ? ` · ${product.color.trim()}` : ""}`, price: product.price, url: shareUrl, ...(chosen ? { size: chosen.size } : {}), language: lang });
 
   const wa = waTo(shop.phone, enquiryText(lang, shop.name, label, chosen?.size ?? ""));
   const canOrder = shop.booking || shop.local || shop.outside;
@@ -430,7 +435,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   }
 
   const upi = res ? `upi://pay?pa=${encodeURIComponent(res.upi_id)}&pn=${encodeURIComponent(res.shop)}&am=${res.advance}&cu=INR&tn=${encodeURIComponent(res.booking_no)}` : "";
-  const paymentProofMessage = res ? proofText(lang, { booking_no: res.booking_no, product: res.product, size: res.size, name, price: res.price, advance: res.advance, delivery_charge: res.delivery_charge, fulfillment: res.fulfillment, shop: res.shop, address: delivery ? `${address}${area ? `, ${area}` : ""}` : null }) : "";
+  const paymentProofMessage = res ? proofText(lang, { booking_no: res.booking_no, product: `${res.product}${(reservedProduct ?? product).color ? ` · ${(reservedProduct ?? product).color}` : ""}`, size: res.size, name, price: res.price, advance: res.advance, delivery_charge: res.delivery_charge, fulfillment: res.fulfillment, shop: res.shop, address: delivery ? `${address}${area ? `, ${area}` : ""}` : null }) : "";
   const proof = res ? waTo(shop.phone, paymentProofMessage) : null;
   if (step === "done" && res) return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -465,6 +470,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
       <DialogContent data-product-theme={dark ? "dark" : "light"} className={`${styles["dialog"]} ${styles["productModal"]} ${step === "view" ? styles["productDialog"] : "max-h-[92vh] overflow-y-auto sm:max-w-lg"}`}>
         <DialogHeader className={step === "view" ? styles["productHeader"] : undefined}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}{step === "view" && <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className={styles["productShare"]} aria-label={t("Share product on WhatsApp")} title={t("Share product on WhatsApp")}><Share2 aria-hidden="true" className="h-5 w-5" /></a>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
         {step === "view" && <div className={styles["productBody"]} role="region" aria-label={t("Product information")} tabIndex={0}>
+          <CatalogColourOptions product={product} products={all} onPick={onPick} />
           <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} imageClassName={styles["detailPhoto"] ?? ""} />
           <div className={styles["detailHeading"]}>
             <p className={styles["detailBrand"]} data-no-translate>{product.brand}</p>

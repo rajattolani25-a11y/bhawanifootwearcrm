@@ -157,7 +157,7 @@ function POS() {
         }
         return c.map((i) => (i.variant_id === v.id ? { ...i, qty: i.qty + 1 } : i));
       }
-      return [...c, { variant_id: v.id, product_name: p.article, brand: p.brand, size: v.size, sku: v.sku, price: Number(p.selling_price), qty: 1, max: v.stock }];
+      return [...c, { variant_id: v.id, product_name: p.article, brand: p.brand, colour: p.color, size: v.size, sku: v.sku, price: Number(p.selling_price), qty: 1, max: v.stock }];
     });
     beep(true);
   }, []);
@@ -368,7 +368,7 @@ function POS() {
           removed_reward_id: reward && !rewardOn ? reward.id : "",
           coupon_code: coupon?.code ?? "",
         },
-        items: cart.map((i) => ({ variant_id: i.variant_id, product_name: i.product_name, size: i.size, sku: i.sku, price: i.price, qty: i.qty, discount: 0 })),
+        items: cart.map((i) => ({ variant_id: i.variant_id, product_name: `${i.product_name}${i.colour ? ` · ${i.colour}` : ""}`, size: i.size, sku: i.sku, price: i.price, qty: i.qty, discount: 0 })),
       };
       sessionStorage.setItem(requestStorageKey, JSON.stringify({ userId: user.id, payload: request }));
       pendingSaleRef.current = request;
@@ -459,7 +459,7 @@ function POS() {
         <div className={styles["productGrid"]}>
           {list.slice(0, visibleCount).map((p) => <article key={p.id} className={styles["productCard"]}>
             <div className={styles["productPhoto"]}>{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} loading="lazy" /> : <div className={styles["photoFallback"]}><PackagePlus aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}</div>
-            <div className={styles["productInfo"]}><p className={styles["productBrand"]} data-no-translate>{p.brand}</p><h2 data-no-translate>{p.article}</h2><strong>{inr(p.selling_price)}</strong></div>
+            <div className={styles["productInfo"]}><p className={styles["productBrand"]} data-no-translate>{p.brand}</p><h2 data-no-translate>{p.article}</h2>{p.color && <p className="text-xs text-muted-foreground" data-no-translate>{p.color}</p>}<strong>{inr(p.selling_price)}</strong></div>
             <div className={styles["quickSizes"]} role="group" aria-label={`${p.brand} ${p.article} sizes`}>
               {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => <button key={v.id} onClick={() => addVariant(p, v)} aria-label={`${p.brand} ${p.article}, size ${v.size}, ${v.stock} in stock`} data-available={v.stock > 0}>
                 <b>{v.size}</b><span>{v.stock} <span>left</span></span>
@@ -501,7 +501,7 @@ function POS() {
         </div>
         <div className={styles["cartItems"]}>
           {cart.map((i) => <m.div key={i.variant_id} className={styles["cartItem"]} initial={reduceMotion ? false : { opacity: 0.6, x: 16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: reduceMotion ? 0 : 0.28, ease: "easeOut" }}>
-            <div className={styles["cartItemText"]}><p data-no-translate>{i.brand} {i.product_name}</p><span>Size <b>{i.size}</b> · {inr(i.price)}</span></div>
+            <div className={styles["cartItemText"]}><p data-no-translate>{i.brand} {i.product_name}</p>{i.colour && <span data-no-translate>{i.colour}</span>}<span>Size <b>{i.size}</b> · {inr(i.price)}</span></div>
             <div className={styles["quantity"]}>
               <button aria-label={`Decrease ${i.product_name} size ${i.size}`} onClick={() => setCart((c) => c.map((x) => (x.variant_id === i.variant_id ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))}><Minus aria-hidden="true" /></button>
               <span>{i.qty}</span>

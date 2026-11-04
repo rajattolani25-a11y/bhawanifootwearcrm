@@ -51,6 +51,7 @@ export const CatalogProductGrid = memo(function CatalogProductGrid({
                 {p.brand}
               </p>
               <h3 data-no-translate>{p.article}</h3>
+              {p.color && <p className="mt-1 text-xs text-muted-foreground" data-no-translate>{p.color}</p>}
               <p className={styles["price"]}>
                 <strong>{inr(p.price)}</strong>
                 {off > 0 && <del>{inr(p.mrp)}</del>}

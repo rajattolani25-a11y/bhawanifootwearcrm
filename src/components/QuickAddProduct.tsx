@@ -1,4 +1,4 @@
-import { DEPARTMENTS, SUBCATEGORIES, categoryValue } from "@/lib/product-categories";
+import { DEPARTMENTS, SUBCATEGORIES, categoryValue, parseCategory } from "@/lib/product-categories";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -77,12 +77,23 @@ export function QuickAddProduct({
   onAdded,
   mode = "stock",
   initialArticle = "",
+  colourOf,
 }: {
   open: boolean;
   onClose: () => void;
   onAdded?: (r: QuickAddResult) => void;
   mode?: "stock" | "purchase";
   initialArticle?: string;
+  colourOf?: {
+    id: string;
+    brand: string;
+    article: string;
+    category: string;
+    color: string | null;
+    mrp: number;
+    selling_price: number;
+    sizes: string[];
+  };
 }) {
   const qc = useQueryClient();
   const { t } = useLang();
@@ -118,6 +129,25 @@ export function QuickAddProduct({
   useEffect(() => {
     if (open) setF((x) => ({ ...x, article: initialArticle || x.article }));
   }, [open, initialArticle]);
+  useEffect(() => {
+    if (!open || !colourOf) return;
+    const category = parseCategory(colourOf.category);
+    setF({
+      brand: colourOf.brand,
+      article: colourOf.article,
+      category: category.department,
+      subcategory: category.subcategory,
+      color: "",
+      mrp: String(colourOf.mrp),
+      selling_price: String(colourOf.selling_price),
+      cost: "",
+      rack: "",
+    });
+    setPicked(colourOf.sizes);
+    setExtraSizes("");
+    setQty({});
+    setDefQty("0");
+  }, [open, colourOf]);
   const chart: Chart = SIZE_CHART[f.category as keyof typeof SIZE_CHART] ?? SIZE_CHART.Men;
   const sizes = [...new Set([...picked, ...parseSizes(extraSizes)])].sort(sizeSort);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -139,6 +169,16 @@ export function QuickAddProduct({
   async function save() {
     if (saving.current) return;
     const sp = Number(f.selling_price);
+    if (
+      colourOf &&
+      (!isOwner ||
+        !f.color.trim() ||
+        f.color.trim().length > 80 ||
+        f.color.trim().toLowerCase() === (colourOf.color ?? "").trim().toLowerCase())
+    ) {
+      toast.error(t("Enter a different colour name"));
+      return;
+    }
     if (!f.article.trim()) {
       toast.error(t("Enter an article name"));
       return;
@@ -147,7 +187,11 @@ export function QuickAddProduct({
       toast.error(t("Choose a product category"));
       return;
     }
-    if (SUBCATEGORIES[f.category] && !SUBCATEGORIES[f.category]!.includes(f.subcategory)) {
+    if (
+      !colourOf &&
+      SUBCATEGORIES[f.category] &&
+      !SUBCATEGORIES[f.category]!.includes(f.subcategory)
+    ) {
       toast.error(t("Choose a subcategory, or select Other"));
       return;
     }
@@ -161,16 +205,35 @@ export function QuickAddProduct({
     }
     const rows = sizes.map((s) => ({
       size: s,
-      qty: mode === "purchase" ? 0 : Math.max(0, Math.floor(Number(qty[s] ?? defQty) || 0)),
+      qty:
+        mode === "purchase" || colourOf
+          ? 0
+          : Math.max(0, Math.floor(Number(qty[s] ?? defQty) || 0)),
     }));
     saving.current = true;
     setBusy(true);
     try {
+      if (colourOf) {
+        // A saved colour must be edited, never topped up by submitting Add colour again.
+        const { data: existing, error: lookupError } = await supabase
+          .from("products")
+          .select("id,color")
+          .eq("brand", colourOf.brand)
+          .eq("article", colourOf.article);
+        if (lookupError) throw lookupError;
+        if (
+          existing?.some(
+            (product) =>
+              (product.color ?? "").trim().toLowerCase() === f.color.trim().toLowerCase(),
+          )
+        )
+          throw new Error(t("This colour already exists. Open it to edit photos or stock."));
+      }
       const { data, error } = await supabase.rpc("quick_add_product", {
         _product: {
           brand: f.brand.trim(),
           article: f.article.trim(),
-          category: categoryValue(f.category, f.subcategory),
+          category: colourOf?.category ?? categoryValue(f.category, f.subcategory),
           color: f.color.trim(),
           mrp: Number(f.mrp) || sp,
           selling_price: sp,
@@ -194,9 +257,11 @@ export function QuickAddProduct({
           }
         }
       }
-      toast.success(
-        `${f.brand.toUpperCase()} ${f.article} ready — ${rows.reduce((a, x) => a + x.qty, 0)} pairs added`,
-      );
+      if (colourOf) toast.success(t("Colour saved. Add its quantities in Sizes & stock."));
+      else
+        toast.success(
+          `${f.brand.toUpperCase()} ${f.article} ready — ${rows.reduce((a, x) => a + x.qty, 0)} pairs added`,
+        );
       [
         "products",
         "stock-all",
@@ -242,7 +307,7 @@ export function QuickAddProduct({
     ["color", "Colour"],
     ["selling_price", "Selling price *"],
     ["mrp", "MRP"],
-    ...(isOwner ? [["cost", "Purchase cost"]] : []),
+    ...(isOwner && !colourOf ? [["cost", "Purchase cost"]] : []),
     ["rack", "Rack"],
   ] as [keyof typeof f, string][];
   const chip = (on: boolean) =>
@@ -252,11 +317,13 @@ export function QuickAddProduct({
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Quick add product</DialogTitle>
+          <DialogTitle>{colourOf ? "Add colour" : "Quick add product"}</DialogTitle>
           <DialogDescription>
-            {mode === "purchase"
-              ? "Create a new article, then sizes will appear in the purchase list."
-              : "Article and sizes immediately in stock — scan code will be generated automatically."}
+            {colourOf
+              ? "Details and prices are copied. New colours start at zero stock; add actual quantities in Sizes & stock after saving."
+              : mode === "purchase"
+                ? "Create a new article, then sizes will appear in the purchase list."
+                : "Article and sizes immediately in stock — scan code will be generated automatically."}
           </DialogDescription>
         </DialogHeader>
         <fieldset disabled={busy} className="contents">
@@ -269,8 +336,9 @@ export function QuickAddProduct({
                 <Input
                   id={`quick-product-${mode}-${k}`}
                   value={f[k]}
+                  readOnly={!!colourOf && ["brand", "article"].includes(k)}
                   onChange={set(k)}
-                  autoFocus={k === "article"}
+                  autoFocus={colourOf ? k === "color" : k === "article"}
                   inputMode={["mrp", "selling_price", "cost"].includes(k) ? "decimal" : undefined}
                   className="h-9"
                 />
@@ -283,6 +351,7 @@ export function QuickAddProduct({
               <button
                 key={c}
                 type="button"
+                disabled={!!colourOf}
                 onClick={() => pickCategory(c)}
                 className={`${chip(f.category === c)} px-1 py-2 text-xs`}
               >
@@ -298,6 +367,7 @@ export function QuickAddProduct({
               <select
                 id="quick-add-subcategory"
                 required
+                disabled={!!colourOf}
                 value={f.subcategory}
                 onChange={(e) => setF({ ...f, subcategory: e.target.value })}
                 className="h-10 w-full rounded-md border bg-background px-2 text-sm"
@@ -330,21 +400,25 @@ export function QuickAddProduct({
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Select only the sizes received</Label>
+            <Label className="text-xs">
+              {colourOf ? "Select sizes for this colour" : "Select only the sizes received"}
+            </Label>
             <div className="flex flex-wrap gap-1.5">
-              {chart.all.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleSize(s)}
-                  className={`${chip(picked.includes(s))} h-9 min-w-9 px-2 text-sm`}
-                >
-                  {s}
-                </button>
-              ))}
+              {(colourOf ? [...new Set([...chart.all, ...picked])].sort(sizeSort) : chart.all).map(
+                (s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleSize(s)}
+                    className={`${chip(picked.includes(s))} h-9 min-w-9 px-2 text-sm`}
+                  >
+                    {s}
+                  </button>
+                ),
+              )}
             </div>
           </div>
-          <div className="grid grid-cols-[1fr_90px] gap-2.5">
+          <div className={`grid ${colourOf ? "grid-cols-1" : "grid-cols-[1fr_90px]"} gap-2.5`}>
             <div className="space-y-1">
               <Label className="text-xs">Extra size (optional)</Label>
               <Input
@@ -354,7 +428,7 @@ export function QuickAddProduct({
                 placeholder={t("For example: 13 or 4")}
               />
             </div>
-            {mode !== "purchase" && (
+            {mode !== "purchase" && !colourOf && (
               <div className="space-y-1">
                 <Label className="text-xs">Pairs / size</Label>
                 <Input
@@ -366,7 +440,7 @@ export function QuickAddProduct({
               </div>
             )}
           </div>
-          {mode !== "purchase" && sizes.length > 0 && (
+          {mode !== "purchase" && !colourOf && sizes.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {sizes.map((s) => (
                 <label
@@ -386,7 +460,7 @@ export function QuickAddProduct({
             </div>
           )}
 
-          {mode !== "purchase" && isOwner && !(Number(f.cost) > 0) && (
+          {mode !== "purchase" && !colourOf && isOwner && !(Number(f.cost) > 0) && (
             <p className="text-xs text-warning-foreground">
               {t('Cost is empty — "cost missing" will appear in the profit report.')}
             </p>
@@ -452,7 +526,7 @@ export function QuickAddProduct({
           </p>
         )}
         <Button onClick={save} disabled={busy} className="h-11">
-          {busy ? "Saving…" : "Save & add"}
+          {busy ? "Saving…" : colourOf ? "Save colour" : "Save & add"}
         </Button>
       </DialogContent>
     </Dialog>

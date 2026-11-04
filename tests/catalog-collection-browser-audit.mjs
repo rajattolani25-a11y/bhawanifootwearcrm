@@ -18,7 +18,12 @@ const products = names.map((article, i) => ({
   article,
   brand: i % 2 ? "North" : "Demo",
   color: "Cream",
-  category: i < 3 ? "Men / Sports & Active" : "Women / Sandals & Flats",
+  category:
+    i < 3
+      ? "Men / Sports & Active"
+      : i === 4
+        ? "Women / Sports & Active"
+        : "Women / Sandals & Flats",
   price: [999, 1499, 499, 799, 1299, 999][i],
   mrp: [1299, 1999, 999, 799, 1299, 1499][i],
   image: null,
@@ -95,7 +100,7 @@ try {
     0,
   );
   assert.deepEqual(await order(), names);
-  for (const name of ["Size", "Sort by"])
+  for (const name of ["Size", "Sort by", "Style"])
     assert.equal(await page.getByRole("combobox", { name, exact: true }).count(), 1);
   assert.equal(await page.getByRole("combobox", { name: "Brand", exact: true }).count(), 0);
   assert.equal(await page.getByRole("combobox", { name: "Subcategory", exact: true }).count(), 0);
@@ -114,6 +119,20 @@ try {
   );
   const size = page.getByRole("combobox", { name: "Size", exact: true });
   const choice = (department, value) => JSON.stringify([department, value]);
+  const style = page.getByRole("combobox", { name: "Style", exact: true });
+  assert.deepEqual(
+    await style.locator("optgroup").evaluateAll((nodes) => nodes.map((node) => node.label)),
+    ["Men", "Women"],
+  );
+  await style.selectOption(JSON.stringify(["Men", "Sports & Active"]));
+  assert.deepEqual(await order(), ["Cedar", "Atlas", "Birch"]);
+  await style.selectOption(JSON.stringify(["Women", "Sports & Active"]));
+  assert.deepEqual(
+    await order(),
+    ["Elm"],
+    "Women's Sports style never includes Men's Sports products",
+  );
+  await page.getByRole("button", { name: "All", exact: true }).click();
   await sorted("price-asc", ["Birch", "Dune", "Cedar", "Fir", "Elm", "Atlas"]);
   await sorted("price-desc", ["Atlas", "Elm", "Cedar", "Fir", "Dune", "Birch"]);
   await sorted("name", ["Atlas", "Birch", "Cedar", "Dune", "Elm", "Fir"]);
@@ -259,9 +278,13 @@ try {
           return { x: r.x, y: r.y, w: r.width, h: r.height };
         }),
       );
-    assert.equal(boxes.length, 2);
+    assert.equal(boxes.length, 3);
     assert(Math.abs(boxes[0].y - boxes[1].y) < 1, "First two fields must align");
-    assert(Math.abs(boxes[0].w - boxes[1].w) < 1, "Equal field widths");
+    assert(
+      Math.abs(boxes[0].w - boxes[1].w) < 1 && Math.abs(boxes[2].w - boxes[0].w) < 1,
+      "Equal field widths",
+    );
+    assert(Math.abs(boxes[2].y - boxes[0].y) < 1, "Style stays beside size and sort");
     assert.equal(
       Math.round((await page.locator('[class*="filterPanel"]').boundingBox()).height),
       44,
@@ -272,6 +295,10 @@ try {
       false,
     );
     await page.screenshot({ path: out + `/collection-${width}.png` });
+    if (width === 390) {
+      await heading.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: out + "/size-sort-style-mobile.png" });
+    }
     layouts.push({ width, height, aligned: true, noOverflow: true });
   }
   await page.getByRole("button", { name: "Ask about a photo", exact: true }).click();
@@ -350,7 +377,9 @@ try {
     categorySizeGroups: true,
     overlappingSizeLabelsSeparated: true,
     spotlightBeforeControls: true,
-    brandAndStyleRemoved: true,
+    brandRemoved: true,
+    styleAlongsideSizeAndSort: true,
+    separateMenWomenStyles: true,
     blankBrandProductRetained: true,
     noBlankSizeOptionOnStockRefresh: true,
     correctProductOpens: true,
