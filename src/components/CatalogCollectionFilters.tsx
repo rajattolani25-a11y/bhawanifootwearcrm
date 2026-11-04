@@ -5,7 +5,7 @@ import styles from "@/routes/catalog.module.css";
 export type CatalogSort = "default" | "price-asc" | "price-desc" | "name" | "discount";
 const COPY = {
   english: {
-    title: "Refine your selection",
+    title: "Filters & sort",
     style: "Style",
     type: "Type",
     brand: "Brand",
@@ -23,7 +23,7 @@ const COPY = {
     styleAria: "Subcategory",
   },
   hindi: {
-    title: "अपनी पसंद चुनें",
+    title: "फ़िल्टर और क्रम",
     style: "स्टाइल",
     type: "प्रकार",
     brand: "ब्रांड",
@@ -41,7 +41,7 @@ const COPY = {
     styleAria: "उपश्रेणी",
   },
   hinglish: {
-    title: "Apni pasand chunein",
+    title: "Filters & sort",
     style: "Style",
     type: "Type",
     brand: "Brand",

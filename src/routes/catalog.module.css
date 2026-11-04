@@ -71,18 +71,18 @@
 .collection { padding: 25px 32px 0; scroll-margin-top: 180px; }
 .collectionHeader { display: flex; flex-direction: column; align-items: stretch; gap: 18px; margin-bottom: 22px; }
 .collectionHeader h2 { font-family: var(--font-sans); font-size: 18px; font-weight: 700; }
-.filterPanel { min-width: 0; padding: 16px; border: 1px solid var(--catalog-line); border-radius: 16px; background: var(--catalog-paper); }
-.filterHeading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; min-height: 32px; }
-.filterHeading p { display: flex; align-items: center; gap: 8px; color: var(--catalog-muted); font-size: 12px; font-weight: 600; }
-.filterHeading svg { width: 15px; height: 15px; flex-shrink: 0; }
+.filterPanel { min-width: 0; padding: 10px; border: 1px solid var(--catalog-line); border-radius: 12px; background: var(--catalog-paper); }
+.filterHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; min-height: 24px; }
+.filterHeading p { display: flex; align-items: center; gap: 6px; color: var(--catalog-muted); font-size: 11px; font-weight: 600; }
+.filterHeading svg { width: 13px; height: 13px; flex-shrink: 0; }
 .filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.filter { display: flex; flex-direction: column; min-width: 0; gap: 4px; padding: 10px 12px 4px; border: 1px solid var(--catalog-line); border-radius: 10px; background: var(--catalog-bg); font-size: 13px; }
-.filter > span { color: var(--catalog-muted); font-size: 11px; font-weight: 600; }
-.filter select { width: 100%; min-width: 0; min-height: 38px; background: transparent; color: var(--catalog-ink); font-weight: 600; text-overflow: ellipsis; }
+.filter { position: relative; display: flex; align-items: center; min-width: 0; min-height: 44px; padding: 0 8px; border: 1px solid var(--catalog-line); border-radius: 8px; background: var(--catalog-paper); font-size: 13px; }
+.filter > span { position: absolute; top: -7px; left: 7px; padding: 0 4px; background: var(--catalog-paper); color: var(--catalog-muted); font-size: 10px; line-height: 12px; font-weight: 600; }
+.filter select { width: 100%; min-width: 0; min-height: 42px; background: transparent; color: var(--catalog-ink); font-weight: 600; text-overflow: ellipsis; }
 .filter select:focus-visible { outline: 2px solid var(--catalog-accent); outline-offset: 2px; border-radius: 4px; }
 .filter select:disabled { opacity: .55; cursor: not-allowed; }
 .filter option { background: var(--catalog-paper); color: var(--catalog-ink); }
-.clear { min-height: 32px; flex-shrink: 0; padding: 0 4px; color: var(--catalog-accent); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; font-weight: 600; }
+.clear { min-height: 24px; flex-shrink: 0; padding: 0 4px; color: var(--catalog-accent); text-decoration: underline; text-underline-offset: 3px; font-size: 11px; font-weight: 600; }
 .productGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
 .productCard { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--catalog-line); border-radius: 16px; background: var(--catalog-paper); text-align: left; transition: border-color 160ms, box-shadow 160ms; }
 .productCard:hover { border-color: var(--catalog-accent); box-shadow: 0 8px 24px #3324120c; }
@@ -151,10 +151,10 @@
   .collection { padding: 20px 16px 0; scroll-margin-top: 155px; }
   .collectionHeader { gap: 12px; margin-bottom: 16px; }
   .collectionHeader h2 { font-size: 17px; }
-  .filterPanel { padding: 12px; border-radius: 12px; }
-  .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .filter { padding: 8px 8px 2px; font-size: 12px; }
-  .filter select { min-height: 40px; font-size: 13px; }
+  .filterPanel { padding: 8px; border-radius: 10px; }
+  .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 8px; }
+  .filter { padding: 0 7px; font-size: 12px; }
+  .filter select { min-height: 42px; font-size: 12px; }
   .productGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .productCard { border-radius: 12px; }
   .productImage img { padding: 8px; }
