@@ -15,3 +15,7 @@ About uses a flex dialog with a separately scrolling body and a non-scrolling ac
 - Adjacent public order-recovery and product-category browser regressions, TypeScript, scoped ESLint and production build.
 
 These use intercepted synthetic services; they do not execute live payments, sales, messages or database writes. Latest evidence: `docs/audit/evidence/catalog-size-only-2026-11-04/checks.json`; earlier four-field evidence is historical.
+
+## Ask by photo handoff
+
+The catalog no longer offers a photo picker or preview. Customers optionally select a section and size, use **Continue on WhatsApp**, then attach/send their photo in WhatsApp. The dialog explicitly describes this step in English/Hindi/Hinglish. There is no file input, object URL or photo upload. The existing store-number link and prefilled message remain; no message is sent automatically. The collection browser audit verifies removal, selected category/size in the message, reset on close and all three languages without opening an external message.

@@ -274,6 +274,36 @@ try {
     await page.screenshot({ path: out + `/collection-${width}.png` });
     layouts.push({ width, height, aligned: true, noOverflow: true });
   }
+  await page.getByRole("button", { name: "Ask about a photo", exact: true }).click();
+  const inquiry = page.getByRole("dialog");
+  await inquiry.getByRole("heading", { name: "Ask by photo", exact: true }).waitFor();
+  assert.equal(await inquiry.locator('input[type="file"]').count(), 0);
+  assert.equal(await inquiry.locator("img").count(), 0);
+  assert.equal(await inquiry.getByRole("button", { name: /Choose a photo/ }).count(), 0);
+  await inquiry
+    .getByText("WhatsApp will open — attach your photo there and send.", { exact: true })
+    .waitFor();
+  await inquiry.getByRole("button", { name: "Men", exact: true }).click();
+  await inquiry.getByRole("button", { name: "7", exact: true }).click();
+  const handoff = new URL(
+    await inquiry
+      .getByRole("link", { name: "Continue on WhatsApp", exact: true })
+      .getAttribute("href"),
+  );
+  assert.equal(handoff.hostname, "wa.me");
+  assert.equal(handoff.pathname, "/919999999999");
+  assert(handoff.searchParams.get("text").includes("Bhawani Footwear"));
+  assert(handoff.searchParams.get("text").includes("(Men), Size 7"));
+  await page.screenshot({ path: out + "/photo-inquiry-mobile.png" });
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Ask about a photo", exact: true }).click();
+  const resetMessage = new URL(
+    await inquiry
+      .getByRole("link", { name: "Continue on WhatsApp", exact: true })
+      .getAttribute("href"),
+  ).searchParams.get("text");
+  assert(!resetMessage.includes("Size 7"), "Closing inquiry clears the previous selection");
+  await page.keyboard.press("Escape");
   for (const [language, sortLabel] of [
     ["hindi", "क्रम चुनें"],
     ["hinglish", "Sort by"],
@@ -282,6 +312,27 @@ try {
     await page.getByRole("combobox", { name: "Language", exact: true }).selectOption(language);
     await page.getByRole("combobox", { name: sortLabel, exact: true }).selectOption("price-desc");
     assert.equal((await order())[0], "Atlas");
+    await page.getByRole("button", { name: "Ask about a photo", exact: true }).click();
+    await inquiry
+      .getByRole("heading", {
+        name: { hindi: "फोटो से पूछें", hinglish: "Photo se poochein", english: "Ask by photo" }[
+          language
+        ],
+        exact: true,
+      })
+      .waitFor();
+    assert.equal(await inquiry.locator('input[type="file"]').count(), 0);
+    await inquiry
+      .getByRole("link", {
+        name: {
+          hindi: "WhatsApp पर जारी रखें",
+          hinglish: "WhatsApp par continue karein",
+          english: "Continue on WhatsApp",
+        }[language],
+        exact: true,
+      })
+      .waitFor();
+    await page.keyboard.press("Escape");
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Switch theme", exact: true }).click();
@@ -293,6 +344,9 @@ try {
     passed: true,
     countRemoved: true,
     fiveSortOrders: true,
+    photoInquiryWithoutFilePicker: true,
+    whatsappHandoffIncludesSelectedCategoryAndSize: true,
+    photoInquiryResetAndThreeLanguages: true,
     categorySizeGroups: true,
     overlappingSizeLabelsSeparated: true,
     spotlightBeforeControls: true,
