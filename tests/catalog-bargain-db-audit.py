@@ -43,7 +43,9 @@ try:
 
  unchanged_sql="SELECT md5(string_agg(pg_get_functiondef(x::regprocedure),'|'ORDER BY x))FROM unnest(ARRAY['public.create_sale(jsonb,jsonb)','public.create_catalog_order(uuid,text,text,text,text,text,text,uuid,jsonb)','public.complete_catalog_booking(uuid,jsonb,jsonb)','public.checked_sale_payload(jsonb,jsonb,numeric,numeric)'])x;"
  original_definitions=sql(unchanged_sql).stdout
- sql((root/'docs/sql/catalog-bargaining/support.sql').read_text())
+ if '--short-parts'in sys.argv:
+  for part in sorted((root/'docs/sql/catalog-bargaining/short-parts').glob('part-*.sql')):sql(part.read_text())
+ else:sql((root/'docs/sql/catalog-bargaining/support.sql').read_text())
  sql((root/'docs/sql/catalog-bargaining/paste-under-200-lines.sql').read_text()) # idempotent compact paste
  assert sql(unchanged_sql).stdout==original_definitions
  owner='00000000-0000-4000-8000-000000000001';staff='00000000-0000-4000-8000-000000000002';p='10000000-0000-4000-8000-000000000001';v='20000000-0000-4000-8000-000000000001';v2='20000000-0000-4000-8000-000000000002';client=str(uuid.uuid4())

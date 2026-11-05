@@ -21,6 +21,7 @@ Owner policy updates use a revision guard. Price/policy changes invalidate unpla
 
 ## SQL review and activation
 
+- Mobile paste fallback: run `docs/sql/catalog-bargaining/short-parts/part-01.sql` through `part-04.sql` separately in order, clearing the editor between parts. Each complete transaction is under8KB and60lines. Part1 clears an aborted transaction and keeps public bargain flags empty until Part4 completes maintenance compatibility and activation. A syntax42601 around an unfinished dollar-quoted maintenance block can result from an incomplete paste; do not rerun old migrations or reset the store to fix it. All four parts were tested in order with `python3 tests/catalog-bargain-db-audit.py --short-parts`.
 - Readable review: `docs/sql/catalog-bargaining/support.sql`.
 - Equivalent single atomic paste below200lines: `docs/sql/catalog-bargaining/paste-under-200-lines.sql`. Run **one** version, only after owner approval; no Lovable AI task is required to paste into SQL Editor. No migration journal or marker is needed for this optional reviewed add-on.
 - Read-only checks: `docs/sql/catalog-bargaining/verify.sql` (six true values).
