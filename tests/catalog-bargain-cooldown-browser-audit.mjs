@@ -116,12 +116,37 @@ try {
     });
     assert(geometry.inside && geometry.aligned, JSON.stringify({ width, geometry }));
     assert.equal(await page.getByRole("button", { name: "Make an offer", exact: true }).count(), 1);
+    const cart = page.getByRole("button", { name: "Add to cart", exact: true });
+    const cb = await cart.boundingBox();
+    assert(cb.width >= 100 && cb.height >= 44);
+    assert(cb.x >= 0 && cb.x + cb.width <= width && cb.y + cb.height <= 844);
+    assert.equal(await cart.locator("svg").count(), 1);
+    assert.equal(await cart.evaluate((el) => getComputedStyle(el).textDecorationLine), "none");
+  }
+  for (const height of [568, 640]) {
+    await page.setViewportSize({ width: 320, height });
+    for (const name of ["Add to cart", "Get this pair"]) {
+      const b = await page.getByRole("button", { name, exact: true }).boundingBox();
+      assert(b.height >= 44 && b.y >= 0 && b.y + b.height <= height);
+    }
+    const wa = await page
+      .getByRole("link", { name: "Ask on WhatsApp & visit store", exact: true })
+      .boundingBox();
+    assert(wa.y + wa.height <= height);
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Add to cart", exact: true }).click();
+  assert.equal(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("solestack-catalog-cart-v1") || "[]").length,
+    ),
+    0,
+  );
   await page.screenshot({ path: out + "/price-placement-390.png" });
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   assert.equal(await page.getByRole("textbox", { name: "Your offer", exact: true }).count(), 0);
   await page.getByRole("button", { name: "7", exact: true }).click();
+  await page.screenshot({path:out+"/cart-action-390.png"});
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   const note =
     "After the final price expires, there is a 30-minute cooldown before bargaining again.";
@@ -175,6 +200,12 @@ try {
     window.dispatchEvent(new Event("focus"));
   });
   await again.click();
+  const resetDialog = page.getByRole("dialog");
+  await resetDialog.getByText("Four chances to find your price.", { exact: true }).waitFor();
+  assert.equal(await resetDialog.getByText("₹2,045", { exact: true }).count(), 0);
+  assert.equal(await resetDialog.getByText("FINAL COUNTER-OFFER", { exact: true }).count(), 0);
+  const listed = resetDialog.getByText("Listed price", { exact: true }).locator("..");
+  assert((await listed.innerText()).includes("₹2,200"));
   await page.getByRole("textbox", { name: "Your offer", exact: true }).fill("1900");
   await page.getByRole("button", { name: "Send my offer", exact: true }).click();
   await page.getByText("OUR COUNTER-OFFER", { exact: true }).waitFor();
@@ -193,12 +224,14 @@ try {
         pass: true,
         checks: [
           "one offer action beside price at320/390/768/1440",
+          "prominent cart button with icon pinned beside price summary; actions fit320x568",
           "size-required focus prompt",
           "cooldown timer only inside the product offer sheet; no global timer",
           "unused second bid survives expired first quote",
           "final quote expiry blocks early restart",
           "reopen preserves deadline",
           "new four-bid round after cooldown",
+          "new round shows listed price and clears the old discounted counter",
         ],
         productionWrites: 0,
       },

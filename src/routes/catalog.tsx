@@ -516,10 +516,13 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           {invalidDeal && <div className="text-xs" role="alert"><p>{t("The product price or selection changed. Review the listed price to continue.")}</p><button className="min-h-11 underline" onClick={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);onDiscardDeal();}}>{t("Use listed price")} · {inr(product.price)}</button></div>}
           {quoteForTimer && <DealTimer deal={quoteForTimer} onExpired={()=>setDealExpiry(true)}/>}
           <div className={styles["actionSummary"]}>
+            <div className={styles["actionSummaryCopy"]}>
             <strong>{inr(activeDeal?.price ?? product.price)}</strong>
             <span role="status">{!hasStock ? t("Out of stock") : chosen ? <><span>{t("Size")}</span> <span data-no-translate>{chosen.size}</span> <span>{t("selected")}</span></> : t(canOrder ? "Select a size to continue" : "Choose a size (optional)")}</span>
+            </div>
+            {canOrder && <button type="button" className={styles["addCartAction"]} onClick={()=>{if(!chosen?.available){setNeedsSize(true);sizesRef.current?.focus();return;}try{addToCart({productId:product.id,variantId:chosen.id,...(activeDeal?{deal:activeDeal}:{})});toast.success(t("Added to cart"));}catch(e){toast.error(t((e as Error).message));}}} disabled={!hasStock}><ShoppingCart aria-hidden="true" className="h-[18px] w-[18px]"/><span>{t("Add to cart")}</span></button>}
           </div>
-          {canOrder && <button type="button" className="min-h-11 text-xs underline underline-offset-4" onClick={()=>{if(!chosen?.available){setNeedsSize(true);sizesRef.current?.focus();return;}try{addToCart({productId:product.id,variantId:chosen.id,...(activeDeal?{deal:activeDeal}:{})});toast.success(t("Added to cart"));}catch(e){toast.error(t((e as Error).message));}}} disabled={!hasStock}>{t("Add to cart")}</button>}
+
           <div className={styles["actionButtons"]}>
             {wa && <Button asChild variant="outline" className={styles["whatsappAction"]}><a href={wa} target="_blank" rel="noreferrer" aria-label={t("Ask on WhatsApp & visit store")}><MessageCircle aria-hidden="true" /><span>WhatsApp</span></a></Button>}
             {canOrder && <Button type="button" disabled={!hasStock || invalidDeal} onClick={startOrder} className={styles["orderAction"]}><span>{t(hasStock ? "Get this pair" : "Out of stock")}</span><ArrowRight aria-hidden="true" /></Button>}

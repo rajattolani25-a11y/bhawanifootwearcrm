@@ -15,7 +15,11 @@
     "expired earlier quote retains unused bids",
     "early restart disabled; reopen retains deadline",
     "new negotiation after final-price expiry plus30min",
-    "existing commerce regression"
+    "existing commerce regression",
+    "pinned outlined Add to cart with icon beside footer price summary",
+    "WhatsApp/Get this pair remain visible at320x568 and320x640",
+    "missing size cannot add a cart item",
+    "restarted form clears old counter and shows original listed price"
   ],
   "database_tests": [
     "cooldown SQL repeated; original RPC definitions byte-identical",
@@ -26,9 +30,10 @@
     "old quotes rejected; committed order recovery unaffected",
     "backup/reset/restore regression",
     "combined cart/coupon/receipt/refund regression with new quote data",
-    "same customer can bargain on another product while first product remains on cooldown"
+    "same customer can bargain on another product while first product remains on cooldown",
+    "new negotiation from old accepted floor resets to current listed price and first-bid range, old bids cleared"
   ],
   "production_writes": 0,
   "live_backend_status": "manual cooldown SQL not applied; owner previously reported coupon verification true",
-  "visual_review": "price-side action and per-product cooldown sheet inspected; reused existing photos"
+  "visual_review": "selected-size mobile footer/cart button and reset-listed-price behavior reviewed; no production SQL change for this follow-up"
 }
