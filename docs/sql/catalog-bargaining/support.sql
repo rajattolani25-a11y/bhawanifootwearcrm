@@ -211,9 +211,9 @@ BEGIN
  END IF;
  SELECT pg_get_functiondef('public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure) INTO d;
  IF position('public.catalog_bargain_sessions'IN d)=0 THEN
-  old_marker:='TRUNCATE TABLE public.catalog_bookings,';
-  IF position(old_marker IN d)=0 THEN RAISE EXCEPTION 'Reclaim reset0029 is required. Stop for review.'; END IF;
-  EXECUTE replace(d,old_marker,'TRUNCATE TABLE public.catalog_bargain_sessions, public.catalog_bargain_policies, public.catalog_bookings,');
+  old_marker:='TRUNCATE[[:space:]]+TABLE[[:space:]]+public[.]catalog_bookings[[:space:]]*,';
+  IF (SELECT count(*) FROM regexp_matches(d,old_marker,'gi'))<>1 THEN RAISE EXCEPTION 'Reset cleanup layout differs. Stop for review.'; END IF;
+  EXECUTE regexp_replace(d,old_marker,'TRUNCATE TABLE public.catalog_bargain_sessions, public.catalog_bargain_policies, public.catalog_bookings,','i');
  END IF;
  SELECT pg_get_functiondef('public.restore_store_backup_v2(text,jsonb)'::regprocedure) INTO d;
  IF position('-- optional-bargain-tables-v1'IN d)=0 THEN

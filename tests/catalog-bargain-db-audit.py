@@ -43,11 +43,17 @@ try:
 
  unchanged_sql="SELECT md5(string_agg(pg_get_functiondef(x::regprocedure),'|'ORDER BY x))FROM unnest(ARRAY['public.create_sale(jsonb,jsonb)','public.create_catalog_order(uuid,text,text,text,text,text,text,uuid,jsonb)','public.complete_catalog_booking(uuid,jsonb,jsonb)','public.checked_sale_payload(jsonb,jsonb,numeric,numeric)'])x;"
  original_definitions=sql(unchanged_sql).stdout
+ if '--cloud-reset-format'in sys.argv:sql((root/'tests/fixtures/reset-formatted-cloud.sql').read_text())
+ reset_query="SELECT pg_get_functiondef('public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure);"
+ original_reset=sql(reset_query).stdout
  if '--short-parts'in sys.argv:
   for part in sorted((root/'docs/sql/catalog-bargaining/short-parts').glob('part-*.sql')):sql(part.read_text())
  else:sql((root/'docs/sql/catalog-bargaining/support.sql').read_text())
  sql((root/'docs/sql/catalog-bargaining/paste-under-200-lines.sql').read_text()) # idempotent compact paste
  assert sql(unchanged_sql).stdout==original_definitions
+ import re
+ expected_reset=re.sub(r'TRUNCATE\s+TABLE\s+public[.]catalog_bookings\s*,','TRUNCATE TABLE public.catalog_bargain_sessions, public.catalog_bargain_policies, public.catalog_bookings,',original_reset,count=1,flags=re.I)
+ assert sql(reset_query).stdout==expected_reset,'Reset checks or unrelated code were modified'
  owner='00000000-0000-4000-8000-000000000001';staff='00000000-0000-4000-8000-000000000002';p='10000000-0000-4000-8000-000000000001';v='20000000-0000-4000-8000-000000000001';v2='20000000-0000-4000-8000-000000000002';client=str(uuid.uuid4())
  sql(f"INSERT INTO auth.users(id,email)VALUES('{owner}','owner@example.test'),('{staff}','staff@example.test');SET request.jwt.claim.sub='{owner}';SELECT set_team_role('{staff}','staff');UPDATE store_settings SET catalog_enabled=true,booking_enabled=true,pickup_enabled=true,upi_id='demo@upi',business_phone='9999999999' WHERE id=1;INSERT INTO products(id,article,brand,category,selling_price,catalog_visible)VALUES('{p}','Audit Pair','Demo','Men / Other',2200,true);INSERT INTO product_variants(id,product_id,size,stock)VALUES('{v}','{p}','7',10),('{v2}','{p}','8',10);")
  def call(name,args,who=None,ok=True):
@@ -119,6 +125,6 @@ try:
  assert sql("SELECT count(*)FROM catalog_bargain_policies;").stdout.strip()=='0' 
  assert 'catalog_bargain_sessions'in sql("SELECT maintenance_business_tables();").stdout
  assert 'public.catalog_bargain_sessions'in sql("SELECT pg_get_functiondef('reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure);").stdout
- print(json.dumps({'pass':True,'checks':['original billing and order definitions unchanged','concurrent duplicate bids serialize to one attempt','owner-only policy / hidden limits','idempotent installation','two bids and duplicate replay','rounded bounded variable counter','180-second server expiry','size switch keeps attempt count','no stock hold during bids','coupon/price/variant forgery blocked','order stock decremented once','expired quote committed-order recovery','owner policy invalidation','maintenance manifest integration','discounted receipt and invoice completion unchanged','reset reclaims new tables and keeps owner','new backup restore and old v2 compatibility']}))
+ print(json.dumps({'pass':True,'checks':['only the TRUNCATE allowlist insertion changes in reset; all owner and backup guards byte-preserved','original billing and order definitions unchanged','concurrent duplicate bids serialize to one attempt','owner-only policy / hidden limits','idempotent installation','two bids and duplicate replay','rounded bounded variable counter','180-second server expiry','size switch keeps attempt count','no stock hold during bids','coupon/price/variant forgery blocked','order stock decremented once','expired quote committed-order recovery','owner policy invalidation','maintenance manifest integration','discounted receipt and invoice completion unchanged','reset reclaims new tables and keeps owner','new backup restore and old v2 compatibility']}))
 finally:
  run(['docker','rm','-f',container])

@@ -1,3 +1,4 @@
+ROLLBACK;
 BEGIN;
 -- Include new business records in backup/restore/reset without changing their safety checks.
 -- Guard the definition layout and fail atomically on an unsupported backend.
@@ -6,9 +7,9 @@ DO $$ DECLARE d text; old_marker text; new_marker text; BEGIN SELECT pg_get_func
   new_marker:='''catalog_bookings'',''catalog_bargain_policies'',''catalog_bargain_sessions'']';
   IF position(old_marker IN d)=0 THEN RAISE EXCEPTION 'Unsupported maintenance manifest. Stop for review.'; END IF; EXECUTE replace(d,old_marker,new_marker);
  END IF; SELECT pg_get_functiondef('public.reset_store_data_v2(text,text,boolean,boolean,boolean,boolean)'::regprocedure) INTO d;
- IF position('public.catalog_bargain_sessions'IN d)=0 THEN old_marker:='TRUNCATE TABLE public.catalog_bookings,';
-  IF position(old_marker IN d)=0 THEN RAISE EXCEPTION 'Reclaim reset0029 is required. Stop for review.'; END IF;
-  EXECUTE replace(d,old_marker,'TRUNCATE TABLE public.catalog_bargain_sessions, public.catalog_bargain_policies, public.catalog_bookings,'); END IF;
+ IF position('public.catalog_bargain_sessions'IN d)=0 THEN old_marker:='TRUNCATE[[:space:]]+TABLE[[:space:]]+public[.]catalog_bookings[[:space:]]*,';
+  IF (SELECT count(*) FROM regexp_matches(d,old_marker,'gi'))<>1 THEN RAISE EXCEPTION 'Reset cleanup layout differs. Stop for review.'; END IF;
+  EXECUTE regexp_replace(d,old_marker,'TRUNCATE TABLE public.catalog_bargain_sessions, public.catalog_bargain_policies, public.catalog_bookings,','i'); END IF;
  SELECT pg_get_functiondef('public.restore_store_backup_v2(text,jsonb)'::regprocedure) INTO d;
  IF position('-- optional-bargain-tables-v1'IN d)=0 THEN
   old_marker:=' expected := public.maintenance_business_tables()';
