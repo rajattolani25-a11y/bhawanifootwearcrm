@@ -1,0 +1,62 @@
+{
+  "pass": true,
+  "checks": [
+    "cart placement320to1440",
+    "two bids and duplicate",
+    "context headings",
+    "fixed180second timer",
+    "cart persistence",
+    "correct reduced-price shipping",
+    "no coupon stack",
+    "exact negotiated checkout",
+    "cart removes only ordered pair",
+    "expiry requires explicit price choice"
+  ],
+  "errors": [],
+  "external": [],
+  "date": "2026-11-05",
+  "unit_tests": 51,
+  "database": {
+    "pass": true,
+    "checks": [
+      "original billing and order definitions unchanged",
+      "concurrent duplicate bids serialize to one attempt",
+      "owner-only policy / hidden limits",
+      "idempotent installation",
+      "two bids and duplicate replay",
+      "rounded bounded variable counter",
+      "180-second server expiry",
+      "size switch keeps attempt count",
+      "no stock hold during bids",
+      "coupon/price/variant forgery blocked",
+      "order stock decremented once",
+      "expired quote committed-order recovery",
+      "owner policy invalidation",
+      "maintenance manifest integration",
+      "discounted receipt and invoice completion unchanged",
+      "reset reclaims new tables and keeps owner",
+      "new backup restore and old v2 compatibility"
+    ]
+  },
+  "owner_controls": "save/reload25percent, owner rules dialog, staff exclusion passed",
+  "regressions": [
+    "ordinary order request recovery",
+    "public colour/size/gallery/order selection",
+    "owner colour creation, zero stock, guarded stock, correct colour billing"
+  ],
+  "typescript": "passed",
+  "lint": "passed, no warnings",
+  "build": "passed",
+  "live_database_applied": false,
+  "live_transactions": 0,
+  "backend_activation": "pending explicit owner confirmation; SQL review artifact outside automatic migrations",
+  "cart_checkout": "one pair at a time; delivery/advance reviewed per order",
+  "visual_fixes": [
+    "independent cream/forest palette for storefront portals",
+    "mobile bottom sheets and fixed timer/actions",
+    "preserved modal layering during transition",
+    "explicit expired/changed price confirmation",
+    "context headings reflect counter movement",
+    "normal-price choice dismisses deal reminder"
+  ]
+}

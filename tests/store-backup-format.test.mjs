@@ -80,3 +80,13 @@ test("reset clears business drafts only, never auth, language or device appearan
   );
   assert.deepEqual([...session.keys()], ["other"]);
 });
+test("optional bargain tables round-trip together while old v2 and strict manifests remain supported", async () => {
+  const b = base();
+  b.snapshot.tables.catalog_bargain_policies = [];
+  b.snapshot.tables.catalog_bargain_sessions = [];
+  await verifyBackup(await sealBackup(b));
+  delete b.snapshot.tables.catalog_bargain_sessions;
+  await assert.rejects(() => sealBackup(b).then(verifyBackup), /table manifest/);
+  b.snapshot.tables.unknown_table = [];
+  await assert.rejects(() => sealBackup(b).then(verifyBackup), /table manifest/);
+});

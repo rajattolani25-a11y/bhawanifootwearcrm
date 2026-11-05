@@ -1,3 +1,6 @@
+import { BargainPolicyFields } from "./catalog-commerce/BargainPolicyEditor";
+import { ownerBargainRpc, saveBargainPolicy } from "@/lib/catalog-bargain-owner";
+import { DEFAULT_BARGAIN_POLICY, policyError } from "@/lib/catalog-bargain";
 import { DEPARTMENTS, SUBCATEGORIES, categoryValue, parseCategory } from "@/lib/product-categories";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -115,6 +118,25 @@ export function QuickAddProduct({
   const [qty, setQty] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const [bargainPolicy, setBargainPolicy] = useState({ ...DEFAULT_BARGAIN_POLICY });
+  const [bargainReady, setBargainReady] = useState(false);
+  useEffect(() => {
+    if (open) setBargainPolicy({ ...DEFAULT_BARGAIN_POLICY });
+  }, [open, colourOf?.id]);
+  useEffect(() => {
+    let live = true;
+    if (open && isOwner)
+      ownerBargainRpc("owner_catalog_bargain_policy", { _product_id: null })
+        .then(({ error }) => {
+          if (live) setBargainReady(!error);
+        })
+        .catch(() => {
+          if (live) setBargainReady(false);
+        });
+    return () => {
+      live = false;
+    };
+  }, [open, isOwner]);
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [photoProgress, setPhotoProgress] = useState("");
@@ -210,6 +232,11 @@ export function QuickAddProduct({
           ? 0
           : Math.max(0, Math.floor(Number(qty[s] ?? defQty) || 0)),
     }));
+    const bargainError = policyError(sp, bargainPolicy);
+    if (isOwner && bargainReady && bargainError) {
+      toast.error(t(bargainError));
+      return;
+    }
     saving.current = true;
     setBusy(true);
     try {
@@ -244,6 +271,17 @@ export function QuickAddProduct({
       });
       if (error) throw error;
       const r = data as { product_id: string; variants: { id: string; size: string }[] };
+      if (isOwner && bargainReady && bargainPolicy.enabled) {
+        try {
+          await saveBargainPolicy(r.product_id, bargainPolicy);
+        } catch {
+          toast.error(
+            t(
+              "Product saved. Bargaining settings were not saved. Open Edit product to retry; do not create the product again.",
+            ),
+          );
+        }
+      }
       if (isOwner && photos.length) {
         for (let i = 0; i < photos.length; i++) {
           setPhotoProgress(`Uploading photo ${i + 1}/${photos.length}…`);
@@ -291,6 +329,7 @@ export function QuickAddProduct({
       setQty({});
       setExtraSizes("");
       setPhotos([]);
+      setBargainPolicy({ ...DEFAULT_BARGAIN_POLICY });
       onClose();
     } catch (error) {
       toast.error((error as Error).message);
@@ -345,6 +384,14 @@ export function QuickAddProduct({
               </div>
             ))}
           </div>
+          {isOwner && bargainReady && (
+            <BargainPolicyFields
+              value={bargainPolicy}
+              onChange={setBargainPolicy}
+              price={Number(f.selling_price)}
+              disabled={busy}
+            />
+          )}
           <Label className="text-xs">Category (required)</Label>
           <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Product category">
             {DEPARTMENTS.map((c) => (

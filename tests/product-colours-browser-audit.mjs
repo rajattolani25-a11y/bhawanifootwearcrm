@@ -137,6 +137,8 @@ await p.route("**/*", async (r) => {
     writes.push("white-profile");
     return r.fulfill({ json: { id: whiteId } });
   }
+  // Optional bargaining is deliberately absent in this legacy-backend colour regression.
+  if(path.endsWith("/rpc/owner_catalog_bargain_policy"))return r.fulfill({status:404,json:{code:"PGRST202",message:"Optional bargaining not installed"}});
   if (method !== "GET") {
     writes.push("UNEXPECTED " + path);
     return r.abort();

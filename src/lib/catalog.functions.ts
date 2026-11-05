@@ -6,14 +6,14 @@ import type { PublicHero } from "./catalog-hero";
 
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
-export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
+export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; bargain_enabled?: boolean; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
 export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
 export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null; heroUnavailable?: boolean; presentation?: CatalogPresentation };
 export type BookingResult = { booking_no: string; advance: number; price: number; delivery_charge: number; fulfillment: Fulfillment; upi_id: string; shop: string; phone: string | null; product: string; size: string; hold_hours: number; coupon_code?: string | null; coupon_discount?: number };
 export type TrackResult = { booking_no: string; product: string; size: string; status: string; fulfillment: Fulfillment; price: number; advance: number; delivery_charge: number; created_at: string; expires_at: string; history: { status: string; at: string }[] } | null;
 
-async function publicClient() {
+export async function publicClient() {
   const { createClient } = await import("@supabase/supabase-js");
   const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
   return createClient(process.env["SUPABASE_URL"]!, key, {
@@ -40,8 +40,9 @@ export const getCatalogSnapshot = createServerFn({ method: "GET" }).handler(asyn
   const { data, error } = await sb.rpc("public_catalog");
   if (error) throw new Error("Catalog refresh is unavailable");
   const d = data as unknown as CatalogData;
+  const flags = await sb.rpc("catalog_bargain_enabled").then(({data}) => new Set(Array.isArray(data) ? data as string[] : []), () => new Set<string>());
   if (!d.enabled || !d.shop) return { enabled: false };
-  return { enabled: true, shop: d.shop, products: (d.products ?? []).map(p => ({ ...p, image_key: p.image, image: null })) };
+  return { enabled: true, shop: d.shop, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };
 });
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;
@@ -66,6 +67,7 @@ export const createBooking = createServerFn({ method: "POST" })
     z.object({
       variantId: z.string().uuid(),
       requestId: z.string().uuid(),
+      bargain: z.object({ id: z.string().uuid(), client: z.string().uuid() }).optional(),
       quote: z.object({ price: z.number().finite().nonnegative(), net: z.number().finite().nonnegative(), charge: z.number().finite().nonnegative(), advance: z.number().finite().nonnegative() }),
       name: z.string().trim().min(2).max(60),
       mobile: z.string().trim().regex(mobileRx, "Enter a valid 10-digit mobile number"),
@@ -77,7 +79,7 @@ export const createBooking = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<BookingResult> => {
     const sb = await publicClient();
-    const { data: r, error } = await sb.rpc("create_catalog_order", { _variant_id: data.variantId, _name: data.name, _mobile: data.mobile, _fulfillment: data.fulfillment, _address: data.address, _area: data.area, _coupon: data.coupon, _request_id: data.requestId, _quote: data.quote });
+    const { data: r, error } = await sb.rpc(data.bargain ? "create_catalog_bargain_order" : "create_catalog_order", { ...(data.bargain ? { _deal_id: data.bargain.id, _client: data.bargain.client } : {}), _variant_id: data.variantId, _name: data.name, _mobile: data.mobile, _fulfillment: data.fulfillment, _address: data.address, _area: data.area, _coupon: data.coupon, _request_id: data.requestId, _quote: data.quote });
     if (error) throw new Error((/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST") ? "ORDER_REJECTED: " : "ORDER_UNCONFIRMED: ") + error.message);
     return r as unknown as BookingResult;
   });

@@ -1,0 +1,43 @@
+# Optional catalog bargaining and cart
+
+Status: frontend and reviewed SQL source prepared locally. No live database changes have been applied. The SQL is an explicit review artifact outside the migration runner/journal because the owner previously required confirmation before backend/RPC changes. Normal ordering and the cart work without installing bargaining support; the public bargain link stays hidden and the owner editor explains missing support.
+
+## Customer flow
+
+- Header shopping-cart icon, item count, mobile bottom sheet. Save exact product/colour/size IDs; reuse existing cover URLs in memory. Device cart stores no photo binaries, customer contact or owner limits. Maximum30 distinct pairs, one pair per checkout, clearly labelled delivery/advance for each. This preserves the existing single-pair reservation/accounting model; it is not a multi-item atomic order.
+- Subtle Make an offer link after product details/policy and immediately above similar pairs. Choose size first. No automatic popups, fake salesperson/typing or WhatsApp claim.
+- At most two distinct valid customer bids per product colour and device capability session within24hours. Size changes preserve the two-chance budget; quotes remain bound to their selected size. Same monetary amount, including1900 vs1900.00, returns the current result without consuming a chance or changing its deadline. Concurrent retries serialize.
+- Owner sets optional ON/OFF, ₹/% minimum and maximum discount,5/10rupee rounding. No universal12% maximum. Floor rounds up; highest counter rounds down so neither end crosses the approved range. Invalid/empty rounded ranges cannot save. Limits and costs are never in public responses.
+- A customer bid in the allowed selling range can close the deal without automatic maximum discount; rounded acceptance never exceeds the offered amount. Otherwise counters use bid-dependent bounded random concession, retain the better existing counter and do not reward a decreased bid. Final does not automatically mean floor price. Progress headings are used only when the counter actually improves; the final card label follows the two-bid count.
+- Every new valid response has an authoritative server deadline180seconds later. The final response also has180seconds. Duplicate bids, accept, cart, reopening and refresh do not renew it. Client timers subtract request latency and persist their local deadline; the server independently rejects late orders after acquiring locks. A fixed footer shows time and actions; a customer-initiated catalog reminder and cart entries retain the timer. No hidden-tab polling; a single shared clock updates only timer consumers, not the product grid.
+- Customer must successfully place the order before expiry; cart/negotiation alone do not hold inventory. A successfully saved order retains its agreed price under the existing separate unpaid reservation/payment deadline. The three-minute bargain deadline never retroactively changes an order or marks payment received.
+- Bargain price changes delivery-threshold/advance calculation. No additional coupon/festival/reward redemption stacking. Expired/changed quotes require explicit listed-price confirmation; checkout never silently raises a price. Existing original-request recovery takes precedence even after quote expiry, so transport failures cannot duplicate stock holds.
+
+## Owner access
+
+Products → Edit product → Allow bargaining. The small Bargaining rules text action beside the switch opens a separate rules dialog, only for an owner. Choose limits and Save bargaining settings. Quick Add/Add colour expose the same optional fields only when backend support is available. A failed secondary policy save reports that the product itself was saved and directs the owner to edit, avoiding a duplicate stock-adding creation retry. New colours never inherit the parent policy or quantities.
+
+Owner policy updates use a revision guard. Price/policy changes invalidate unplaced quotes; existing orders, receipts, invoices, returns, profit and loyalty history are unchanged. The owner policy editor intentionally does not invent a profit preview for missing costs.
+
+## SQL review and activation
+
+- Readable review: `docs/sql/catalog-bargaining/support.sql`.
+- Equivalent single atomic paste below200lines: `docs/sql/catalog-bargaining/paste-under-200-lines.sql`. Run **one** version, only after owner approval; no Lovable AI task is required to paste into SQL Editor. No migration journal or marker is needed for this optional reviewed add-on.
+- Read-only checks: `docs/sql/catalog-bargaining/verify.sql` (six true values).
+- Requires existing operations update0040. Unsupported backend layouts fail atomically. The script is idempotent and executes no reset, sale, receipt or live sample order.
+- Two private RLS tables: `catalog_bargain_policies` and `catalog_bargain_sessions`; one nullable booking snapshot identifier. Owner reads/saves are role-checked; sessions have no direct public/authenticated access. Public APIs expose enabled product IDs and capability-bound quotes only. Sessions are cleaned after24hours during subsequent bids; no paid worker/AI service is introduced.
+- New scoped order function `create_catalog_bargain_order` reuses the current validation/locking/hold semantics and preserves displayed-quote and request dedup checks. **Existing `create_catalog_order`, `create_sale`, `checked_sale_payload` and `complete_catalog_booking` definitions are not edited.** Existing receipt/invoice completion accepts the saved booking price as before.
+- The review SQL also narrowly extends three maintenance definitions: business-table manifest, fixed reset TRUNCATE allowlist, and legacy v2 restore optional-table compatibility. This is necessary to prevent the new FKs blocking reset or leaving policies out of backup. Existing owner/backup/RESET checks and RESTRICT stay intact. Installing the definitions does not execute reset. The matching frontend accepts exactly the old manifest or the old manifest plus both new tables; unknown/partial extensions stay rejected. Restored session generations cannot revive a deal.
+- Publish matching frontend after approved SQL installation. If frontend is deployed first, cart remains available and bargaining stays unavailable until support exists and an owner enables a product. Never claim source/mock tests prove live installation.
+
+## Verification
+
+`tests/catalog-bargain-db-audit.py` starts a disposable PostgreSQL17 container with network disabled, applies existing migrations and this review SQL, then removes the container. It verifies original financial definitions unchanged, installation/reapplication/compact paste, role/RLS checks, concurrent duplicate bids, two chances, bounded rounded counters,180second expiry, size-budget binding, no bargain stock hold, forged amount/variant/coupon rejection, one stock hold, committed-request retry after expiry, policy invalidation, unchanged receipt/invoice completion, complete backup/reset/new+old restore compatibility. All fixtures are synthetic.
+
+`tests/catalog-commerce-browser-audit.mjs` covers320/390/768/1440px cart placement, two bids/duplicate messaging, final state, visible timer/actions, lower net shipping thresholds, cart reload, no coupon control on bargains, agreed-price checkout, exact cart removal and explicit expiry fallback. Services are fully mocked and all external requests are blocked. `tests/catalog-bargain-owner-browser-audit.mjs` verifies owner limits above12%, save/reload, separate rules screen and staff exclusion.
+
+Pure unit tests cover floor/range boundaries, parsing, deadline persistence/latency, cart identities and strict old/new backup manifests. Screenshots/JSON are in `/tmp/solestack-audit/catalog-commerce` during local review. Real customer scan/touch/network conditions still need a normal production smoke check after approved installation and deployment; these tests do not perform live customer transactions.
+
+## Rollback and limits
+
+Disable a product's bargaining switch to stop new deals; previously saved orders remain at their agreed prices. Frontend can be reverted independently. Do not drop tables or remove maintenance support while bargain orders/history exist. Anonymous capability sessions prevent refresh rerolls but cannot prove the same human across devices/incognito; stronger prevention requires verified identity. Cart deliberately orders one pair at a time; batch orders need a separate atomic backend design rather than several hidden stock-writing requests.

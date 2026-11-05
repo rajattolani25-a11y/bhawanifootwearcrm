@@ -1,3 +1,4 @@
+import { BargainPolicyEditor } from "./catalog-commerce/BargainPolicyEditor";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -163,6 +164,7 @@ export function ProductDetailsEditor({
       >
         Save product details
       </Button>
+      <BargainPolicyEditor productId={id} price={sellingPrice} />
       <CatalogDescriptionEditor productId={id} onPreview={noPreview} onEditing={noEditing} />
     </section>
   );

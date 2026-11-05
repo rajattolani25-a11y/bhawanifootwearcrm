@@ -1,3 +1,4 @@
+import { COMMERCE } from "./i18n-commerce";
 import { OPERATIONS } from "./i18n-operations";
 import { CATEGORY_TRANSLATIONS } from "@/lib/i18n-categories";
 import { EXTRA, GENERATED } from "@/lib/i18n-dict";
@@ -15,6 +16,7 @@ const DICT: Record<string, { english?: string; hindi: string; hinglish: string }
   ...POSTERS,
   ...CATEGORY_TRANSLATIONS,
   ...OPERATIONS,
+  ...COMMERCE,
   "SoleStack": { hindi: "SoleStack", hinglish: "SoleStack" },
   "Summary": { hindi: "सारांश", hinglish: "Summary" },
   "Profit & Loss": { hindi: "लाभ और हानि", hinglish: "Munafa-Nuksaan" },

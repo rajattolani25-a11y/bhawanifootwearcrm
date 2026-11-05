@@ -22,6 +22,10 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     ({ data }) => (data as unknown as CatalogOffer) ?? null,
     () => null,
   );
+  const bargainRequest = Promise.resolve(sb.rpc("catalog_bargain_enabled")).then(
+    ({ data }) => new Set<string>(Array.isArray(data) ? data : []),
+    () => new Set<string>(),
+  );
   let heroUnavailable = false;
   const heroRequest = (async (): Promise<PublicHero | null> => {
     // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
@@ -71,10 +75,11 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
       .createSignedUrls(paths, 6 * 3600);
     signed?.forEach((s) => s.path && s.signedUrl && urls.set(s.path, s.signedUrl));
   }
-  const [presentation, offer, hero] = await Promise.all([
+  const [presentation, offer, hero, bargainEnabled] = await Promise.all([
     presentationRequest,
     offerRequest,
     heroRequest,
+    bargainRequest,
   ]);
   return {
     enabled: true,
@@ -85,6 +90,7 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     shop: d.shop,
     products: d.products.map((p) => ({
       ...p,
+      bargain_enabled: bargainEnabled.has(p.id),
       image_key: p.image,
       image: p.image ? (urls.get(p.image) ?? null) : null,
     })),

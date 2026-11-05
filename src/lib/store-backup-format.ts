@@ -30,6 +30,7 @@ export const BACKUP_TABLES = [
   "catalog_hero_settings",
   "catalog_presentation_settings",
 ];
+const OPTIONAL_BARGAIN_TABLES = ["catalog_bargain_policies", "catalog_bargain_sessions"];
 export type ResetState = { installation_id: string; generation: string; reset_at: string | null };
 export type BackupAsset = {
   bucket: "product-images" | "catalog-hero-images";
@@ -95,8 +96,10 @@ export async function verifyBackup(raw: unknown): Promise<StoreBackup> {
   const tables = b.snapshot.tables;
   if (
     !tables ||
-    Object.keys(tables).length !== BACKUP_TABLES.length ||
-    BACKUP_TABLES.some((t) => !Array.isArray(tables[t]))
+    BACKUP_TABLES.some((t) => !Array.isArray(tables[t])) ||
+    (Object.keys(tables).length !== BACKUP_TABLES.length &&
+      (Object.keys(tables).length !== BACKUP_TABLES.length + OPTIONAL_BARGAIN_TABLES.length ||
+        OPTIONAL_BARGAIN_TABLES.some((t) => !Array.isArray(tables[t]))))
   )
     throw new Error("Backup table manifest is incomplete.");
   const { checksum, ...body } = b;
@@ -152,6 +155,9 @@ export function clearStoreDrafts(
   local: Pick<Storage, "removeItem">,
   session: Pick<Storage, "removeItem">,
 ) {
+  local.removeItem("solestack-catalog-cart-v1");
+  local.removeItem("solestack-catalog-last-deal-v1");
+  local.removeItem("solestack-catalog-bargain-client-v1");
   local.removeItem("solestack-held-bills");
   local.removeItem("solestack-poster-campaigns-v1");
   session.removeItem("offer-seen");
