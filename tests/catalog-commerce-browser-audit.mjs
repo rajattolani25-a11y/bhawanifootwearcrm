@@ -214,6 +214,14 @@ try {
     })
     .waitFor();
   await e.screenshot({ path: out + "/expired-320.png" });
+  assert.equal(await e.getByRole("dialog").locator("time").count(), 0);
+  await e.getByRole("button", { name: "Back", exact: true }).click();
+  await e
+    .getByText("This bargain price has expired. Choose the listed price to continue.", {
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(await e.getByRole("dialog").locator("time").count(), 0);
   await e.getByRole("button", { name: /Use listed price/ }).click();
   assert.equal(await e.locator("time").count(), 0);
   assert.deepEqual(errors, []);

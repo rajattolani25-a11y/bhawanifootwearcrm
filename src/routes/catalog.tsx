@@ -513,7 +513,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           </div>; })()}
         </div>}
         {step === "view" && (wa || canOrder) && <footer className={styles["productActions"]} aria-label={t("Product actions")}>
-          {invalidDeal && <div className="text-xs" role="alert"><p>{t("The product price or selection changed. Review the listed price to continue.")}</p><button className="min-h-11 underline" onClick={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);onDiscardDeal();}}>{t("Use listed price")} · {inr(product.price)}</button></div>}
+          {(invalidDeal || activeDeal && dealExpiry) && <div className="text-xs" role="alert"><p>{t(invalidDeal ? "The product price or selection changed. Review the listed price to continue." : "This bargain price has expired. Choose the listed price to continue.")}</p><button className="min-h-11 underline" onClick={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);onDiscardDeal();}}>{t("Use listed price")} · {inr(product.price)}</button></div>}
           {quoteForTimer && <DealTimer deal={quoteForTimer} onExpired={()=>setDealExpiry(true)}/>}
           <div className={styles["actionSummary"]}>
             <div className={styles["actionSummaryCopy"]}>

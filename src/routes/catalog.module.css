@@ -322,3 +322,10 @@
 .addCartAction:hover:not(:disabled) { border-color:var(--primary); }
 .addCartAction:focus-visible { outline:2px solid var(--primary);outline-offset:3px; }
 .addCartAction:disabled { opacity:.45;cursor:not-allowed; }
+
+/* Catalog-only close/back contrast; keep shared dialogs elsewhere unchanged. */
+.productModal > button:last-child { opacity:1; }
+.productModal[data-product-theme="light"] > button:last-child,
+.productModal[data-product-theme="light"] .productBack { color:#111; }
+.productModal[data-product-theme="dark"] > button:last-child,
+.productModal[data-product-theme="dark"] .productBack { color:#f3f2e8; }

@@ -306,3 +306,7 @@
 .sheet.sheet {
   z-index: 51;
 }
+
+.sheet.sheet > button:last-child { color:#111;opacity:1; }
+:global(.dark) .sheet.sheet > button:last-child { color:#f5f1e6; }
+.footer:empty { display:none; }

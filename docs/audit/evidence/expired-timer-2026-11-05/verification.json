@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-05",
+  "checks": {
+    "browser_cooldown_and_close_contrast": "pass",
+    "browser_legacy_commerce_and_explicit_expired_price_review": "pass",
+    "typescript": "pass",
+    "scoped_eslint": "pass (formatting rule excluded for compact route)",
+    "production_build": "pass"
+  },
+  "behavior": [
+    "price timer disappears at zero without clearing the accepted deal",
+    "opening and closing Make an offer does not resurrect expired product footer timer",
+    "cooldown remains server-authoritative and displayed only in offer sheet",
+    "accepted expired price requires explicit listed-price review in checkout and product view",
+    "catalog close/back black and opaque in light; light in dark theme",
+    "global owner dialog styles unchanged"
+  ],
+  "sql_changes": false,
+  "production_test_writes": 0
+}

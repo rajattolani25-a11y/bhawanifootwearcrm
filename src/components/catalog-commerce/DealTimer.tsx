@@ -11,20 +11,12 @@ export function DealTimer({ deal, onExpired }: { deal: CatalogDeal; onExpired?: 
   useEffect(() => {
     if (seconds === 0) onExpired?.();
   }, [seconds, onExpired]);
+  if (seconds === 0) return null;
   return (
-    <div
-      className={styles["timer"]}
-      data-expired={seconds === 0}
-      data-urgent={seconds > 0 && seconds <= 30}
-      data-no-translate
-    >
+    <div className={styles["timer"]} data-urgent={seconds > 0 && seconds <= 30} data-no-translate>
       <Clock3 aria-hidden="true" size={18} />
       <div>
-        <strong>
-          {t(
-            seconds > 0 ? "Place your order to keep this price" : "This bargain price has expired",
-          )}
-        </strong>
+        <strong>{t("Place your order to keep this price")}</strong>
         <span>
           {inr(deal.price)} · {t("Cart does not reserve stock")}
         </span>

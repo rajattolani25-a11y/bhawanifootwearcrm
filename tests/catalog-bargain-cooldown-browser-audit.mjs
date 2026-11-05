@@ -123,6 +123,29 @@ try {
     assert.equal(await cart.locator("svg").count(), 1);
     assert.equal(await cart.evaluate((el) => getComputedStyle(el).textDecorationLine), "none");
   }
+  async function closeContrast(expected) {
+    const close = page.getByRole("dialog").getByRole("button", { name: "Close", exact: true });
+    const style = await close.evaluate((el) => ({
+      color: getComputedStyle(el).color,
+      opacity: getComputedStyle(el).opacity,
+    }));
+    assert.equal(style.color, expected, JSON.stringify(style));
+    assert.equal(style.opacity, "1");
+  }
+  await closeContrast("rgb(17, 17, 17)");
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Back to catalog", exact: true })
+      .evaluate((el) => getComputedStyle(el).color),
+    "rgb(17, 17, 17)",
+  );
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Switch theme", exact: true }).click();
+  await page.getByRole("button", { name: "DEMO Everyday Sports Shoe", exact: true }).click();
+  await closeContrast("rgb(243, 242, 232)");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Switch theme", exact: true }).click();
+  await page.getByRole("button", { name: "DEMO Everyday Sports Shoe", exact: true }).click();
   for (const height of [568, 640]) {
     await page.setViewportSize({ width: 320, height });
     for (const name of ["Add to cart", "Get this pair"]) {
@@ -146,11 +169,26 @@ try {
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   assert.equal(await page.getByRole("textbox", { name: "Your offer", exact: true }).count(), 0);
   await page.getByRole("button", { name: "7", exact: true }).click();
-  await page.screenshot({path:out+"/cart-action-390.png"});
+  await page.screenshot({ path: out + "/cart-action-390.png" });
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   const note =
     "After the final price expires, there is a 30-minute cooldown before bargaining again.";
   await page.getByText(note, { exact: true }).waitFor();
+  await closeContrast("rgb(17, 17, 17)");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Switch theme", exact: true }).click();
+  await page.getByRole("button", { name: "DEMO Everyday Sports Shoe", exact: true }).click();
+  await page.getByRole("button", { name: "7", exact: true }).click();
+  await page.getByRole("button", { name: "Make an offer", exact: true }).click();
+  await closeContrast("rgb(245, 241, 230)");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Switch theme", exact: true }).click();
+  await page.getByRole("button", { name: "DEMO Everyday Sports Shoe", exact: true }).click();
+  await page.getByRole("button", { name: "7", exact: true }).click();
+  await page.getByRole("button", { name: "Make an offer", exact: true }).click();
+  await closeContrast("rgb(17, 17, 17)");
   await page.getByRole("textbox", { name: "Your offer", exact: true }).fill("1900");
   await page.getByRole("button", { name: "Send my offer", exact: true }).click();
   await page.getByRole("button", { name: "Revise my offer", exact: true }).waitFor();
@@ -173,10 +211,19 @@ try {
   await page.getByText("FINAL COUNTER-OFFER", { exact: true }).waitFor();
   assert.equal(await page.getByRole("dialog").locator("time").count(), 1);
   assert.equal(await page.getByText("Try another offer in", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.waitForTimeout(300); // Let the existing modal transition finish before inspecting the product footer.
+  const productFooter = page.locator('footer[aria-label="Product actions"]');
+  assert.equal(await productFooter.locator("time").count(), 1);
   await page.evaluate(() => {
     window.__qaOffset += 181000;
     window.dispatchEvent(new Event("focus"));
   });
+  await page.waitForFunction(
+    () => !document.querySelector('footer[aria-label="Product actions"] time'),
+  );
+  await page.screenshot({ path: out + "/expired-product-no-timer-390.png" });
+  await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   const again = page.getByRole("button", { name: "Start a new bargain", exact: true });
   await again.waitFor();
   assert(await again.isDisabled());
@@ -187,6 +234,8 @@ try {
   await page.screenshot({ path: out + "/cooldown-note-390.png" });
   await page.getByRole("button", { name: "Close", exact: true }).click();
   assert.equal(await page.locator("[data-bargain-cooldown]").count(), 0);
+  assert.equal(await productFooter.locator("time").count(), 0);
+  assert.equal(await productFooter.getByText("00:00", { exact: true }).count(), 0);
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   await page.getByLabel("Cooldown remaining", { exact: true }).waitFor();
   await again.waitFor();
@@ -226,6 +275,8 @@ try {
           "one offer action beside price at320/390/768/1440",
           "prominent cart button with icon pinned beside price summary; actions fit320x568",
           "size-required focus prompt",
+          "expired price timer disappears live and never returns after offer reopen",
+          "black opaque close/back in light catalog, light close in dark; scoped sheet contrast",
           "cooldown timer only inside the product offer sheet; no global timer",
           "unused second bid survives expired first quote",
           "final quote expiry blocks early restart",

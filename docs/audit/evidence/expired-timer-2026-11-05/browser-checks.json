@@ -1,0 +1,17 @@
+{
+  "pass": true,
+  "checks": [
+    "one offer action beside price at320/390/768/1440",
+    "prominent cart button with icon pinned beside price summary; actions fit320x568",
+    "size-required focus prompt",
+    "expired price timer disappears live and never returns after offer reopen",
+    "black opaque close/back in light catalog, light close in dark; scoped sheet contrast",
+    "cooldown timer only inside the product offer sheet; no global timer",
+    "unused second bid survives expired first quote",
+    "final quote expiry blocks early restart",
+    "reopen preserves deadline",
+    "new four-bid round after cooldown",
+    "new round shows listed price and clears the old discounted counter"
+  ],
+  "productionWrites": 0
+}
