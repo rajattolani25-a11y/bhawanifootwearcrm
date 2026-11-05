@@ -17,6 +17,8 @@ Status: frontend and reviewed SQL source prepared locally. No live database chan
 
 Products → Edit product → Allow bargaining. The small Bargaining rules text action beside the switch opens a separate rules dialog, only for an owner. Choose limits and Save bargaining settings. Quick Add/Add colour expose the same optional fields only when backend support is available. A failed secondary policy save reports that the product itself was saved and directs the owner to edit, avoiding a duplicate stock-adding creation retry. New colours never inherit the parent policy or quantities.
 
+First-time owner reads from the installed RPC can return an object of null fields rather than SQL null. The frontend normalizes that absent record to OFF/amount/min0/max0/rounding5/revisionnull, validates the discount kind, and sends a complete canonical save payload. Existing malformed saved records fail closed instead of being silently rewritten. This fixes valid first-time10–250rupee saves without another backend update.
+
 Owner policy updates use a revision guard. Price/policy changes invalidate unplaced quotes; existing orders, receipts, invoices, returns, profit and loyalty history are unchanged. The owner policy editor intentionally does not invent a profit preview for missing costs.
 
 ## SQL review and activation

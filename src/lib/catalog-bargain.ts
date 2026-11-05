@@ -34,6 +34,41 @@ export const DEFAULT_BARGAIN_POLICY: BargainPolicy = {
   rounding: 5,
   revision: null,
 };
+/** Older RPCs serialize an absent composite row as an object of null fields. */
+export function readBargainPolicy(raw: unknown): BargainPolicy {
+  if (raw === null || raw === undefined) return { ...DEFAULT_BARGAIN_POLICY };
+  if (typeof raw !== "object" || Array.isArray(raw))
+    throw Error("Bargaining settings could not be read. Reload before editing.");
+  const r = raw as Record<string, unknown>;
+  if (
+    ["enabled", "kind", "min_discount", "max_discount", "rounding", "revision"].every(
+      (key) => r[key] === null || r[key] === undefined,
+    )
+  )
+    return { ...DEFAULT_BARGAIN_POLICY };
+  const lo = Number(r["min_discount"]),
+    hi = Number(r["max_discount"]),
+    step = Number(r["rounding"]);
+  if (
+    typeof r["enabled"] !== "boolean" ||
+    !["amount", "percent"].includes(String(r["kind"])) ||
+    r["min_discount"] === null ||
+    r["max_discount"] === null ||
+    !Number.isFinite(lo) ||
+    !Number.isFinite(hi) ||
+    ![5, 10].includes(step) ||
+    !(r["revision"] === null || typeof r["revision"] === "string")
+  )
+    throw Error("Bargaining settings could not be read. Reload before editing.");
+  return {
+    enabled: r["enabled"],
+    kind: r["kind"] as "amount" | "percent",
+    min_discount: lo,
+    max_discount: hi,
+    rounding: step as 5 | 10,
+    revision: r["revision"] as string | null,
+  };
+}
 export function dealSeconds(deal: CatalogDeal, now: number, offset = 0): number {
   return Math.max(
     0,
@@ -54,6 +89,7 @@ export function policyFloor(price: number, p: BargainPolicy): number {
   return Math.ceil((price - max) / p.rounding) * p.rounding;
 }
 export function policyError(price: number, p: BargainPolicy): string | null {
+  if (!["amount", "percent"].includes(p.kind)) return "Enter a valid minimum and maximum discount.";
   if (!p.enabled) return null;
   if (
     ![price, p.min_discount, p.max_discount].every(Number.isFinite) ||

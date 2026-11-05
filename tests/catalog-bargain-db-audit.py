@@ -62,6 +62,9 @@ try:
   return (json.loads(r.stdout)if r.stdout.strip()else None)if ok else r
  def fail(name,args,who=None):
   r=call(name,args,who,False);assert r.returncode,(name,r.stdout);return r.stderr
+ missing_policy=call('owner_catalog_bargain_policy',{'product_id':p},owner)
+ print('Initial owner policy:',json.dumps(missing_policy))
+ assert missing_policy['revision']is None
  policy={'enabled':True,'kind':'amount','min_discount':0,'max_discount':200,'rounding':5}
  saved=call('save_catalog_bargain_policy',{'product_id':p,'policy':policy,'expected_revision':None},owner)
  assert call('catalog_bargain_enabled',{})==[p]

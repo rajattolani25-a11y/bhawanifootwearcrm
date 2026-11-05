@@ -86,3 +86,29 @@ test("owner bargaining rules have explicit Hindi and Hinglish copy", async () =>
     assert(COMMERCE[rule]?.hinglish, rule);
   }
 });
+
+test("missing owner policy from PostgreSQL null composite gets complete usable defaults", async () => {
+  const { readBargainPolicy, DEFAULT_BARGAIN_POLICY } =
+    await import("../src/lib/catalog-bargain.ts");
+  const empty = {
+    enabled: null,
+    kind: null,
+    min_discount: null,
+    max_discount: null,
+    rounding: null,
+    revision: null,
+  };
+  const policy = {
+    ...readBargainPolicy(empty),
+    enabled: true,
+    min_discount: 10,
+    max_discount: 250,
+  };
+  assert.deepEqual(readBargainPolicy(empty), DEFAULT_BARGAIN_POLICY);
+  assert.equal(policy.kind, "amount");
+  assert.equal(policy.rounding, 5);
+  assert.equal(policyFloor(1600, policy), 1350);
+  assert.equal(policyError(1600, policy), null);
+  assert(policyError(1600, { ...policy, kind: null }));
+  assert.throws(() => readBargainPolicy({ ...empty, revision: "saved-revision" }));
+});

@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
 import {
   DEFAULT_BARGAIN_POLICY,
+  readBargainPolicy,
   OWNER_BARGAIN_RULES,
   policyError,
   policyFloor,
@@ -148,7 +149,7 @@ export function BargainPolicyEditor({ productId, price }: { productId: string; p
         _product_id: productId,
       });
       if (error) throw Error(error.message);
-      return data as BargainPolicy;
+      return readBargainPolicy(data);
     },
   });
   if (!isOwner) return null;

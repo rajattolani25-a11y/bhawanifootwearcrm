@@ -29,7 +29,7 @@ await page.route("**/*", async (route) => {
   if (u.pathname.includes("/src/integrations/supabase/client.ts"))
     return route.fulfill({
       contentType: "application/javascript",
-      body: `export const supabase={rpc:async(name,args)=>{const policy=JSON.parse(localStorage.getItem('qa-policy')||'null')||{enabled:false,kind:'amount',min_discount:0,max_discount:0,rounding:5,revision:null};if(!window.__owner)return {error:{message:'Owner access required'}};if(name==='owner_catalog_bargain_policy')return {data:policy,error:null};if(name==='save_catalog_bargain_policy'){if(args._expected_revision!==policy.revision)return {error:{message:'Bargaining rules changed. Reload before saving.'}};const saved={...args._policy,revision:crypto.randomUUID()};localStorage.setItem('qa-policy',JSON.stringify(saved));return {data:saved,error:null};}throw Error('Unexpected owner RPC');}};`,
+      body: `export const supabase={rpc:async(name,args)=>{const policy=JSON.parse(localStorage.getItem('qa-policy')||'null')||{enabled:null,kind:null,min_discount:null,max_discount:null,rounding:null,revision:null};if(!window.__owner)return {error:{message:'Owner access required'}};if(name==='owner_catalog_bargain_policy')return {data:policy,error:null};if(name==='save_catalog_bargain_policy'){if(!['amount','percent'].includes(args._policy.kind)||![5,10].includes(args._policy.rounding))return {error:{message:'Enter a valid minimum and maximum discount.'}};if(args._expected_revision!==policy.revision)return {error:{message:'Bargaining rules changed. Reload before saving.'}};const saved={...args._policy,revision:crypto.randomUUID()};localStorage.setItem('qa-policy',JSON.stringify(saved));return {data:saved,error:null};}throw Error('Unexpected owner RPC');}};`,
     });
   if (u.pathname === "/owner-bargain-audit.html")
     return route.fulfill({
@@ -51,6 +51,26 @@ try {
     timeout: 60000,
   });
   await page.getByRole("switch").check();
+  await page
+    .getByRole("spinbutton", { name: "Minimum discount (optional)", exact: true })
+    .fill("10");
+  await page.getByRole("spinbutton", { name: "Maximum discount", exact: true }).fill("250");
+  await page.getByRole("button", { name: "Save bargaining settings", exact: true }).click();
+  await page.waitForFunction(() => {
+    const p = JSON.parse(localStorage.getItem("qa-policy") || "null");
+    return (
+      p?.kind === "amount" && p.rounding === 5 && p.min_discount === 10 && p.max_discount === 250
+    );
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("switch").waitFor();
+  assert.equal(
+    await page
+      .getByRole("spinbutton", { name: "Minimum discount (optional)", exact: true })
+      .inputValue(),
+    "10",
+  );
+
   await page.getByRole("spinbutton", { name: "Maximum discount", exact: true }).fill("200");
   await page.getByRole("button", { name: "Bargaining rules", exact: true }).click();
   const dialog = page.getByRole("dialog");
