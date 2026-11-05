@@ -7,7 +7,7 @@ import type { PublicHero } from "./catalog-hero";
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
 export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; bargain_enabled?: boolean; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
-export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number; cart_ready?: boolean };
+export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number; cart_ready?: boolean; cart_coupon_ready?: boolean };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
 export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null; heroUnavailable?: boolean; presentation?: CatalogPresentation };
 export type BookingResult = { booking_no: string; advance: number; price: number; delivery_charge: number; fulfillment: Fulfillment; upi_id: string; shop: string; phone: string | null; product: string; size: string; hold_hours: number; coupon_code?: string | null; coupon_discount?: number };
@@ -40,9 +40,9 @@ export const getCatalogSnapshot = createServerFn({ method: "GET" }).handler(asyn
   const { data, error } = await sb.rpc("public_catalog");
   if (error) throw new Error("Catalog refresh is unavailable");
   const d = data as unknown as CatalogData;
-  const [flags,cartReady] = await Promise.all([sb.rpc("catalog_bargain_enabled").then(({data}) => new Set(Array.isArray(data) ? data as string[] : []), () => new Set<string>()),sb.rpc("catalog_cart_version").then(({data,error})=>!error&&data===1,()=>false)]);
+  const [flags,cartReady] = await Promise.all([sb.rpc("catalog_bargain_enabled").then(({data}) => new Set(Array.isArray(data) ? data as string[] : []), () => new Set<string>()),sb.rpc("catalog_cart_version").then(({data,error})=>!error && (data === 1 || data === 2) ? data : 0,()=>0)]);
   if (!d.enabled || !d.shop) return { enabled: false };
-  return { enabled: true, shop: {...d.shop,cart_ready:cartReady}, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };
+  return { enabled: true, shop: {...d.shop,cart_ready:cartReady>=1,cart_coupon_ready:cartReady>=2}, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };
 });
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;

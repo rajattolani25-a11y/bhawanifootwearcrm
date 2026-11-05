@@ -28,6 +28,7 @@ export function CartConfirmation({
   onTrack: () => void;
 }) {
   const { lang, t } = useLang();
+  const couponDiscount = result.orders.reduce((sum, item) => sum + (item.coupon_discount ?? 0), 0);
   const canPay = result.orders.every(
     (item) =>
       item.status === "pending" &&
@@ -69,18 +70,33 @@ export function CartConfirmation({
                 {image && (
                   <img src={image} alt="" loading="lazy" decoding="async" width="72" height="60" />
                 )}
-                <div>
+                <div className="flex-1">
                   <strong data-no-translate>{item.product}</strong>
                   <p>
-                    <span data-no-translate>{item.color}</span> · {t("Size")} {item.size} ·{" "}
-                    {inr(item.price)}
+                    <span data-no-translate>{item.color}</span> · {t("Size")} {item.size}
                   </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-0.5 text-sm">
+                  {(item.coupon_discount ?? 0) > 0 && (
+                    <del className="text-xs text-muted-foreground">
+                      {inr(item.price + item.coupon_discount!)}
+                    </del>
+                  )}
+                  <strong>{inr(item.price)}</strong>
                 </div>
               </div>
             );
           })}
         </div>
         <dl className="grid grid-cols-2 gap-2 border-t pt-3 text-sm">
+          {couponDiscount > 0 && (
+            <>
+              <dt>{t("Subtotal")}</dt>
+              <dd className="text-right">{inr(result.price + couponDiscount)}</dd>
+              <dt>{t("Coupon discount")}</dt>
+              <dd className="text-right">−{inr(couponDiscount)}</dd>
+            </>
+          )}
           <dt>{t("Product total")}</dt>
           <dd className="text-right">{inr(result.price)}</dd>
           <dt>{t("Delivery charge")}</dt>

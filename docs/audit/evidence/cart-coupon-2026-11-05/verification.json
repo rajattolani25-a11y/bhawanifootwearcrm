@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-05",
+  "unit_tests": {
+    "passed": 56,
+    "failed": 0
+  },
+  "typescript": "pass",
+  "scoped_eslint": "pass (formatting rule excluded for existing compact files)",
+  "production_build": "pass",
+  "browser_tests": [
+    "whole cart / proportional crossed-out and net prices / only Eligible subtotal copy",
+    "real browser restart exact request recovery",
+    "bargain checkout regression at320/390/768/1440",
+    "owner group payment success/rejection"
+  ],
+  "database_test": "isolated network-disabled PostgreSQL17: Parts3/4 reapplied; aggregate min/percentage, proportional split, partial cancel/full refund, one usage, expiry/revalidation, capacity conflict, rule-change rejection, legacy confirmation and small-money edges passed",
+  "rpc_definition_checks": "all original definitions unchanged except coupon_usage_count and guarded expired-coupon clause in confirm_catalog_booking, with exact comparison outside clause",
+  "live_database_writes": 0,
+  "activation": "base cart Parts1/2 then coupon Parts3/4, verify, matching Lovable Publish Update pending"
+}

@@ -6,6 +6,7 @@ export function catalogFixture(latency = 0) {
   const events = [];
   const state = {
     price: 999,
+    cartVersion: 1,
     available: true,
     enabled: true,
     primaryError: false,
@@ -54,7 +55,12 @@ export function catalogFixture(latency = 0) {
       if (state.optionalError)
         return delay(name, { data: null, error: { message: "missing optional support" } });
       return delay(name, {
-        data: name === "public_catalog_hero" ? hero : { title: "Offer", value: 20 },
+        data:
+          name === "catalog_cart_version"
+            ? state.cartVersion
+            : name === "public_catalog_hero"
+              ? hero
+              : { title: "Offer", value: 20 },
         error: null,
       });
     },
@@ -163,4 +169,18 @@ test("temporary hero-read failure is distinguishable from an owner-disabled hero
   const disabled = await readPublicCatalog(sb);
   assert.equal(disabled.hero, null);
   assert.equal(disabled.heroUnavailable, undefined);
+});
+
+test("whole-cart coupon readiness requires version 2 and preserves basic cart on version 1", async () => {
+  const { sb, state } = catalogFixture();
+  let result = await readPublicCatalog(sb);
+  assert.equal(result.shop.cart_ready, true);
+  assert.equal(result.shop.cart_coupon_ready, false);
+  state.cartVersion = 2;
+  result = await readPublicCatalog(sb);
+  assert.equal(result.shop.cart_coupon_ready, true);
+  state.optionalError = true;
+  result = await readPublicCatalog(sb);
+  assert.equal(result.shop.cart_ready, false);
+  assert.equal(result.shop.cart_coupon_ready, false);
 });

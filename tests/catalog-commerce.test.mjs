@@ -131,3 +131,58 @@ test("cart group references do not misgroup ordinary bookings", async () => {
   assert.equal(cartReference("BK-1105-ABCDEF1234"), null);
   assert.equal(cartReference("CT-bad-01"), null);
 });
+
+test("whole-cart coupon allocations sum exactly, stay proportionate and preserve positive pair prices", async () => {
+  const { cartCouponShares } = await import("../src/lib/catalog-cart-checkout.ts");
+  assert.deepEqual(
+    cartCouponShares(
+      [
+        { variantId: "a", price: 2200 },
+        { variantId: "b", price: 800 },
+      ],
+      300,
+    ),
+    { a: 220, b: 80 },
+  );
+  assert.deepEqual(
+    cartCouponShares(
+      [
+        { variantId: "a", price: 800 },
+        { variantId: "b", price: 333 },
+      ],
+      150,
+    ),
+    { a: 105.91, b: 44.09 },
+  );
+  assert.deepEqual(
+    cartCouponShares(
+      [
+        { variantId: "a", price: 2 },
+        { variantId: "b", price: 0.01 },
+      ],
+      1.01,
+    ),
+    { a: 1.01, b: 0 },
+  );
+  for (let n = 1; n <= 30; n++) {
+    const lines = Array.from({ length: n }, (_, i) => ({
+      variantId: String(i),
+      price: (1 + ((i * 997) % 100003)) / 100,
+    }));
+    const total = lines.reduce((sum, line) => sum + Math.round(line.price * 100), 0);
+    for (const cents of [0, Math.floor((total - n) / 2), total - n]) {
+      const shares = cartCouponShares(lines, cents / 100);
+      assert.equal(
+        Object.values(shares).reduce((sum, x) => sum + Math.round(x * 100), 0),
+        cents,
+      );
+      assert(
+        lines.every(
+          (line) =>
+            shares[line.variantId] >= 0 &&
+            Math.round((line.price - shares[line.variantId]) * 100) >= 1,
+        ),
+      );
+    }
+  }
+});

@@ -26,7 +26,7 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     ({ data }) => new Set<string>(Array.isArray(data) ? data : []),
     () => new Set<string>(),
   );
-  const cartRequest=Promise.resolve(sb.rpc("catalog_cart_version")).then(({data,error})=>!error&&data===1,()=>false);
+  const cartRequest=Promise.resolve(sb.rpc("catalog_cart_version")).then(({data,error})=>!error && (data === 1 || data === 2) ? data : 0,()=>0);
   let heroUnavailable = false;
   const heroRequest = (async (): Promise<PublicHero | null> => {
     // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
@@ -89,7 +89,7 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     hero,
     ...(heroUnavailable ? { heroUnavailable: true } : {}),
     offer,
-    shop: {...d.shop,cart_ready:cartReady},
+    shop: {...d.shop,cart_ready:cartReady>=1,cart_coupon_ready:cartReady>=2},
     products: d.products.map((p) => ({
       ...p,
       bargain_enabled: bargainEnabled.has(p.id),

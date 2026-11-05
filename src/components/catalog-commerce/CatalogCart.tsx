@@ -15,6 +15,7 @@ import {
 } from "@/lib/catalog-cart";
 import {
   cartAmounts,
+  cartCouponShares,
   cartMoney,
   readCartCheckout,
   saveCartCheckout,
@@ -23,13 +24,8 @@ import {
   type CartOrderResult,
 } from "@/lib/catalog-cart-checkout";
 import { readCatalogOrder } from "@/lib/catalog-order-recovery";
-import { createCartOrder } from "@/lib/catalog-cart.functions";
-import {
-  checkCoupon,
-  type CatalogProduct,
-  type CatalogShop,
-  type Fulfillment,
-} from "@/lib/catalog.functions";
+import { createCartOrder, checkCartCoupon } from "@/lib/catalog-cart.functions";
+import { type CatalogProduct, type CatalogShop, type Fulfillment } from "@/lib/catalog.functions";
 import { dealSeconds } from "@/lib/catalog-bargain";
 import { useDealSeconds } from "@/lib/use-deal-seconds";
 import { DealTimer } from "./DealTimer";
@@ -66,8 +62,7 @@ export function CatalogCart({
     [pending, setPending] = useState<CartCheckoutRequest | null>(null),
     [blocked, setBlocked] = useState(false);
   const [code, setCode] = useState(""),
-    [couponVariant, setCouponVariant] = useState(""),
-    [disc, setDisc] = useState<{ code: string; amount: number; variantId: string } | null>(null),
+    [disc, setDisc] = useState<{ code: string; amount: number; context: string } | null>(null),
     [couponBusy, setCouponBusy] = useState(false);
   const couponRequest = useRef(0),
     sending = useRef(false);
@@ -87,6 +82,7 @@ export function CatalogCart({
       !product ||
       !Number.isFinite(product.price) ||
       product.price <= 0 ||
+      product.price !== cartMoney(product.price) ||
       !available ||
       (item.deal &&
         (item.deal.invalidated ||
@@ -94,18 +90,33 @@ export function CatalogCart({
           product.bargain_enabled === false ||
           dealSeconds(item.deal, Date.now()) === 0)),
   );
-  const eligible = rows.filter((row) => !row.item.deal && row.available && row.product);
-  const target = eligible.some((row) => row.item.variantId === couponVariant)
-    ? couponVariant
-    : eligible[0]?.item.variantId || "";
+  const eligible = rows.filter(
+    (row) =>
+      !row.item.deal &&
+      row.available &&
+      row.product &&
+      Number.isFinite(row.product.price) &&
+      row.product.price > 0 &&
+      row.product.price === cartMoney(row.product.price),
+  );
+  const signature = rows
+    .map(
+      ({ item, product, available }) =>
+        `${item.variantId}:${product?.price}:${item.deal?.id ?? ""}:${available}`,
+    )
+    .join("|");
+  const couponContext = signature + ":" + mobile;
+  const activeDisc = disc?.context === couponContext ? disc : null;
+  const eligibleSubtotal = cartMoney(eligible.reduce((sum, row) => sum + row.product!.price, 0));
+  const couponShares = cartCouponShares(
+    eligible.map((row) => ({ variantId: row.item.variantId, price: row.product!.price })),
+    activeDisc?.amount ?? 0,
+  );
   const subtotal = cartMoney(
     rows.reduce((sum, { item, product }) => sum + (item.deal?.price ?? product?.price ?? 0), 0) -
-      (disc?.amount ?? 0),
+      (activeDisc?.amount ?? 0),
   );
   const quote = cartAmounts(subtotal, method, shop);
-  const signature = rows
-    .map(({ item, product }) => `${item.variantId}:${product?.price}:${item.deal?.id ?? ""}`)
-    .join("|");
   useEffect(() => {
     couponRequest.current++;
     setDisc(null);
@@ -144,16 +155,17 @@ export function CatalogCart({
     setError("");
     setDisc(null);
     try {
-      const value = await checkCoupon({
-        data: { variantId: target, code: code.trim(), mobile: mobile.replace(/[\s-]/g, "") },
+      const value = await checkCartCoupon({
+        data: {
+          variantIds: eligible.map((row) => row.item.variantId),
+          code: code.trim(),
+          mobile: mobile.replace(/[\s-]/g, ""),
+        },
       });
       if (seq === couponRequest.current) {
-        if (
-          value.amount >=
-          (eligible.find((row) => row.item.variantId === target)?.product?.price ?? 0)
-        )
+        if (value.amount >= eligibleSubtotal)
           throw Error(t("This coupon must leave a price above zero."));
-        setDisc({ ...value, variantId: target });
+        setDisc({ ...value, context: couponContext });
       }
     } catch (e) {
       if (seq === couponRequest.current) setError((e as Error).message);
@@ -187,6 +199,7 @@ export function CatalogCart({
           ? saved
           : {
               requestId: crypto.randomUUID(),
+              ...(shop.cart_coupon_ready ? { coupon: activeDisc?.code ?? "" } : {}),
               name: name.trim(),
               mobile: mobile.replace(/[\s-]/g, ""),
               fulfillment: method,
@@ -197,10 +210,9 @@ export function CatalogCart({
                 variantId: item.variantId,
                 price: product!.price,
                 net: cartMoney(
-                  (item.deal?.price ?? product!.price) -
-                    (disc?.variantId === item.variantId ? disc.amount : 0),
+                  (item.deal?.price ?? product!.price) - (couponShares[item.variantId] ?? 0),
                 ),
-                coupon: disc?.variantId === item.variantId ? disc.code : "",
+                coupon: "",
                 ...(item.deal ? { bargain: { id: item.deal.id, client: bargainClient() } } : {}),
               })),
             };
@@ -419,6 +431,40 @@ export function CatalogCart({
                       <p className="text-sm">
                         {selected.length} {t("pairs in one order")}
                       </p>
+                      <div
+                        className="grid gap-3 rounded-xl border p-3"
+                        aria-label={t("Order summary")}
+                      >
+                        {rows.map(({ item, product, variant }) => {
+                          const original = item.deal?.price ?? product?.price ?? 0;
+                          const saving = couponShares[item.variantId] ?? 0;
+                          return (
+                            <div
+                              key={item.variantId}
+                              className="flex items-start justify-between gap-3 text-xs"
+                            >
+                              <div className="min-w-0">
+                                <strong className="block break-words" data-no-translate>
+                                  {product?.brand} {product?.article ?? t("Unavailable product")}
+                                </strong>
+                                <span data-no-translate>{product?.color}</span> · {t("Size")}{" "}
+                                {variant?.size}
+                              </div>
+                              <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+                                {saving > 0 && (
+                                  <del className="text-muted-foreground">{inr(original)}</del>
+                                )}
+                                <strong>{inr(cartMoney(original - saving))}</strong>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {activeDisc && (
+                          <p className="border-t pt-2 text-xs">
+                            {t("Coupon discount")}: <strong>−{inr(activeDisc.amount)}</strong>
+                          </p>
+                        )}
+                      </div>
                       <Input
                         aria-label={t("Your name")}
                         placeholder={t("Your name")}
@@ -454,24 +500,9 @@ export function CatalogCart({
                       )}
                       {eligible.length > 0 && (
                         <section className="grid gap-2 rounded-xl border p-3">
-                          <p className="text-xs">{t("Coupon applies to one selected pair.")}</p>
-                          <select
-                            aria-label={t("Coupon pair")}
-                            value={target}
-                            onChange={(e) => {
-                              couponRequest.current++;
-                              setCouponBusy(false);
-                              setCouponVariant(e.target.value);
-                              setDisc(null);
-                            }}
-                            className="min-h-11 rounded-md border bg-background px-2 text-xs"
-                          >
-                            {eligible.map((row) => (
-                              <option key={row.item.variantId} value={row.item.variantId}>
-                                {row.product!.article} · {row.variant!.size}
-                              </option>
-                            ))}
-                          </select>
+                          <p className="text-xs text-muted-foreground">
+                            {t("Eligible subtotal")}: {inr(eligibleSubtotal)}
+                          </p>
                           <div className="flex gap-2">
                             <Input
                               className="min-w-0"
@@ -490,6 +521,7 @@ export function CatalogCart({
                               className="min-w-20 shrink-0 whitespace-nowrap"
                               variant="outline"
                               disabled={
+                                !shop.cart_coupon_ready ||
                                 couponBusy ||
                                 !code.trim() ||
                                 !/^(\+?91)?[6-9]\d{9}$/.test(mobile.replace(/[\s-]/g, ""))
@@ -499,9 +531,14 @@ export function CatalogCart({
                               {t(couponBusy ? "Checking…" : "Apply")}
                             </Button>
                           </div>
-                          {disc && (
+                          {!shop.cart_coupon_ready && (
                             <p className="text-xs">
-                              {disc.code} · −{inr(disc.amount)}
+                              {t("Cart coupons are temporarily unavailable.")}
+                            </p>
+                          )}
+                          {activeDisc && (
+                            <p className="text-xs">
+                              {activeDisc.code} · −{inr(activeDisc.amount)}
                             </p>
                           )}
                         </section>

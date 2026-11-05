@@ -426,3 +426,24 @@ Object.assign(COMMERCE, {
   "Price unavailable": { hindi: "कीमत उपलब्ध नहीं है", hinglish: "Price available nahi" },
   "Review required": { hindi: "जाँच ज़रूरी है", hinglish: "Check karna hai" },
 });
+
+Object.assign(COMMERCE, {
+  "Coupon applies to your eligible cart total.": {
+    hindi: "कूपन आपके पात्र कार्ट के कुल पर लागू होगा।",
+    hinglish: "Coupon aapke eligible cart total par lagega.",
+  },
+  "Eligible subtotal": { hindi: "पात्र उत्पादों का कुल", hinglish: "Eligible products ka total" },
+  "Bargained pairs are excluded.": {
+    hindi: "मोलभाव वाली जोड़ियों पर अतिरिक्त छूट नहीं है।",
+    hinglish: "Bargain wale pairs par extra discount nahi.",
+  },
+  "Cart coupons are temporarily unavailable.": {
+    hindi: "कार्ट कूपन अभी उपलब्ध नहीं हैं।",
+    hinglish: "Cart coupons abhi available nahi hain.",
+  },
+  "Coupon discount": { hindi: "कूपन की छूट", hinglish: "Coupon discount" },
+});
+
+Object.assign(COMMERCE, {
+  "Order summary": { hindi: "ऑर्डर का सारांश", hinglish: "Order summary" },
+});

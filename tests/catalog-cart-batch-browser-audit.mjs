@@ -36,6 +36,7 @@ const data = {
     advance_percent: 20,
     hold_hours: 24,
     cart_ready: true,
+    cart_coupon_ready: true,
   },
   products,
   hero: null,
@@ -64,12 +65,12 @@ async function open() {
     if (u.pathname.includes("/src/lib/catalog-cart.functions.ts"))
       return route.fulfill({
         contentType: "application/javascript",
-        body: `const key='qa-server-cart';export const createCartOrder=async({data})=>{const stored=JSON.parse(localStorage.getItem(key)||'null');const calls=JSON.parse(localStorage.getItem('qa-cart-calls')||'[]');calls.push(data);localStorage.setItem('qa-cart-calls',JSON.stringify(calls));if(stored){if(JSON.stringify(stored.request)!==JSON.stringify(data))throw Error('ORDER_REJECTED: Retry differs');return {...stored.result,server_now:new Date().toISOString()};}const result={cart_no:'CT-ABCDEF1234567890',price:data.quote.net,delivery_charge:data.quote.charge,advance:data.quote.advance,upi_id:'demo@upi',shop:'Bhawani Footwear',phone:'9999999999',hold_hours:24,server_now:new Date().toISOString(),orders:data.items.map((item,i)=>({booking_no:'CT-ABCDEF1234567890-0'+(i+1),variant_id:item.variantId,product_id:'10000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),product:i===0?'DEMO Aero':'DEMO Breeze',color:i===0?'Black':'White',size:'7',price:item.net,advance:item.net+(i===0?data.quote.charge:0),delivery_charge:i===0?data.quote.charge:0,fulfillment:data.fulfillment,status:'pending',receipt_recorded:false,expires_at:new Date(Date.now()+1800000).toISOString()}))};localStorage.setItem(key,JSON.stringify({request:data,result}));throw Error('ORDER_UNCONFIRMED: Synthetic response interrupted after commit');};`,
+        body: `export const checkCartCoupon=async({data})=>{if(data.variantIds.length!==2)throw Error('Expected whole eligible cart');return {code:'CART10',amount:300};};const key='qa-server-cart';export const createCartOrder=async({data})=>{const stored=JSON.parse(localStorage.getItem(key)||'null');const calls=JSON.parse(localStorage.getItem('qa-cart-calls')||'[]');calls.push(data);localStorage.setItem('qa-cart-calls',JSON.stringify(calls));if(stored){if(JSON.stringify(stored.request)!==JSON.stringify(data))throw Error('ORDER_REJECTED: Retry differs');return {...stored.result,server_now:new Date().toISOString()};}const result={cart_no:'CT-ABCDEF1234567890',price:data.quote.net,delivery_charge:data.quote.charge,advance:data.quote.advance,upi_id:'demo@upi',shop:'Bhawani Footwear',phone:'9999999999',hold_hours:24,server_now:new Date().toISOString(),orders:data.items.map((item,i)=>({booking_no:'CT-ABCDEF1234567890-0'+(i+1),variant_id:item.variantId,product_id:'10000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),product:i===0?'DEMO Aero':'DEMO Breeze',color:i===0?'Black':'White',size:'7',price:item.net,coupon_code:data.coupon,coupon_discount:item.price-item.net,advance:item.net+(i===0?data.quote.charge:0),delivery_charge:i===0?data.quote.charge:0,fulfillment:data.fulfillment,status:'pending',receipt_recorded:false,expires_at:new Date(Date.now()+1800000).toISOString()}))};localStorage.setItem(key,JSON.stringify({request:data,result}));throw Error('ORDER_UNCONFIRMED: Synthetic response interrupted after commit');};`,
       });
     if (u.pathname.includes("/src/lib/catalog.functions.ts"))
       return route.fulfill({
         contentType: "application/javascript",
-        body: `const d=${JSON.stringify(data)};export const getCatalog=async()=>d;export const getCatalogSnapshot=async()=>d;export const getCatalogPhotos=async()=>({available:true,images:[]});export const checkCoupon=async({data})=>{if(data.variantId!=='${products[1].sizes[0].id}')throw Error('Wrong coupon pair');return {code:'PAIR100',amount:100};};export const createBooking=async()=>{throw Error('Unexpected single-pair order')};export const trackOrder=async()=>JSON.parse(localStorage.getItem('qa-server-cart')).result;`,
+        body: `const d=${JSON.stringify(data)};export const getCatalog=async()=>d;export const getCatalogSnapshot=async()=>d;export const getCatalogPhotos=async()=>({available:true,images:[]});export const checkCoupon=async({data})=>{if(data.variantId!=='${products[1].sizes[0].id}')throw Error('Wrong coupon pair');return {code:'CART10',amount:100};};export const createBooking=async()=>{throw Error('Unexpected single-pair order')};export const trackOrder=async()=>JSON.parse(localStorage.getItem('qa-server-cart')).result;`,
       });
     if (u.pathname === "/cart-batch.html")
       return route.fulfill({
@@ -108,12 +109,19 @@ try {
   await page
     .getByPlaceholder("Full address (house, street, landmark)", { exact: true })
     .fill("Demo address for synthetic test only");
-  await page
-    .getByRole("combobox", { name: "Coupon pair", exact: true })
-    .selectOption(products[1].sizes[0].id);
-  await page.getByPlaceholder("Coupon code (optional)", { exact: true }).fill("PAIR100");
+  assert.equal(await page.getByRole("combobox", { name: "Coupon pair", exact: true }).count(), 0);
+  await page.getByPlaceholder("Coupon code (optional)", { exact: true }).fill("CART10");
   await page.getByRole("button", { name: "Apply", exact: true }).click();
-  await page.getByText("PAIR100 · −₹100", { exact: true }).waitFor();
+  await page.getByText("CART10 · −₹300", { exact: true }).waitFor();
+  assert.equal(await page.getByText("Bargained pairs are excluded.", { exact: true }).count(), 0);
+  assert.equal(await page.getByText("Coupon applies to your eligible cart total.",{exact:true}).count(),0);
+  await page.getByText("Eligible subtotal: ₹3,000",{exact:true}).waitFor();
+  const summary = page.getByLabel("Order summary", { exact: true });
+  assert.deepEqual(await summary.locator("del").allTextContents(), ["₹2,200", "₹800"]);
+  assert(
+    (await summary.innerText()).includes("₹1,980") && (await summary.innerText()).includes("₹720"),
+  );
+  await summary.scrollIntoViewIfNeeded();
   await page.screenshot({ path: out + "/checkout-390.png" });
   await page.getByRole("button", { name: "Place order", exact: true }).click();
   await page
@@ -122,10 +130,15 @@ try {
     .waitFor();
   const first = await page.evaluate(() => JSON.parse(localStorage.getItem("qa-cart-calls"))[0]);
   assert.equal(first.items.length, 2);
-  assert.equal(first.quote.net, 2900);
+  assert.equal(first.quote.net, 2700);
   assert.equal(first.quote.charge, 90);
-  assert.equal(first.quote.advance, 2990);
-  assert.equal(first.items.filter((item) => item.coupon).length, 1);
+  assert.equal(first.quote.advance, 2790);
+  assert.equal(first.coupon, "CART10");
+  assert.equal(first.items.filter((item) => item.coupon).length, 0);
+  assert.deepEqual(
+    first.items.map((item) => item.net),
+    [1980, 720],
+  );
   await context.close();
   page = await open(); // Real browser restart with the same persistent profile.
   await page.getByRole("button", { name: "Your cart", exact: true }).click();
@@ -147,12 +160,13 @@ try {
   assert.equal(remaining[0].productId, products[2].id);
   const dialog = page.getByRole("dialog");
   const upi = await dialog.getByRole("link", { name: /Pay with UPI/ }).getAttribute("href");
-  assert.equal(new URL(upi).searchParams.get("am"), "2990");
+  assert.equal(new URL(upi).searchParams.get("am"), "2790");
   const proof = await dialog
     .getByRole("link", { name: "Send screenshot on WhatsApp", exact: true })
     .getAttribute("href");
   const text = new URL(proof).searchParams.get("text");
-  assert(text.includes("Aero") && text.includes("Breeze") && text.includes("₹2,990"));
+  assert(text.includes("Aero") && text.includes("Breeze") && text.includes("₹2,790"));
+  assert.deepEqual(await dialog.locator("del").allTextContents(), ["₹2,200", "₹800"]);
   await page.screenshot({ path: out + "/reserved-390.png" });
   await dialog.getByRole("button", { name: "Track order", exact: true }).click();
   await page.getByPlaceholder("Mobile number", { exact: true }).fill("9999999999");
@@ -202,7 +216,7 @@ try {
         checks: [
           "Shop Orders Cart bottom placement",
           "selected products enter one checkout",
-          "one coupon target without multiplying discount",
+          "whole-cart percentage discount with per-pair crossed-out and final prices",
           "one delivery charge",
           "single combined UPI amount",
           "exact original request after real browser restart",

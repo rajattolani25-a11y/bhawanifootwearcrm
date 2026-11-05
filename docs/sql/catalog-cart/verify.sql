@@ -5,4 +5,4 @@ SELECT
  to_regprocedure('public.catalog_cart_payment_summary(text)') IS NOT NULL AS cart_summary_ready,
  to_regprocedure('public.confirm_catalog_cart_payment(text,numeric,boolean)') IS NOT NULL AS cart_confirmation_ready,
  NOT has_function_privilege('anon','public.catalog_cart_result(uuid)','EXECUTE') AS private_result_protected,
- public.catalog_cart_version() = 1 AS cart_version_ready;
+ public.catalog_cart_version() IN (1,2) AS cart_version_ready;

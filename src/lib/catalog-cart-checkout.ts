@@ -10,6 +10,8 @@ export type CartOrderLine = {
 };
 export type CartCheckoutRequest = {
   requestId: string;
+  /** Present only for v2 whole-cart requests; absent keeps exact v1 recovery. */
+  coupon?: string;
   items: CartOrderLine[];
   name: string;
   mobile: string;
@@ -59,6 +61,36 @@ export function cartAmounts(net: number, method: Fulfillment, shop: CatalogShop)
         ? Math.min(net, Math.ceil((net * Math.max(1, Math.min(100, shop.advance_percent))) / 100))
         : cartMoney(net + charge),
   };
+}
+/** Allocate one discount in exact cents, preserving at least one paisa per eligible pair. */
+export function cartCouponShares(lines: { variantId: string; price: number }[], amount: number) {
+  const cents = lines.map((line) => Math.round(line.price * 100));
+  const total = cents.reduce((sum, price) => sum + price, 0);
+  const discount = Math.round(amount * 100);
+  if (
+    !Number.isSafeInteger(total) ||
+    !Number.isSafeInteger(discount) ||
+    discount < 0 ||
+    cents.some((price) => !Number.isSafeInteger(price) || price < 1) ||
+    discount > total - lines.length
+  )
+    throw Error("The coupon amount needs review. Apply it again.");
+  let left = discount,
+    priceLeft = total;
+  const shares: Record<string, number> = {};
+  for (let i = 0; i < lines.length; i++) {
+    const price = cents[i]!;
+    const proportional = total ? Number((BigInt(discount) * BigInt(price)) / BigInt(total)) : 0;
+    const part = Math.max(
+      0,
+      left - (priceLeft - price - (lines.length - i - 1)),
+      Math.min(price - 1, proportional),
+    );
+    shares[lines[i]!.variantId] = part / 100;
+    left -= part;
+    priceLeft -= price;
+  }
+  return shares;
 }
 export function readCartCheckout(): CartCheckoutRequest | null {
   const raw = localStorage.getItem(CART_PENDING_KEY);

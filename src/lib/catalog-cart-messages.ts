@@ -13,6 +13,7 @@ export function cartProofMessage(
       ref: "Cart order",
       size: "Size",
       products: "Product total",
+      coupon: "Coupon discount",
       delivery: "Delivery",
       due: "Amount to pay",
       name: "Customer",
@@ -24,6 +25,7 @@ export function cartProofMessage(
       ref: "कार्ट ऑर्डर",
       size: "साइज़",
       products: "उत्पादों का कुल",
+      coupon: "कूपन की छूट",
       delivery: "डिलीवरी",
       due: "देय राशि",
       name: "ग्राहक",
@@ -35,6 +37,7 @@ export function cartProofMessage(
       ref: "Cart order",
       size: "Size",
       products: "Products ka total",
+      coupon: "Coupon discount",
       delivery: "Delivery",
       due: "Abhi dena hai",
       name: "Customer",
@@ -42,7 +45,8 @@ export function cartProofMessage(
       note: "Payment ka screenshot yahin bhejunga. Payment verify karke order confirm karein.",
     },
   }[lang];
-  return `${c.hello} ${result.shop},\n\n*${c.ref}: ${result.cart_no}*\n${result.orders.map((item, i) => `${i + 1}. ${item.product}${item.color ? ` · ${item.color}` : ""}\n${c.size}: ${item.size} · ${inr(item.price)}`).join("\n\n")}\n\n${c.products}: ${inr(result.price)}\n${c.delivery}: ${inr(result.delivery_charge)}\n*${c.due}: ${inr(result.advance)}*${name ? `\n${c.name}: ${name}` : ""}${address ? `\n${c.address}: ${address}` : ""}\n\n${c.note}`;
+  const discount = result.orders.reduce((sum, item) => sum + (item.coupon_discount ?? 0), 0);
+  return `${c.hello} ${result.shop},\n\n*${c.ref}: ${result.cart_no}*\n${result.orders.map((item, i) => `${i + 1}. ${item.product}${item.color ? ` · ${item.color}` : ""}\n${c.size}: ${item.size} · ${inr(item.price)}`).join("\n\n")}${discount > 0 ? `\n\n${c.coupon}: −${inr(discount)}` : ""}\n\n${c.products}: ${inr(result.price)}\n${c.delivery}: ${inr(result.delivery_charge)}\n*${c.due}: ${inr(result.advance)}*${name ? `\n${c.name}: ${name}` : ""}${address ? `\n${c.address}: ${address}` : ""}\n\n${c.note}`;
 }
 export function cartPaymentUpdate(lang: AppLanguage, ref: string, shop: string, url: string) {
   return {
