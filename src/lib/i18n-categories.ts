@@ -1,4 +1,9 @@
 export const CATEGORY_TRANSLATIONS = {
+  "Offers appear as a compact ticket below Spotlight. Customers tap it to view details.": {
+    hindi: "ऑफ़र Spotlight के नीचे छोटे टिकट में दिखेगा। ग्राहक टैप करके जानकारी देख सकते हैं।",
+    hinglish:
+      "Offer Spotlight ke neeche compact ticket mein dikhega. Customer tap karke details dekh sakte hain.",
+  },
   "Show this colour in catalog": {
     hindi: "यह रंग कैटलॉग में दिखाएँ",
     hinglish: "Yeh colour catalog mein dikhayein",

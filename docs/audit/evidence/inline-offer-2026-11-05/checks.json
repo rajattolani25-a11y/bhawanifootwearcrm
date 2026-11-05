@@ -1,0 +1,115 @@
+{
+  "browser_suites": {
+    "inline_offer": {
+      "passed": true,
+      "oldHeaderStripRemoved": true,
+      "spotlightThenInlineTicket": true,
+      "layouts": [
+        {
+          "width": 320,
+          "height": 700,
+          "ticketHeight": 76,
+          "inFlow": true,
+          "noOverflow": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "ticketHeight": 80,
+          "inFlow": true,
+          "noOverflow": true
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "ticketHeight": 80,
+          "inFlow": true,
+          "noOverflow": true
+        },
+        {
+          "width": 1440,
+          "height": 1000,
+          "ticketHeight": 80,
+          "inFlow": true,
+          "noOverflow": true
+        }
+      ],
+      "copyExactCode": true,
+      "clipboardFailureManualFallback": true,
+      "minimumAndCapsAccurate": true,
+      "noCouponAndDisabledOfferSafe": true,
+      "ownerMotionAndReducedMotionRespected": true,
+      "animationIterations": 1,
+      "languages": 3,
+      "noAutomaticPopup": true,
+      "productionWrites": 0
+    },
+    "collection": {
+      "passed": true,
+      "countRemoved": true,
+      "fiveSortOrders": true,
+      "photoInquiryWithoutFilePicker": true,
+      "whatsappHandoffIncludesSelectedCategoryAndSize": true,
+      "photoInquiryResetAndThreeLanguages": true,
+      "categorySizeGroups": true,
+      "overlappingSizeLabelsSeparated": true,
+      "spotlightBeforeControls": true,
+      "brandRemoved": true,
+      "styleAlongsideSizeAndSort": true,
+      "separateMenWomenStyles": true,
+      "blankBrandProductRetained": true,
+      "noBlankSizeOptionOnStockRefresh": true,
+      "correctProductOpens": true,
+      "livePriceRefreshReorders": true,
+      "languages": 3,
+      "layouts": [
+        {
+          "width": 320,
+          "height": 568,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "aligned": true,
+          "noOverflow": true
+        },
+        {
+          "width": 1440,
+          "height": 1000,
+          "aligned": true,
+          "noOverflow": true
+        }
+      ],
+      "errors": [],
+      "productionWrites": 0
+    },
+    "order_recovery": {
+      "result": "PASS",
+      "checks": [
+        "Interrupted response retains exact order request and quote; no false success",
+        "Reload recovers one original order; direct shop WhatsApp includes order reference, with no app screenshot upload",
+        "Recovered order immediately provides pinned UPI/WhatsApp/tracking while decorative art loops",
+        "Open catalog and product view refresh current price/stock without re-signing unchanged photos; sold-out checkout blocked"
+      ],
+      "productionWrites": 0,
+      "errors": []
+    }
+  },
+  "typecheck": "passed",
+  "scoped_eslint": "passed",
+  "production_build": "passed",
+  "visual_review": [
+    "320px compact in-flow ticket,44px Copy target, no navigation overlap",
+    "390px Spotlight → ticket → collection, no black header strip",
+    "1440px ticket constrained to720px with amount clear of notch"
+  ],
+  "notes": "Adjacent audits were run sequentially with60second navigation budget for cold development bundle loading; assertions are unchanged. Tests intercept synthetic services and clipboard; no live order/payment/message/database write. No migration or RPC definition changed."
+}

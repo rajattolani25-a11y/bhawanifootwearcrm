@@ -459,15 +459,7 @@ function OfferSettings() {
               maxLength={120}
             />
           </div>
-          <label className="flex items-center justify-between gap-3 py-2 sm:col-span-2">
-            <span>
-              <span className="block text-sm font-medium">Show small offer card</span>
-              <span className="block text-xs text-muted-foreground">
-                Appears once, after the customer looks at a few designs.
-              </span>
-            </span>
-            <Switch checked={o.offer_card} onCheckedChange={(v) => setO({ ...o, offer_card: v })} />
-          </label>
+          <p className="text-xs text-muted-foreground sm:col-span-2">Offers appear as a compact ticket below Spotlight. Customers tap it to view details.</p>
         </div>
       )}
       <Button onClick={save} variant="outline" className="mt-3">

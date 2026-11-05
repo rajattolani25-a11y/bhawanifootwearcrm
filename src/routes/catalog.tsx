@@ -1,3 +1,4 @@
+import { CatalogOfferTicket } from "@/components/CatalogOfferTicket";
 import { catalogStyleGroups, catalogStyleMatches } from "@/lib/catalog-style-options";
 import { CatalogColourOptions } from "@/components/CatalogColourOptions";
 import { catalogSizeGroups, catalogSizeMatches } from "@/lib/catalog-size-options";
@@ -17,12 +18,12 @@ import { CatalogReservation } from "@/components/catalog-reservation";
 import reservationStyles from "@/components/catalog-reservation.module.css";
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Info, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Copy, Store, Truck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Info, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, Sun, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
 import { CatalogProductGallery } from "@/components/CatalogProductGallery";
 import { CatalogHero } from "@/components/CatalogHero";
-import { checkCoupon, createBooking, getCatalog, type CatalogOffer, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type CatalogData, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
+import { checkCoupon, createBooking, getCatalog, trackOrder, type BookingResult, type CatalogProduct, type CatalogShop, type CatalogData, type Fulfillment, type TrackResult } from "@/lib/catalog.functions";
 import { LanguageProvider, useLang, type AppLanguage } from "@/lib/i18n";
 import { enquiryText, proofText } from "@/lib/order-messages";
 import { inr } from "@/lib/modules";
@@ -108,8 +109,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [open, setOpen] = useState<CatalogProduct | null>(null);
   const [track, setTrack] = useState<string | null>(null);
-  const [views, setViews] = useState(0);
-  const openProduct = useCallback((product: CatalogProduct) => { setOpen(product); setViews(v => v + 1); }, []);
+  const openProduct = useCallback((product: CatalogProduct) => { setOpen(product); }, []);
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
   // Catalog has its own customer theme (light by default, customer can switch in footer), independent of the app's setting.
   const [dark, setDark] = useState(false);
@@ -221,10 +221,6 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         </div>
       </header>
       {pendingOrder && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>An earlier order response was not confirmed. Recover it before placing another order.</p><Button variant="outline" onClick={() => { setRecoveryNonce(n=>n+1);setOpen(pendingOrder.product); }}>Recover saved order</Button></div>}
-      {data.offer && <button type="button" onClick={() => { if (data.offer?.code) void navigator.clipboard?.writeText(data.offer.code); }} className={styles["offer"]}>
-        <span>{data.offer.title}</span>{offerText(data.offer) && <> · {offerText(data.offer)}</>}{data.offer.code && <> · <span>Code</span> <b data-no-translate>{data.offer.code}</b></>}
-        {data.offer.code && <Copy aria-hidden="true" />}
-      </button>}
 
       {data.hero ? <CatalogHero theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
 
@@ -248,6 +244,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
         {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${fstyle}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
+        {data.offer && <CatalogOfferTicket offer={data.offer} motionEnabled={presentation.motion_enabled} />}
         <div className={styles["collectionHeader"]}>
           <h2>Shop the collection</h2>
         </div>
@@ -298,41 +295,6 @@ const STEPS_PICKUP = ["pending", "confirmed", "packed", "picked"];
 const STEPS_DELIVERY = ["pending", "confirmed", "packed", "shipped", "delivered"];
 const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirmed: "Payment confirmed", packed: "Packed", shipped: "Out for delivery", delivered: "Delivered", picked: "Picked up", cancelled: "Cancelled", expired: "Cancelled (not paid)", refund_pending: "Cancelled — refund pending", refunded: "Refund sent (recorded)" };
 const TYPE_LABEL: Record<string, string> = { pickup: "Store pickup", local: "Local delivery", outside: "Outside Jabalpur delivery" };
-
-function offerText(o: NonNullable<CatalogOffer>) {
-  if (!o.value) return "";
-  const v = o.kind === "percent" ? `${o.value}% OFF` : `${inr(o.value)} OFF`;
-  return o.min_bill ? `${v} above ${inr(o.min_bill)}` : v;
-}
-
-function OfferCard({ offer, views }: { offer: NonNullable<CatalogOffer>; views: number }) {
-  const [show, setShow] = useState(false);
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (sessionStorage.getItem("offer-seen")) return;
-    const t = setTimeout(() => setShow(true), 20000);
-    return () => clearTimeout(t);
-  }, []);
-  useEffect(() => { if (views >= 2 && !sessionStorage.getItem("offer-seen")) setShow(true); }, [views]);
-  if (!show) return null;
-  const close = () => { sessionStorage.setItem("offer-seen", "1"); setShow(false); };
-  return (
-    <div className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-md animate-in slide-in-from-bottom-6 fade-in duration-500">
-      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-4 pr-10 shadow-2xl">
-        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/20 blur-2xl" />
-        <button onClick={close} aria-label="Close" className="absolute right-2 top-2 rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary"><span>{offer.title}</span></p>
-        <p className="mt-1 font-display text-lg font-bold leading-tight">{offerText(offer) || offer.subtitle}</p>
-        {offer.subtitle && offerText(offer) && <p className="text-xs text-muted-foreground">{offer.subtitle}</p>}
-        <button onClick={() => { void navigator.clipboard?.writeText(offer.code ?? ""); setCopied(true); setTimeout(close, 1500); }} className="mt-3 flex w-full items-center justify-between rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 px-3 py-2">
-          <span className="font-mono text-base font-bold tracking-[0.2em]" data-no-translate>{offer.code}</span>
-          <span className="flex items-center gap-1 text-xs font-semibold text-primary">{copied ? <><Check className="h-3.5 w-3.5" /> <span>Copied</span></> : <><Copy className="h-3.5 w-3.5" /> <span>Tap to copy</span></>}</span>
-        </button>
-        <p className="mt-2 text-[11px] text-muted-foreground">Use this code when you place your order.</p>
-      </div>
-    </div>
-  );
-}
 
 const TYPE_WORDS = ["sneaker", "running", "sports", "loafer", "sandal", "slipper", "flip", "slide", "boot", "formal", "belly", "ballerina", "clog", "crocs", "heel", "wedge", "juti", "mojari", "kolhapuri", "school", "canvas", "floater"];
 function similarTo(p: CatalogProduct, all: CatalogProduct[]) {
