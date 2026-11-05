@@ -1,0 +1,14 @@
+{
+  "name": "catalog-promotion-artwork",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "remotion render src.tsx StreetEnergy ../../public/media/catalog-promotions/street-energy.mp4 --codec=h264 --crf=28 --pixel-format=yuv420p --concurrency=2 --browser-executable=/usr/bin/chromium"
+  },
+  "dependencies": {
+    "remotion": "4.0.538",
+    "@remotion/cli": "4.0.538",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  }
+}

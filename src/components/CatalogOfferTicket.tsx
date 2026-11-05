@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Copy } from "lucide-react";
-import type { CatalogOffer } from "@/lib/catalog.functions";
+import type { CatalogProduct, CatalogOffer } from "@/lib/catalog.functions";
 import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { promotionCalendar, type PromoCampaign } from "@/lib/catalog-promotion";
+import { PromotionCountdown } from "./PromotionCountdown";
+import { PromotionMotion } from "./PromotionMotion";
 import styles from "./catalog-offer-ticket.module.css";
 
 const COPY = {
@@ -58,9 +61,23 @@ const COPY = {
 export function CatalogOfferTicket({
   offer,
   motionEnabled,
+  campaign,
+  phase = "live",
+  now = Date.now(),
+  products = [],
+  onProduct,
+  onShop,
+  clock,
 }: {
   offer: NonNullable<CatalogOffer>;
   motionEnabled: boolean;
+  campaign?: PromoCampaign;
+  phase?: "advance" | "live";
+  now?: number;
+  clock?: { server: number; monotonic: number };
+  products?: CatalogProduct[];
+  onProduct?: (p: CatalogProduct) => void;
+  onShop?: () => void;
 }) {
   const { lang } = useLang();
   const copy = COPY[lang];
@@ -72,16 +89,62 @@ export function CatalogOfferTicket({
     [manual, setManual] = useState(false);
   const [seen, setSeen] = useState(false),
     [hidden, setHidden] = useState(false);
-  const code = offer.code?.trim() || "";
+  const labels = {
+    english: {
+      upcoming: "Upcoming",
+      live: "Live now",
+      starts: "Starts in",
+      ends: "Ends in",
+      calendar: "Add calendar reminder",
+      shop: "Shop the offer",
+      men: "Men’s edit",
+      women: "Women’s edit",
+      all: "Store edit",
+      calendarNote: "Download and import into your calendar.",
+    },
+    hindi: {
+      upcoming: "जल्द आ रहा है",
+      live: "अभी चालू है",
+      starts: "शुरू होने में",
+      ends: "समाप्त होने में",
+      calendar: "कैलेंडर में जोड़ें",
+      shop: "ऑफ़र देखें",
+      men: "पुरुषों का कलेक्शन",
+      women: "महिलाओं का कलेक्शन",
+      all: "दुकान का कलेक्शन",
+      calendarNote: "फ़ाइल डाउनलोड करके अपने कैलेंडर में जोड़ें।",
+    },
+    hinglish: {
+      upcoming: "Jald aa raha hai",
+      live: "Abhi live",
+      starts: "Shuru hone mein",
+      ends: "Khatam hone mein",
+      calendar: "Calendar reminder jodein",
+      shop: "Offer dekhein",
+      men: "Men’s edit",
+      women: "Women’s edit",
+      all: "Store edit",
+      calendarNote: "Download karke apne calendar mein import karein.",
+    },
+  }[lang];
+  const image = campaign?.[phase].image;
+  const [failedImage, setFailedImage] = useState("");
+  const custom = image && failedImage !== image.url;
+  const schedule = campaign?.schedule;
+  const target = schedule ? (phase === "advance" ? schedule.startsAt : schedule.endsAt) : null;
+  const audience = campaign?.audience ?? "all";
+  const artworkProducts = products.filter((p) => campaign?.productIds.includes(p.id)).slice(0, 2);
+  const code = phase === "live" ? offer.code?.trim() || "" : "";
+  const priceCode = offer.code?.trim() || "";
   const value = Number(offer.value),
     minimum = Number(offer.min_bill),
     cap = Number(offer.max_discount);
   const hasCap = offer.max_discount !== null && Number.isFinite(cap) && cap >= 0;
-  const hasValue = !!code && Number.isFinite(value) && value > 0 && (!hasCap || cap > 0);
+  const hasValue = !!priceCode && Number.isFinite(value) && value > 0 && (!hasCap || cap > 0);
   const flatValue = hasCap ? Math.min(value, cap) : value;
   const amount = hasValue
     ? `${offer.kind === "percent" ? `${value}%` : inr(flatValue)} ${copy.off}`
-    : offer.subtitle?.trim() || offer.title?.trim() || copy.message;
+    : offer.subtitle?.trim() || copy.message;
   const terms = [
     minimum > 0 ? `${copy.orders} ${inr(minimum)}+` : "",
     hasCap ? `${copy.max} ${inr(cap)} ${copy.off}` : "",
@@ -140,33 +203,114 @@ export function CatalogOfferTicket({
         className={styles["ticket"]}
         aria-label={copy.label}
         data-catalog-offer-ticket
+        data-custom={!!custom}
+        data-products={artworkProducts.length}
+        data-layout={campaign?.[phase].layout ?? "split"}
+        data-phase={phase}
         data-motion={motionEnabled && seen}
         data-paused={hidden}
         data-no-translate
       >
-        <svg
-          className={styles["backdrop"]}
-          viewBox="0 0 390 76"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path d="M12 0H378Q390 0 390 12V31C380 31 380 45 390 45V64Q390 76 378 76H12Q0 76 0 64V45C10 45 10 31 0 31V12Q0 0 12 0Z" />
-        </svg>
-        <button
-          type="button"
-          className={styles["summary"]}
-          aria-label={copy.details}
-          onClick={() => setOpen(true)}
-        >
-          <span className={styles["eyebrow"]}>
-            {hasValue ? offer.title || copy.label : copy.label}
+        {!custom && <PromotionMotion enabled={motionEnabled} />}
+        <div className={styles["topline"]}>
+          <span className={styles["badge"]}>
+            {phase === "advance"
+              ? labels.upcoming
+              : hasValue || campaign
+                ? labels.live
+                : copy.label}
           </span>
-          <span className={styles["headline"]}>
-            <strong>{amount}</strong>
-            <ChevronRight aria-hidden="true" />
-          </span>
-          {terms && <span className={styles["terms"]}>{terms}</span>}
-        </button>
+          {campaign && <span>{labels[audience]}</span>}
+        </div>
+        <div className={styles["offerbody"]}>
+          <button
+            type="button"
+            className={styles["summary"]}
+            aria-label={copy.details}
+            onClick={() => setOpen(true)}
+          >
+            <span className={styles["eyebrow"]} title={offer.title}>
+              {(() => {
+                const words = (offer.title || copy.label).trim().split(/\s+/);
+                const lines = words.reduce<string[][]>((out, word) => {
+                  const last = out[out.length - 1];
+                  if (last && last.join(" ").length + word.length < 13) last.push(word);
+                  else out.push([word]);
+                  return out;
+                }, []);
+                if (lines.length === 1 && words.length > 1) {
+                  const mid = Math.ceil(words.length / 2);
+                  return [words.slice(0, mid), words.slice(mid)].map((line, i) => (
+                    <span key={i}>{line.join(" ")}</span>
+                  ));
+                }
+                return lines.map((line, i) => <span key={i}>{line.join(" ")}</span>);
+              })()}
+            </span>
+            <span className={styles["headline"]}>
+              <strong>{amount}</strong>
+              <ChevronRight aria-hidden="true" />
+            </span>
+            {terms && <span className={styles["terms"]}>{terms}</span>}
+          </button>
+        </div>
+        {custom ? (
+          <img
+            className={styles["custom"]}
+            src={image.url}
+            width={image.width}
+            height={image.height}
+            loading="lazy"
+            decoding="async"
+            alt={offer.title}
+            onError={() => setFailedImage(image.url)}
+          />
+        ) : (
+          <>
+            {artworkProducts.length > 0 && (
+              <div className={styles["products"]} data-count={artworkProducts.length}>
+                {artworkProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    aria-label={`${p.brand} ${p.article} — ${inr(p.price)}`}
+                    type="button"
+                    onClick={() => onProduct?.(p)}
+                    disabled={!onProduct}
+                  >
+                    {p.image && (
+                      <img src={p.image} alt={p.article} loading="lazy" decoding="async" />
+                    )}
+                    <span>
+                      {p.brand} {p.article}
+                    </span>
+                    <strong>{inr(p.price)}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        {offer.subtitle && hasValue && <p className={styles["message"]}>{offer.subtitle}</p>}
+        {schedule && (
+          <div className={styles["when"]}>
+            <span>
+              {new Date(schedule.startsAt).toLocaleString(lang === "hindi" ? "hi-IN" : "en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "numeric",
+                month: "short",
+                hour: "numeric",
+                minute: "2-digit",
+              })}{" "}
+              IST
+            </span>
+            <span>
+              {phase === "advance" ? labels.starts : labels.ends}{" "}
+              {target && (
+                <PromotionCountdown target={target} now={now} {...(clock ? { clock } : {})} />
+              )}
+            </span>
+          </div>
+        )}
         {code && (
           <div className={styles["coupon"]}>
             <button
@@ -184,6 +328,43 @@ export function CatalogOfferTicket({
               {copied ? copy.copied : ""}
             </span>
           </div>
+        )}
+        {phase === "advance" && schedule ? (
+          <>
+            <button
+              className={styles["action"]}
+              type="button"
+              onClick={() => {
+                const blob = new Blob(
+                  [
+                    promotionCalendar(
+                      offer.title,
+                      schedule.startsAt,
+                      schedule.endsAt,
+                      window.location.origin + "/catalog",
+                    ),
+                  ],
+                  { type: "text/calendar;charset=utf-8" },
+                );
+                const url = URL.createObjectURL(blob),
+                  a = document.createElement("a");
+                a.href = url;
+                a.download = "bhawani-sale.ics";
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            >
+              {labels.calendar}
+            </button>
+            <p className={styles["calendarNote"]}>{labels.calendarNote}</p>
+          </>
+        ) : (
+          phase === "live" &&
+          onShop && (
+            <button className={styles["action"]} type="button" onClick={onShop}>
+              {labels.shop} <ChevronRight aria-hidden="true" />
+            </button>
+          )
         )}
       </section>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -203,6 +384,7 @@ export function CatalogOfferTicket({
             <DialogTitle>{copy.details}</DialogTitle>
           </DialogHeader>
           <h3 className="break-words font-semibold">{offer.title || copy.label}</h3>
+          {phase === "advance" && <p>{labels.upcoming}</p>}
           {hasValue && <p className="text-2xl font-bold">{amount}</p>}
           {offer.subtitle && <p className="break-words text-sm">{offer.subtitle}</p>}
           {minimum > 0 && (

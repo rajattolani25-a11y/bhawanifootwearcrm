@@ -7,7 +7,7 @@ import commerce from "@/components/catalog-commerce/commerce.module.css";
 import { CART_EVENT, CART_KEY, LAST_DEAL_KEY, addToCart, readCart, removeFromCart, bargainClient, type CatalogCartItem } from "@/lib/catalog-cart";
 import { type CatalogDeal, dealSeconds } from "@/lib/catalog-bargain";
 import { toast } from "sonner";
-import { CatalogOfferTicket } from "@/components/CatalogOfferTicket";
+import { CatalogPromotions } from "@/components/CatalogPromotions";
 import { catalogStyleGroups, catalogStyleMatches } from "@/lib/catalog-style-options";
 import { CatalogColourOptions } from "@/components/CatalogColourOptions";
 import { catalogSizeGroups, catalogSizeMatches } from "@/lib/catalog-size-options";
@@ -275,9 +275,9 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
         {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${fstyle}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
-        {data.offer && <CatalogOfferTicket offer={data.offer} motionEnabled={presentation.motion_enabled} />}
+        <CatalogPromotions offer={data.offer ?? null} products={products} department={filter} motionEnabled={presentation.motion_enabled} onProduct={openProduct} onShop={audience=>{setQ("");setFilter(audience === "men" ? "Men" : audience === "women" ? "Women" : "All");setFsize("All");setFstyle("All");window.requestAnimationFrame(()=>document.getElementById("catalog-products")?.scrollIntoView({behavior: presentation.motion_enabled && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto", block:"start"}));}} />
         <div className={styles["collectionHeader"]}>
-          <h2>Shop the collection</h2>
+          <h2 id="catalog-products">Shop the collection</h2>
         </div>
         <CatalogCollectionFilters groups={sizeGroups} size={fsize} setSize={setFsize} sort={sort} setSort={setSort}
           styleGroups={styleGroups} selectedStyle={fstyle} setStyle={value => { setFstyle(value); setFsize("All"); }}

@@ -1,3 +1,4 @@
+import { CatalogPromotionSettings } from "./CatalogPromotionSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogPresentationSettings } from "@/components/CatalogPresentationSettings";
 import { Link } from "@tanstack/react-router";
@@ -319,7 +320,7 @@ export function CatalogSettings() {
         </TabsContent>
         <TabsContent value="offers" forceMount className="data-[state=inactive]:hidden">
           <div id="catalog-offer-controls" className="scroll-mt-20">
-            <OfferSettings />
+            <CatalogPromotionSettings fallback={<OfferSettings />}/>
           </div>
         </TabsContent>
         <TabsContent value="products" forceMount className="data-[state=inactive]:hidden">
