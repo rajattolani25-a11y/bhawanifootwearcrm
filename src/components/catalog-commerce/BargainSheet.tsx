@@ -7,6 +7,7 @@ import { inr } from "@/lib/modules";
 import {
   BARGAIN_HEADINGS,
   BID_LIMIT,
+  firstOfferMinimum,
   receivedDeal,
   validOffer,
   type CatalogDeal,
@@ -46,6 +47,10 @@ export function BargainSheet({
   const quoteHandler = useRef(onQuote);
   quoteHandler.current = onQuote;
   const limit = deal ? (deal.bid_limit === 4 ? 4 : deal.bid_limit === 3 ? 3 : 2) : BID_LIMIT;
+  const firstBid = !deal || deal.attempts === 0;
+  const minimum = firstOfferMinimum(product.price);
+  const amount = validOffer(offer, product.price);
+  const belowMinimum = firstBid && amount !== null && amount < minimum;
   const seconds = useDealSeconds(deal);
   const retrySeconds = useBargainRetrySeconds(deal);
   const retryAvailable =
@@ -85,7 +90,7 @@ export function BargainSheet({
   }, [variantId, product.price]);
   async function bid() {
     const amount = validOffer(offer, product.price);
-    if (!amount || sent.current) return;
+    if (!amount || sent.current || (firstBid && amount < minimum)) return;
     sent.current = true;
     setBusy(true);
     setError("");
@@ -207,6 +212,12 @@ export function BargainSheet({
                   disabled={busy}
                 />
               </label>
+              {firstBid && (
+                <p className="text-xs text-muted-foreground">
+                  <span>{t("First offer minimum")}</span>: <strong>{inr(minimum)}</strong>{" "}
+                  <span>{t("(75% of listed price)")}</span>
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 {t(
                   deal
@@ -219,7 +230,8 @@ export function BargainSheet({
               <Button
                 disabled={
                   busy ||
-                  !validOffer(offer, product.price) ||
+                  !amount ||
+                  belowMinimum ||
                   (!!deal && (deal.attempts >= limit || deal.order_placed))
                 }
                 className="h-12"

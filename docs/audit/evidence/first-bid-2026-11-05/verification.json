@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-05",
+  "unit_tests": {
+    "passed": 58,
+    "failed": 0
+  },
+  "typescript": "pass",
+  "scoped_eslint": "pass",
+  "production_build": "pass",
+  "browser_tests": [
+    "public75percent minimum visible",
+    "low first submission disabled with no request",
+    "minimum absent from later bids and present again on new round",
+    "old commerce/explicit-expiry fallback regression"
+  ],
+  "database_tests": [
+    "below75percent first offer rejected via legacy/current RPC",
+    "exact75percent accepted as valid input without bypassing owner floor",
+    "invalid first attempts do not consume budget or move cooldown",
+    "low restart rolls back quote/budget changes",
+    "rupee increments hold counter and consume four finite attempts",
+    "full setup and small patch give identical definitions",
+    "both bid functions differ only by the minimum check; all unrelated functions unchanged",
+    "existing order recovery/receipt/billing/reset/restore regressions pass"
+  ],
+  "sql_application": "manual first-bid patch pending; no live DB writes by Codex"
+}

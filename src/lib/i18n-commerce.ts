@@ -527,3 +527,19 @@ Object.assign(COMMERCE, {
   },
   "Cooldown remaining": { hindi: "कूलडाउन का बचा समय", hinglish: "Cooldown ka baaki time" },
 });
+
+Object.assign(COMMERCE, {
+  "First offer minimum": { hindi: "पहली पेशकश की न्यूनतम राशि", hinglish: "Pehli offer minimum" },
+  "(75% of listed price)": { hindi: "(मौजूदा कीमत का 75%)", hinglish: "(listed price ka 75%)" },
+  "Your first offer must be at least 75% of the listed price.": {
+    hindi: "पहली पेशकश मौजूदा कीमत के कम से कम 75% की होनी चाहिए।",
+    hinglish: "Pehli offer listed price ki kam se kam 75% honi chahiye.",
+  },
+  "The first bid in each new negotiation must be at least 75% of the current listed price, rounded up to a whole rupee. Owner discount limits still decide the counter.":
+    {
+      hindi:
+        "हर नए मोलभाव की पहली पेशकश मौजूदा कीमत के कम से कम 75% की हो, अगले पूरे रुपये तक बढ़ाकर। जवाबी कीमत मालिक की छूट सीमा में ही होगी।",
+      hinglish:
+        "Har naye bargain ki pehli bid current listed price ki minimum 75% ho, agle poore rupaye tak round up. Counter owner ki discount limits mein hi rahega.",
+    },
+});

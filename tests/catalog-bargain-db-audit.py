@@ -69,16 +69,42 @@ try:
  saved=call('save_catalog_bargain_policy',{'product_id':p,'policy':policy,'expected_revision':None},owner)
  if '--cooldown' in sys.argv:
   ids=sql("SELECT string_agg(oid::text,',')FROM pg_proc WHERE pronamespace='public'::regnamespace;").stdout.strip()
-  q="SELECT md5(string_agg(pg_get_functiondef(oid),'|'ORDER BY oid))FROM pg_proc WHERE oid IN("+ids+");"
+  q="SELECT md5(string_agg(pg_get_functiondef(oid),'|'ORDER BY oid))FROM pg_proc WHERE oid IN("+ids+")AND oid<>'public.catalog_bargain_bid(uuid,uuid,numeric)'::regprocedure;"
   before=sql(q).stdout
-  for _ in range(2):sql((root/'docs/sql/catalog-bargaining/cooldown-update/support.sql').read_text())
+  legacy_before=sql("SELECT pg_get_functiondef('public.catalog_bargain_bid(uuid,uuid,numeric)'::regprocedure);").stdout
+  support=(root/'docs/sql/catalog-bargaining/cooldown-update/support.sql').read_text()
+  left=support.index('DO $minimum$');right=support.index('END $minimum$;',left)+len('END $minimum$;')
+  unpatched=support[:left]+support[right:]
+  for _ in range(2):sql(unpatched)
+  current_before=sql("SELECT pg_get_functiondef('public.catalog_bargain_bid_v2(uuid,uuid,numeric,boolean)'::regprocedure);").stdout
+  for _ in range(2):sql((root/'docs/sql/catalog-bargaining/cooldown-update/first-bid-minimum.sql').read_text())
+  guard="IF s.attempts=0 AND _offer<ceil(v.selling_price*0.75) THEN RAISE EXCEPTION USING MESSAGE='Your first offer must be at least 75% of the listed price.';END IF;"
+  for name,old in [('public.catalog_bargain_bid(uuid,uuid,numeric)',legacy_before),('public.catalog_bargain_bid_v2(uuid,uuid,numeric,boolean)',current_before)]:
+   assert old.count('IF _offer>=floor_price THEN')==1
+   assert sql("SELECT pg_get_functiondef('"+name+"'::regprocedure);").stdout==old.replace('IF _offer>=floor_price THEN',guard+'\n IF _offer>=floor_price THEN')
+  sql(support) # Full setup and small live patch must install the same definitions.
   assert sql(q).stdout==before
   assert sql((root/'docs/sql/catalog-bargaining/cooldown-update/verify.sql').read_text()).stdout.strip()=='t|t|t|t'
+  assert sql((root/'docs/sql/catalog-bargaining/cooldown-update/verify-first-bid.sql').read_text()).stdout.strip()=='t|t'
   c30=str(uuid.uuid4())
   def fresh_bid(value,again=False,who=c30,variant=v):return call('catalog_bargain_bid_v2',{'variant_id':variant,'client':who,'offer':value,'restart':again})
   def rejects_bid(value,again=False,who=c30,variant=v):return fail('catalog_bargain_bid_v2',{'variant_id':variant,'client':who,'offer':value,'restart':again})
   def state30(who=c30,variant=v):return call('catalog_bargain_state_v2',{'variant_id':variant,'client':who})
   def age_expiry(minutes,who=c30):sql("UPDATE catalog_bargain_sessions SET expires_at=clock_timestamp()-interval'"+str(minutes)+" minutes'WHERE client_hash=md5('"+who+"');")
+  minimum_client=str(uuid.uuid4())
+  assert rejects_bid(1649.99,who=minimum_client)
+  assert fail('catalog_bargain_bid',{'variant_id':v,'client':minimum_client,'offer':1649.99})
+  assert state30(minimum_client)is None
+  first75=fresh_bid(1650,who=minimum_client);assert first75['attempts']==1 and first75['price']>=2000
+  # A rupee-by-rupee increase cannot farm extra discounts or unlimited attempts.
+  for attempt,offer in enumerate([1651,1652,1653],2):
+   small=fresh_bid(offer,who=minimum_client);assert small['attempts']==attempt and small['price']==first75['price']
+  assert rejects_bid(1654,who=minimum_client)
+  age_expiry(31,minimum_client)
+  previous=state30(minimum_client)
+  assert rejects_bid(1600,True,who=minimum_client)
+  assert state30(minimum_client)['id']==previous['id']and state30(minimum_client)['attempts']==4
+  assert fresh_bid(1650,True,who=minimum_client)['attempts']==1
   # Upgrade an existing old-RPC session without resetting its existing two-bid budget.
   initial=call('catalog_bargain_bid',{'variant_id':v,'client':c30,'offer':1850})
   assert state30()['attempts']==1
@@ -140,7 +166,7 @@ try:
   assert sql("SELECT bids::text FROM catalog_bargain_sessions WHERE client_hash=md5('"+accepted_client+"');").stdout.strip()=='[1850]'
 
   assert as_role('anon','',"SELECT * FROM catalog_bargain_sessions;",False).returncode
-  print(json.dumps({'cooldown':'pass','checks':['all original RPC definitions byte-unchanged','old session budget retained','unused second bid survives first quote expiry','30 minutes after final quote expiry','same product size switch/read cannot restart; other product can bargain immediately','concurrent explicit restart idempotency','more than three rounds allowed: no daily cap','old quote rejected and saved order retry unchanged','linked order cannot restart','accepted-first quote cooldown; new counter resets to listed-price first-bid range','no new tables or columns; guarded attempts limit widened to four']}))
+  print(json.dumps({'cooldown':'pass','checks':['all other RPC definitions unchanged; exact guard-only change to both bid APIs','75percent first minimum: direct legacy/current APIs protected, invalid attempts rolled back','rupee increments hold counter and consume finite bids','old session budget retained','unused second bid survives first quote expiry','30 minutes after final quote expiry','same product size switch/read cannot restart; other product can bargain immediately','concurrent explicit restart idempotency','more than three rounds allowed: no daily cap','old quote rejected and saved order retry unchanged','linked order cannot restart','accepted-first quote cooldown; new counter resets to listed-price first-bid range','no new tables or columns; guarded attempts limit widened to four']}))
  assert call('catalog_bargain_enabled',{})==[p]
  assert fail('save_catalog_bargain_policy',{'product_id':p,'policy':policy,'expected_revision':saved['revision']},staff)
  assert as_role('anon','',"SELECT * FROM catalog_bargain_sessions;",False).returncode

@@ -90,6 +90,9 @@ export function bargainRetrySeconds(deal: CatalogDeal | null, now: number): numb
   const deadline = deal.local_retry_at ?? Date.parse(deal.retry_at);
   return Number.isFinite(deadline) ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
 }
+export function firstOfferMinimum(listedPrice: number): number {
+  return Math.ceil(listedPrice * 0.75);
+}
 export function validOffer(raw: string, price: number): number | null {
   const text = raw.replace(/,/g, "").trim();
   if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
@@ -133,6 +136,7 @@ export const OWNER_BARGAIN_RULES = [
   "Bargaining is optional and applies only to this product colour.",
   "Choose your own discount range in rupees or percent. There is no universal 12% cap.",
   "Counters round to multiples of 5 or 10 without crossing your minimum allowed price.",
+  "The first bid in each new negotiation must be at least 75% of the current listed price, rounded up to a whole rupee. Owner discount limits still decide the counter.",
   "Customers get four different valid bids. The fourth response is final unless a price is agreed earlier. Repeated or invalid amounts do not use a chance.",
   "Counters depend on the bid and previous negotiation. The final counter does not automatically use the maximum discount.",
   "Lowering a bid does not unlock a better counter. A counter already offered never increases in the same negotiation.",

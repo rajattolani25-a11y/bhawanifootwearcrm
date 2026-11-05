@@ -189,8 +189,16 @@ try {
   await page.getByRole("button", { name: "7", exact: true }).click();
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
   await closeContrast("rgb(17, 17, 17)");
+  await page.getByText("First offer minimum", { exact: true }).waitFor();
+  const minRow = page.getByText("First offer minimum", { exact: true }).locator("..");
+  assert((await minRow.innerText()).includes("₹1,650"));
+  await page.getByRole("textbox", { name: "Your offer", exact: true }).fill("1649");
+  assert(await page.getByRole("button", { name: "Send my offer", exact: true }).isDisabled());
+  assert.equal(await page.evaluate(() => window.__qaBids.length), 0);
+  await page.screenshot({ path: out + "/first-offer-minimum-390.png" });
   await page.getByRole("textbox", { name: "Your offer", exact: true }).fill("1900");
   await page.getByRole("button", { name: "Send my offer", exact: true }).click();
+  assert.equal(await page.getByText("First offer minimum", { exact: true }).count(), 0);
   await page.getByRole("button", { name: "Revise my offer", exact: true }).waitFor();
   await page.evaluate(() => {
     window.__qaOffset += 181000;
@@ -251,6 +259,11 @@ try {
   await again.click();
   const resetDialog = page.getByRole("dialog");
   await resetDialog.getByText("Four chances to find your price.", { exact: true }).waitFor();
+  await resetDialog.getByText("First offer minimum", { exact: true }).waitFor();
+  await resetDialog.getByRole("textbox", { name: "Your offer", exact: true }).fill("1649");
+  assert(
+    await resetDialog.getByRole("button", { name: "Send my offer", exact: true }).isDisabled(),
+  );
   assert.equal(await resetDialog.getByText("₹2,045", { exact: true }).count(), 0);
   assert.equal(await resetDialog.getByText("FINAL COUNTER-OFFER", { exact: true }).count(), 0);
   const listed = resetDialog.getByText("Listed price", { exact: true }).locator("..");
@@ -283,6 +296,7 @@ try {
           "reopen preserves deadline",
           "new four-bid round after cooldown",
           "new round shows listed price and clears the old discounted counter",
+          "75percent minimum first bid shown and enforced; applied again on restart",
         ],
         productionWrites: 0,
       },

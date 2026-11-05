@@ -202,3 +202,11 @@ test("cooldown is 30 minutes after quote expiry and is not clamped to the offer 
   assert.equal(bargainRetrySeconds({ ...deal, order_placed: true }, now), 0);
   assert.equal(bargainRetrySeconds({ ...deal, cooldown_supported: false }, now), 0);
 });
+
+test("first bid minimum is 75percent of listed price rounded upward to a whole rupee", async () => {
+  const { firstOfferMinimum } = await import("../src/lib/catalog-bargain.ts");
+  assert.equal(firstOfferMinimum(2200), 1650);
+  assert.equal(firstOfferMinimum(1599), 1200);
+  assert.equal(firstOfferMinimum(1299), 975);
+  assert.equal(firstOfferMinimum(2000), 1500);
+});
