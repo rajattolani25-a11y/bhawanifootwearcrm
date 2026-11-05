@@ -67,6 +67,65 @@ try:
  assert missing_policy['revision']is None
  policy={'enabled':True,'kind':'amount','min_discount':0,'max_discount':200,'rounding':5}
  saved=call('save_catalog_bargain_policy',{'product_id':p,'policy':policy,'expected_revision':None},owner)
+ if '--cooldown' in sys.argv:
+  ids=sql("SELECT string_agg(oid::text,',')FROM pg_proc WHERE pronamespace='public'::regnamespace;").stdout.strip()
+  q="SELECT md5(string_agg(pg_get_functiondef(oid),'|'ORDER BY oid))FROM pg_proc WHERE oid IN("+ids+");"
+  before=sql(q).stdout
+  for _ in range(2):sql((root/'docs/sql/catalog-bargaining/cooldown-update/support.sql').read_text())
+  assert sql(q).stdout==before
+  assert sql((root/'docs/sql/catalog-bargaining/cooldown-update/verify.sql').read_text()).stdout.strip()=='t|t|t|t'
+  c30=str(uuid.uuid4())
+  def fresh_bid(value,again=False,who=c30,variant=v):return call('catalog_bargain_bid_v2',{'variant_id':variant,'client':who,'offer':value,'restart':again})
+  def rejects_bid(value,again=False,who=c30,variant=v):return fail('catalog_bargain_bid_v2',{'variant_id':variant,'client':who,'offer':value,'restart':again})
+  def state30(who=c30,variant=v):return call('catalog_bargain_state_v2',{'variant_id':variant,'client':who})
+  def age_expiry(minutes,who=c30):sql("UPDATE catalog_bargain_sessions SET expires_at=clock_timestamp()-interval'"+str(minutes)+" minutes'WHERE client_hash=md5('"+who+"');")
+  # Upgrade an existing old-RPC session without resetting its existing two-bid budget.
+  initial=call('catalog_bargain_bid',{'variant_id':v,'client':c30,'offer':1850})
+  assert state30()['attempts']==1
+  age_expiry(1)
+  second=fresh_bid(1900);assert second['attempts']==2 and second['id']!=initial['id']
+  assert second['retry_at']is None and second['bid_limit']==4
+  third=fresh_bid(1975);assert third['attempts']==3 and third['retry_at']is None
+  second=fresh_bid(1990);assert second['attempts']==4
+  from datetime import datetime
+  assert abs((datetime.fromisoformat(second['retry_at'])-datetime.fromisoformat(second['expires_at'])).total_seconds()-1800)<.1
+  assert rejects_bid(1920,True,variant=v2)
+  assert state30(variant=v2)['attempts']==4
+  age_expiry(1)
+  assert rejects_bid(1920,True)
+  after=state30();assert 28*60<(datetime.fromisoformat(after['retry_at'])-datetime.fromisoformat(after['server_now'])).total_seconds()<30*60
+  age_expiry(31)
+  expired=state30();same=fresh_bid(1990);assert same['duplicate']and same['id']==expired['id']
+  assert state30()['id']==expired['id']
+  from concurrent.futures import ThreadPoolExecutor
+  with ThreadPoolExecutor(max_workers=2)as ex:twice=list(ex.map(lambda _:fresh_bid(1850,True),range(2)))
+  assert twice[0]['id']==twice[1]['id']and twice[0]['attempts']==twice[1]['attempts']==1
+  reopened=twice[0];old_quote=second
+  # No daily cap: four more full rounds are allowed once each 30-minute cooldown ends.
+  for _ in range(4):
+   age_expiry(1);fresh_bid(1900);fresh_bid(1975);fresh_bid(1990);age_expiry(31)
+   reopened=fresh_bid(1850,True);assert reopened['attempts']==1
+   assert 2000<=reopened['price']<=2200 and reopened['price']%5==0
+  assert 'max_discount'not in reopened
+  def order_args(deal):
+   pct=float(sql('SELECT advance_percent FROM store_settings WHERE id=1;').stdout.strip())
+   return {'variant_id':v,'name':'Demo cooldown','mobile':'8888888888','fulfillment':'pickup','address':'','area':'','coupon':'','request_id':str(uuid.uuid4()),'quote':{'price':2200,'net':deal['price'],'charge':0,'advance':__import__('math').ceil(deal['price']*pct/100)},'deal_id':deal['id'],'client':c30}
+  assert fail('create_catalog_bargain_order',order_args(old_quote))
+  request30=order_args(reopened);placed30=call('create_catalog_bargain_order',request30)
+  assert placed30['price']==reopened['price']
+  age_expiry(31)
+  linked=state30();assert linked['order_placed']and linked['retry_at']is None
+  assert rejects_bid(1900,True)
+  assert call('create_catalog_bargain_order',request30)==placed30
+  id30=sql("SELECT id FROM catalog_bookings WHERE booking_no='"+placed30['booking_no']+"';").stdout.strip()
+  call('cancel_catalog_booking',{'id':id30,'note':'Synthetic cooldown audit'},owner)
+  accepted_client=str(uuid.uuid4());accepted=fresh_bid(2075,who=accepted_client)
+  assert accepted['state']=='accepted'and accepted['attempts']==1
+  assert rejects_bid(2080,True,who=accepted_client)
+  age_expiry(31,accepted_client)
+  assert fresh_bid(1850,True,who=accepted_client)['attempts']==1
+  assert as_role('anon','',"SELECT * FROM catalog_bargain_sessions;",False).returncode
+  print(json.dumps({'cooldown':'pass','checks':['all original RPC definitions byte-unchanged','old session budget retained','unused second bid survives first quote expiry','30 minutes after final quote expiry','size switch and read cannot restart','concurrent explicit restart idempotency','more than three rounds allowed: no daily cap','old quote rejected and saved order retry unchanged','linked order cannot restart','accepted-first quote cooldown','no new tables or columns; guarded attempts limit widened to four']}))
  assert call('catalog_bargain_enabled',{})==[p]
  assert fail('save_catalog_bargain_policy',{'product_id':p,'policy':policy,'expected_revision':saved['revision']},staff)
  assert as_role('anon','',"SELECT * FROM catalog_bargain_sessions;",False).returncode

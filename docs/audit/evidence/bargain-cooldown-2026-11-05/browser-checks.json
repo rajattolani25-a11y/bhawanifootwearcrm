@@ -1,0 +1,13 @@
+{
+  "pass": true,
+  "checks": [
+    "one offer action beside price at320/390/768/1440",
+    "size-required focus prompt",
+    "static 30-minute cooldown note, no visible countdown",
+    "unused second bid survives expired first quote",
+    "final quote expiry blocks early restart",
+    "reopen preserves deadline",
+    "new four-bid round after cooldown"
+  ],
+  "productionWrites": 0
+}

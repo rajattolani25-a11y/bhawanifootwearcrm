@@ -1,6 +1,6 @@
 /** Public deal data only. Owner limits never belong in catalog responses or storage. */
 export const DEAL_SECONDS = 180;
-export const BID_LIMIT = 2;
+export const BID_LIMIT = 4;
 export type BargainState = "counter" | "closer" | "held" | "accepted" | "final";
 export type CatalogDeal = {
   id: string;
@@ -18,6 +18,11 @@ export type CatalogDeal = {
   duplicate?: boolean;
   duplicate_offer?: number;
   local_expires_at?: number;
+  retry_at?: string | null;
+  local_retry_at?: number;
+  order_placed?: boolean;
+  cooldown_supported?: boolean;
+  bid_limit?: number;
 };
 export type BargainPolicy = {
   enabled: boolean;
@@ -71,7 +76,7 @@ export function readBargainPolicy(raw: unknown): BargainPolicy {
   };
 }
 export function dealSeconds(deal: CatalogDeal, now: number, offset = 0): number {
-  if(deal.invalidated)return 0;
+  if (deal.invalidated) return 0;
   return Math.max(
     0,
     Math.min(
@@ -79,6 +84,11 @@ export function dealSeconds(deal: CatalogDeal, now: number, offset = 0): number 
       Math.ceil(((deal.local_expires_at ?? Date.parse(deal.expires_at) - offset) - now) / 1000),
     ),
   );
+}
+export function bargainRetrySeconds(deal: CatalogDeal | null, now: number): number {
+  if (!deal?.cooldown_supported || !deal.retry_at || deal.order_placed) return 0;
+  const deadline = deal.local_retry_at ?? Date.parse(deal.retry_at);
+  return Number.isFinite(deadline) ? Math.max(0, Math.ceil((deadline - now) / 1000)) : 0;
 }
 export function validOffer(raw: string, price: number): number | null {
   const text = raw.replace(/,/g, "").trim();
@@ -123,7 +133,7 @@ export const OWNER_BARGAIN_RULES = [
   "Bargaining is optional and applies only to this product colour.",
   "Choose your own discount range in rupees or percent. There is no universal 12% cap.",
   "Counters round to multiples of 5 or 10 without crossing your minimum allowed price.",
-  "Customers get two different valid bids. Repeated or invalid amounts do not use a chance.",
+  "Customers get four different valid bids. The fourth response is final unless a price is agreed earlier. Repeated or invalid amounts do not use a chance.",
   "Counters depend on the bid and previous negotiation. The final counter does not automatically use the maximum discount.",
   "Lowering a bid does not unlock a better counter. A counter already offered never increases in the same negotiation.",
   "Each new valid response lasts exactly three minutes. Accepting, adding to cart or refreshing never extends it.",
@@ -132,7 +142,8 @@ export const OWNER_BARGAIN_RULES = [
   "Additional coupons, festival discounts and reward redemptions cannot be combined with a bargain price.",
   "Quotes are checked again for the exact product, colour, size, current price, owner rules and available stock.",
   "Changing your limits invalidates unplaced deals. Existing saved orders and bills keep their prices.",
-  "Two chances cannot be restarted by refreshing. Anonymous device switching cannot be fully prevented without verified customer identity.",
+  "After the final or accepted quote expires, a new round opens after a 30-minute cooldown. There is no daily round limit. Unused bids remain available.",
+  "Bids cannot be restarted by refreshing. Anonymous device switching cannot be fully prevented without verified customer identity.",
   "Headings match the actual negotiation. No fake buyers, fake owner replies or artificial waiting.",
 ] as const;
 
@@ -143,6 +154,18 @@ export function receivedDeal(deal: CatalogDeal, requestStarted = Date.now()): Ca
   );
   return {
     ...deal,
+    ...(deal.retry_at && Number.isFinite(Date.parse(deal.retry_at))
+      ? {
+          local_retry_at:
+            Date.now() +
+            Math.max(
+              0,
+              Date.parse(deal.retry_at) -
+                Date.parse(deal.server_now) -
+                (Date.now() - requestStarted),
+            ),
+        }
+      : {}),
     local_expires_at: Date.now() + Math.max(0, duration - (Date.now() - requestStarted)),
   };
 }

@@ -484,7 +484,11 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
             <p className={styles["detailBrand"]} data-no-translate>{product.brand}</p>
             <h3 data-no-translate>{product.article}</h3>
           </div>
-          <div className="flex items-baseline justify-between"><p className="text-sm text-muted-foreground"><span>{categoryLabel(product.category)}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p><p><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p></div>
+          <p className="text-sm text-muted-foreground"><span>{categoryLabel(product.category)}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p>
+          <div className={styles["priceOfferRow"]}>
+            <p className={styles["detailPrice"]}><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p>
+            {product.bargain_enabled && canOrder && hasStock && <button className={styles["priceOfferButton"]} type="button" onClick={()=>{if(!chosen){setNeedsSize(true);sizesRef.current?.scrollIntoView({block:"center"});sizesRef.current?.focus({preventScroll:true});}else setBargainOpen(true);}}><span>{t("Make an offer")}</span><ArrowRight aria-hidden="true" className="h-4 w-4"/></button>}
+          </div>
           <section ref={sizesRef} tabIndex={-1} className={styles["detailSizes"]} data-attention={needsSize && !chosen} aria-label={t("Choose size")}>
             <p className="mb-2 text-sm font-semibold">Choose size</p>
             <div className="flex flex-wrap gap-2">
@@ -497,7 +501,6 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           </section>}
 
           <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><p><b className="block">Exchange policy</b><span className="text-muted-foreground">No cash refund or return. Only size exchange within 7 days, with bill and unworn pair.</span></p></div>
-          {product.bargain_enabled && canOrder && hasStock && <div className={commerce["link"]}><button type="button" onClick={()=>{if(!chosen){setNeedsSize(true);sizesRef.current?.scrollIntoView({block:"center"});sizesRef.current?.focus({preventScroll:true});}else setBargainOpen(true);}}><span aria-hidden="true">↗</span><span>{t("Make an offer")}</span></button></div>}
           {(() => { const sim = similarTo(product, all); return sim.length > 0 && <div>
             <p className="mb-2 text-sm font-semibold">Similar pairs you might like</p>
             <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">

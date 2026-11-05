@@ -6,6 +6,7 @@ import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
 import {
   BARGAIN_HEADINGS,
+  BID_LIMIT,
   receivedDeal,
   validOffer,
   type CatalogDeal,
@@ -14,7 +15,7 @@ import { bargainClient } from "@/lib/catalog-cart";
 import { getBargain, makeBargain } from "@/lib/catalog-bargain.functions";
 import type { CatalogProduct } from "@/lib/catalog.functions";
 import { DealTimer } from "./DealTimer";
-import { useDealSeconds } from "@/lib/use-deal-seconds";
+import { useDealSeconds, useBargainRetrySeconds } from "@/lib/use-deal-seconds";
 import styles from "./commerce.module.css";
 export function BargainSheet({
   product,
@@ -41,9 +42,19 @@ export function BargainSheet({
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const sent = useRef(false);
+  const restarting = useRef(false);
   const quoteHandler = useRef(onQuote);
   quoteHandler.current = onQuote;
+  const limit = deal ? (deal.bid_limit === 4 ? 4 : deal.bid_limit === 3 ? 3 : 2) : BID_LIMIT;
   const seconds = useDealSeconds(deal);
+  const retrySeconds = useBargainRetrySeconds(deal);
+  const retryAvailable =
+    !!deal?.cooldown_supported &&
+    !!deal.retry_at &&
+    retrySeconds === 0 &&
+    !deal.order_placed &&
+    seconds === 0;
+
   const matches = !deal || deal.variant_id === variantId;
   const size = product.sizes.find((s) => s.id === variantId);
   useEffect(() => {
@@ -56,7 +67,7 @@ export function BargainSheet({
           if (live && result) {
             const fresh = receivedDeal(result, started);
             setDeal(fresh);
-            quoteHandler.current(fresh);
+            if (!fresh.order_placed) quoteHandler.current(fresh);
             if (fresh.listed_price !== product.price)
               window.dispatchEvent(new Event("solestack-catalog-refresh"));
           }
@@ -81,14 +92,20 @@ export function BargainSheet({
     const started = Date.now();
     try {
       const result = await makeBargain({
-        data: { variantId, client: bargainClient(), offer: amount },
+        data: {
+          variantId,
+          client: bargainClient(),
+          offer: amount,
+          ...(restarting.current ? { restart: true } : {}),
+        },
       });
       const fresh = receivedDeal(result, started);
       setDeal(fresh);
-      quoteHandler.current(fresh);
+      if (!fresh.order_placed) quoteHandler.current(fresh);
       if (fresh.listed_price !== product.price)
         window.dispatchEvent(new Event("solestack-catalog-refresh"));
       setEditing(false);
+      restarting.current = false;
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -96,8 +113,9 @@ export function BargainSheet({
       sent.current = false;
     }
   }
-  const heading =
-    deal && !loading && seconds === 0
+  const heading = deal?.order_placed
+    ? "This deal is linked to an order."
+    : deal && !loading && seconds === 0
       ? "This offer has expired."
       : !size?.available
         ? "This selection is unavailable."
@@ -143,7 +161,7 @@ export function BargainSheet({
                   {t(
                     deal.state === "accepted"
                       ? "YOUR AGREED PRICE"
-                      : deal.attempts === 2
+                      : deal.attempts >= limit
                         ? "FINAL COUNTER-OFFER"
                         : "OUR COUNTER-OFFER",
                   )}
@@ -159,9 +177,9 @@ export function BargainSheet({
               {deal.duplicate && (
                 <p role="status" className="text-sm">
                   {t(
-                    deal.attempts < 2
+                    deal.attempts < limit
                       ? "Enter a different amount or accept the current counter."
-                      : "Both chances have been used. Accept the current counter before it expires.",
+                      : "All bids have been used. Accept the current counter before it expires.",
                   )}
                 </p>
               )}
@@ -192,13 +210,17 @@ export function BargainSheet({
               <p className="text-xs text-muted-foreground">
                 {t(
                   deal
-                    ? "Last chance. Enter a different amount."
-                    : "Two chances to find your price.",
+                    ? deal.attempts === limit - 1
+                      ? "Last chance. Enter a different amount."
+                      : "You can make another offer."
+                    : "Four chances to find your price.",
                 )}
               </p>
               <Button
                 disabled={
-                  busy || !validOffer(offer, product.price) || (!!deal && deal.attempts >= 2)
+                  busy ||
+                  !validOffer(offer, product.price) ||
+                  (!!deal && (deal.attempts >= limit || deal.order_placed))
                 }
                 className="h-12"
               >
@@ -209,7 +231,7 @@ export function BargainSheet({
           {!matches && (
             <p className="text-xs">
               {t(
-                "Your previous quote belongs to another size. Changing size does not reset the two chances.",
+                "Your previous quote belongs to another size. Changing size does not reset your bids.",
               )}
             </p>
           )}
@@ -221,6 +243,11 @@ export function BargainSheet({
           <p className="text-center text-xs text-muted-foreground">
             {t("Additional offers cannot be combined.")}
           </p>
+          <p className="text-center text-xs text-muted-foreground">
+            {t(
+              "After the final price expires, there is a 30-minute cooldown before bargaining again.",
+            )}
+          </p>
         </div>
         {deal && (
           <footer className={styles["footer"]}>
@@ -229,6 +256,7 @@ export function BargainSheet({
               className="h-12"
               disabled={
                 seconds === 0 ||
+                !!deal.order_placed ||
                 busy ||
                 !matches ||
                 !size?.available ||
@@ -238,15 +266,40 @@ export function BargainSheet({
             >
               {t("Accept price & continue")} · {inr(deal.price)}
             </Button>
-            {deal.attempts < 2 && deal.state !== "accepted" && seconds > 0 && !editing && (
+            {deal.attempts < limit &&
+              deal.state !== "accepted" &&
+              !deal.order_placed &&
+              (seconds > 0 || deal.cooldown_supported) &&
+              !editing && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setOffer("");
+                    setEditing(true);
+                  }}
+                >
+                  {t("Revise my offer")}
+                </Button>
+              )}
+            {deal.order_placed && (
+              <p role="status" className="text-xs">
+                {t("Track your saved order before making another offer.")}
+              </p>
+            )}
+            {!!deal.retry_at && seconds === 0 && !deal.order_placed && (
               <Button
-                variant="ghost"
+                variant="outline"
+                className="min-h-11"
+                disabled={!retryAvailable || busy}
                 onClick={() => {
+                  restarting.current = true;
+                  setDeal(null);
+                  setEditing(false);
                   setOffer("");
-                  setEditing(true);
+                  setError("");
                 }}
               >
-                {t("Revise my offer")}
+                {t("Start a new bargain")}
               </Button>
             )}
             <button

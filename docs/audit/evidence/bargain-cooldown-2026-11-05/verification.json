@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-05",
+  "unit_tests": {
+    "passed": 57,
+    "failed": 0
+  },
+  "typescript": "pass",
+  "scoped_eslint": "pass (existing compact files exclude formatting rule)",
+  "production_build": "pass",
+  "browser_tests": [
+    "price-side placement320/390/768/1440 and44px target",
+    "required size prompt",
+    "fourth counter final",
+    "static cooldown note; no30min countdown",
+    "expired earlier quote retains unused bids",
+    "early restart disabled; reopen retains deadline",
+    "new negotiation after final-price expiry plus30min",
+    "existing commerce regression"
+  ],
+  "database_tests": [
+    "cooldown SQL repeated; original RPC definitions byte-identical",
+    "guarded CHECK widened to4 only",
+    "existing session budget retained; duplicate/free/size guards",
+    "explicit concurrent restart idempotent",
+    "multiple repeated negotiations; no daily cap",
+    "old quotes rejected; committed order recovery unaffected",
+    "backup/reset/restore regression",
+    "combined cart/coupon/receipt/refund regression with new quote data"
+  ],
+  "production_writes": 0,
+  "live_backend_status": "manual cooldown SQL not applied; owner previously reported coupon verification true",
+  "visual_review": "mobile placement and static note inspected; existing photos reused"
+}

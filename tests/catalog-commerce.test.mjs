@@ -186,3 +186,19 @@ test("whole-cart coupon allocations sum exactly, stay proportionate and preserve
     }
   }
 });
+
+test("cooldown is 30 minutes after quote expiry and is not clamped to the offer timer", async () => {
+  const { bargainRetrySeconds, receivedDeal } = await import("../src/lib/catalog-bargain.ts");
+  const now = Date.now();
+  const raw = {
+    cooldown_supported: true,
+    expires_at: new Date(now + 180000).toISOString(),
+    retry_at: new Date(now + 1980000).toISOString(),
+    server_now: new Date(now).toISOString(),
+  };
+  const deal = receivedDeal(raw, now);
+  assert(bargainRetrySeconds(deal, now) >= 1979);
+  assert.equal(bargainRetrySeconds(deal, now + 1981000), 0);
+  assert.equal(bargainRetrySeconds({ ...deal, order_placed: true }, now), 0);
+  assert.equal(bargainRetrySeconds({ ...deal, cooldown_supported: false }, now), 0);
+});

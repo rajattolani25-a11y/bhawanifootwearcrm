@@ -227,11 +227,13 @@ Object.assign(COMMERCE, {
     hindi: "काउंटर कीमत 5 या 10 के गुणज में होगी और आपकी न्यूनतम कीमत से नीचे नहीं जाएगी।",
     hinglish: "Counter 5 ya 10 ke multiples mein hoga, aapki minimum price se neeche nahi.",
   },
-  "Customers get two different valid bids. Repeated or invalid amounts do not use a chance.": {
-    hindi: "ग्राहक दो अलग मान्य पेशकश कर सकता है। दोहराई गई या अमान्य राशि से मौका नहीं कटेगा।",
-    hinglish:
-      "Customer ko do alag valid bids milti hain. Repeat ya invalid amount par chance nahi katega.",
-  },
+  "Customers get four different valid bids. The fourth response is final unless a price is agreed earlier. Repeated or invalid amounts do not use a chance.":
+    {
+      hindi:
+        "ग्राहक चार अलग वैध पेशकश कर सकता है। पहले कीमत तय न हो तो चौथा जवाब अंतिम है। दोहराई या गलत राशि से मौका कम नहीं होता।",
+      hinglish:
+        "Customer chaar alag valid bids de sakta hai. Pehle deal na bane toh fourth response final hai. Repeat ya invalid amount se chance use nahi hota.",
+    },
   "Counters depend on the bid and previous negotiation. The final counter does not automatically use the maximum discount.":
     {
       hindi:
@@ -286,12 +288,12 @@ Object.assign(COMMERCE, {
       hinglish:
         "Limits badalne par unplaced deals invalid hongi. Saved orders aur bills ki price nahi badlegi.",
     },
-  "Two chances cannot be restarted by refreshing. Anonymous device switching cannot be fully prevented without verified customer identity.":
+  "Bids cannot be restarted by refreshing. Anonymous device switching cannot be fully prevented without verified customer identity.":
     {
       hindi:
-        "रीफ्रेश करने से दो मौके फिर से नहीं मिलेंगे। सत्यापित ग्राहक पहचान के बिना अलग डिवाइस से कोशिश को पूरी तरह रोक नहीं सकते।",
+        "रीफ्रेश करने से पेशकश के मौके फिर से नहीं मिलेंगे। सत्यापित ग्राहक पहचान के बिना अलग डिवाइस से कोशिश को पूरी तरह रोक नहीं सकते।",
       hinglish:
-        "Refresh se do chances reset nahi honge. Verified customer identity ke bina doosre device se try karna poori tarah block nahi hota.",
+        "Refresh se bids reset nahi honge. Verified customer identity ke bina doosre device se try karna poori tarah block nahi hota.",
     },
   "Headings match the actual negotiation. No fake buyers, fake owner replies or artificial waiting.":
     {
@@ -446,4 +448,73 @@ Object.assign(COMMERCE, {
 
 Object.assign(COMMERCE, {
   "Order summary": { hindi: "ऑर्डर का सारांश", hinglish: "Order summary" },
+});
+
+Object.assign(COMMERCE, {
+  "Start a new bargain": { hindi: "फिर से मोलभाव करें", hinglish: "Dobara bargain karein" },
+  "This deal is linked to an order.": {
+    hindi: "इस कीमत पर ऑर्डर बन चुका है।",
+    hinglish: "Is deal par order ban chuka hai.",
+  },
+  "Track your saved order before making another offer.": {
+    hindi: "दूसरी पेशकश से पहले अपने सेव ऑर्डर की स्थिति देखें।",
+    hinglish: "Doosri offer se pehle saved order track karein.",
+  },
+  "After the final or accepted quote expires, a new round opens after a 30-minute cooldown. There is no daily round limit. Unused bids remain available.":
+    {
+      hindi:
+        "अंतिम या स्वीकार की गई कीमत समाप्त होने के बाद 30 मिनट का कूलडाउन होगा। फिर नया राउंड खुलेगा। रोज़ के राउंड की सीमा नहीं है; बची हुई पेशकशें उपलब्ध रहती हैं।",
+      hinglish:
+        "Final ya accepted quote expire hone ke baad 30 minute cooldown hai. Phir naya round khulega. Daily rounds ki limit nahi; unused bids available rehti hain.",
+    },
+});
+
+Object.assign(COMMERCE, {
+  "After the final price expires, there is a 30-minute cooldown before bargaining again.": {
+    hindi: "अंतिम कीमत की वैधता खत्म होने के बाद, दोबारा मोलभाव के लिए 30 मिनट का कूलडाउन होता है।",
+    hinglish:
+      "Final price expire hone ke baad, dobara bargaining ke liye 30-minute cooldown hota hai.",
+  },
+});
+
+Object.assign(COMMERCE, {
+  "Three chances to find your price.": {
+    hindi: "अपनी कीमत तय करने के तीन मौके।",
+    hinglish: "Apni price ke liye teen chances.",
+  },
+  "You can make another offer.": {
+    hindi: "आप एक और पेशकश कर सकते हैं।",
+    hinglish: "Aap ek aur offer kar sakte hain.",
+  },
+  "All bids have been used. Accept the current counter before it expires.": {
+    hindi: "सभी पेशकश के मौके पूरे हुए। मौजूदा कीमत खत्म होने से पहले स्वीकार करें।",
+    hinglish: "Saare bids use ho gaye. Current counter expire hone se pehle accept karein.",
+  },
+  "Your previous quote belongs to another size. Changing size does not reset your bids.": {
+    hindi: "पिछली कीमत दूसरे साइज़ की है। साइज़ बदलने से पेशकश के मौके वापस नहीं मिलते।",
+    hinglish: "Pichhli quote doosre size ki hai. Size change karne se bids reset nahi hote.",
+  },
+});
+
+Object.assign(COMMERCE, {
+  "Four chances to find your price.": {
+    hindi: "अपनी कीमत तय करने के चार मौके।",
+    hinglish: "Apni price ke liye chaar chances.",
+  },
+});
+
+Object.assign(COMMERCE, {
+  "Please wait for the 30-minute cooldown before starting a new bargain.": {
+    hindi: "दोबारा मोलभाव शुरू करने से पहले 30 मिनट का कूलडाउन पूरा होने दें।",
+    hinglish: "Dobara bargain se pehle 30-minute cooldown poora hone dein.",
+  },
+  "All bids have been used. Start a new bargain after the cooldown.": {
+    hindi: "सभी पेशकश के मौके पूरे हुए। कूलडाउन के बाद दोबारा मोलभाव करें।",
+    hinglish: "Saare bids use ho gaye. Cooldown ke baad dobara bargain karein.",
+  },
+  "Your offer is already accepted. Use the current price or wait for the next round.": {
+    hindi: "आपकी पेशकश स्वीकार हो चुकी है। मौजूदा कीमत पर आगे बढ़ें या अगले राउंड तक रुकें।",
+    hinglish:
+      "Offer accept ho chuki hai. Current price par continue karein ya next round ka wait karein.",
+  },
 });

@@ -42,6 +42,7 @@ try:
 
 
  sql((root/'docs/sql/catalog-bargaining/support.sql').read_text())
+ if '--cooldown' in sys.argv:sql((root/'docs/sql/catalog-bargaining/cooldown-update/support.sql').read_text())
  original=sql("SELECT md5(string_agg(pg_get_functiondef(p.oid),'|'ORDER BY p.oid))FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public';").stdout
  existing=sql("SELECT string_agg(p.oid::text,',')FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public';").stdout.strip()
  original=sql("SELECT md5(string_agg(pg_get_functiondef(p.oid),'|'ORDER BY p.oid))FROM pg_proc p WHERE p.oid IN("+existing+");").stdout
@@ -181,7 +182,7 @@ try:
   assert fail('confirm_catalog_cart_payment',{'cart_no':changed['cart_no'],'expected_advance':2790,'settled':True},owner)
   # Mixed basket: coupon minimum/discount use only normal prices, never the bargain or delivery.
   # Quote client capability has to match; keep it explicitly rather than reconstructing it.
-  fresh_client=str(uuid.uuid4());d2=call('catalog_bargain_bid',{'variant_id':vs[0],'client':fresh_client,'offer':2050})
+  fresh_client=str(uuid.uuid4());d2=call('catalog_bargain_bid_v2'if '--cooldown'in sys.argv else'catalog_bargain_bid',{'variant_id':vs[0],'client':fresh_client,'offer':2050,**({'restart':False}if '--cooldown'in sys.argv else{})})
   mixed_items=[{'variant_id':vs[0],'price':2200,'net':d2['price'],'coupon':'','bargain_id':d2['id'],'client':fresh_client},{'variant_id':vs[1],'price':800,'net':694.09,'coupon':''},{'variant_id':vs[2],'price':333,'net':288.91,'coupon':''}]
   mixed_total=d2['price']+983
   mix=call('create_catalog_cart_order_v2',dict(whole,request_id=str(uuid.uuid4()),items=mixed_items,coupon='MIX150',mobile='8888888888',quote={'net':mixed_total,'charge':90,'advance':mixed_total+90}))
