@@ -94,6 +94,14 @@ try:
   age_expiry(1)
   assert rejects_bid(1920,True)
   after=state30();assert 28*60<(datetime.fromisoformat(after['retry_at'])-datetime.fromisoformat(after['server_now'])).total_seconds()<30*60
+  # Same client can immediately bargain on a different product during this product's cooldown.
+  otherp='10000000-0000-4000-8000-000000000099';otherv='20000000-0000-4000-8000-000000000099'
+  sql(f"INSERT INTO products(id,article,selling_price,catalog_visible)VALUES('{otherp}','Other demo pair',2200,true);INSERT INTO product_variants(id,product_id,size,stock)VALUES('{otherv}','{otherp}','7',2);")
+  call('save_catalog_bargain_policy',{'product_id':otherp,'policy':policy,'expected_revision':None},owner)
+  before_other=state30()
+  other=fresh_bid(1850,variant=otherv);assert other['attempts']==1 and other['product_id']==otherp
+  assert state30()['id']==before_other['id']and state30()['retry_at']==before_other['retry_at']
+  sql(f"DELETE FROM catalog_bargain_sessions WHERE product_id='{otherp}';DELETE FROM catalog_bargain_policies WHERE product_id='{otherp}';DELETE FROM product_variants WHERE id='{otherv}';DELETE FROM products WHERE id='{otherp}';")
   age_expiry(31)
   expired=state30();same=fresh_bid(1990);assert same['duplicate']and same['id']==expired['id']
   assert state30()['id']==expired['id']
@@ -125,7 +133,7 @@ try:
   age_expiry(31,accepted_client)
   assert fresh_bid(1850,True,who=accepted_client)['attempts']==1
   assert as_role('anon','',"SELECT * FROM catalog_bargain_sessions;",False).returncode
-  print(json.dumps({'cooldown':'pass','checks':['all original RPC definitions byte-unchanged','old session budget retained','unused second bid survives first quote expiry','30 minutes after final quote expiry','size switch and read cannot restart','concurrent explicit restart idempotency','more than three rounds allowed: no daily cap','old quote rejected and saved order retry unchanged','linked order cannot restart','accepted-first quote cooldown','no new tables or columns; guarded attempts limit widened to four']}))
+  print(json.dumps({'cooldown':'pass','checks':['all original RPC definitions byte-unchanged','old session budget retained','unused second bid survives first quote expiry','30 minutes after final quote expiry','same product size switch/read cannot restart; other product can bargain immediately','concurrent explicit restart idempotency','more than three rounds allowed: no daily cap','old quote rejected and saved order retry unchanged','linked order cannot restart','accepted-first quote cooldown','no new tables or columns; guarded attempts limit widened to four']}))
  assert call('catalog_bargain_enabled',{})==[p]
  assert fail('save_catalog_bargain_policy',{'product_id':p,'policy':policy,'expected_revision':saved['revision']},staff)
  assert as_role('anon','',"SELECT * FROM catalog_bargain_sessions;",False).returncode

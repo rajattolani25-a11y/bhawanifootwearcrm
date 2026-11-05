@@ -251,7 +251,21 @@ export function BargainSheet({
         </div>
         {deal && (
           <footer className={styles["footer"]}>
-            <DealTimer deal={deal} />
+            {(!deal.retry_at || seconds > 0 || deal.order_placed) && <DealTimer deal={deal} />}
+            {!!deal.retry_at && seconds === 0 && retrySeconds > 0 && !deal.order_placed && (
+              <div className={styles["timer"]} data-bargain-cooldown>
+                <div>
+                  <strong>{t("Product cooldown")}</strong>
+                  <span>{t("You can bargain on other products meanwhile.")}</span>
+                </div>
+                <time aria-label={t("Cooldown remaining")} dateTime={`PT${retrySeconds}S`}>
+                  {Math.floor(retrySeconds / 60)
+                    .toString()
+                    .padStart(2, "0")}
+                  :{(retrySeconds % 60).toString().padStart(2, "0")}
+                </time>
+              </div>
+            )}
             <Button
               className="h-12"
               disabled={

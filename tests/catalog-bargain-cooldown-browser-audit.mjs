@@ -155,11 +155,15 @@ try {
   const again = page.getByRole("button", { name: "Start a new bargain", exact: true });
   await again.waitFor();
   assert(await again.isDisabled());
-  assert.equal(await page.getByRole("dialog").locator("time").count(), 1); // Only expired 3-minute timer; no cooldown countdown.
+  assert.equal(await page.getByRole("dialog").locator("time").count(), 1); // Inside offer sheet only; replaces expired price timer.
+  const cooldown = page.getByLabel("Cooldown remaining", { exact: true });
+  assert(/^(29:[0-5][0-9]|30:00)$/.test(await cooldown.innerText()));
   const retry = await page.evaluate(() => JSON.parse(localStorage.getItem("qa-cooldown")).retry_at);
   await page.screenshot({ path: out + "/cooldown-note-390.png" });
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  assert.equal(await page.locator("[data-bargain-cooldown]").count(), 0);
   await page.getByRole("button", { name: "Make an offer", exact: true }).click();
+  await page.getByLabel("Cooldown remaining", { exact: true }).waitFor();
   await again.waitFor();
   assert(await again.isDisabled());
   assert.equal(
@@ -190,7 +194,7 @@ try {
         checks: [
           "one offer action beside price at320/390/768/1440",
           "size-required focus prompt",
-          "static 30-minute cooldown note, no visible countdown",
+          "cooldown timer only inside the product offer sheet; no global timer",
           "unused second bid survives expired first quote",
           "final quote expiry blocks early restart",
           "reopen preserves deadline",

@@ -11,7 +11,7 @@
     "price-side placement320/390/768/1440 and44px target",
     "required size prompt",
     "fourth counter final",
-    "static cooldown note; no30min countdown",
+    "actual remaining cooldown inside reopened offer sheet only; no global timer",
     "expired earlier quote retains unused bids",
     "early restart disabled; reopen retains deadline",
     "new negotiation after final-price expiry plus30min",
@@ -25,9 +25,10 @@
     "multiple repeated negotiations; no daily cap",
     "old quotes rejected; committed order recovery unaffected",
     "backup/reset/restore regression",
-    "combined cart/coupon/receipt/refund regression with new quote data"
+    "combined cart/coupon/receipt/refund regression with new quote data",
+    "same customer can bargain on another product while first product remains on cooldown"
   ],
   "production_writes": 0,
   "live_backend_status": "manual cooldown SQL not applied; owner previously reported coupon verification true",
-  "visual_review": "mobile placement and static note inspected; existing photos reused"
+  "visual_review": "price-side action and per-product cooldown sheet inspected; reused existing photos"
 }

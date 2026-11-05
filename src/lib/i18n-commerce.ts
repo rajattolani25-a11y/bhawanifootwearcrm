@@ -518,3 +518,12 @@ Object.assign(COMMERCE, {
       "Offer accept ho chuki hai. Current price par continue karein ya next round ka wait karein.",
   },
 });
+
+Object.assign(COMMERCE, {
+  "Product cooldown": { hindi: "इस उत्पाद का कूलडाउन", hinglish: "Is product ka cooldown" },
+  "You can bargain on other products meanwhile.": {
+    hindi: "इस दौरान दूसरे उत्पादों पर मोलभाव कर सकते हैं।",
+    hinglish: "Is beech doosre products par bargain kar sakte hain.",
+  },
+  "Cooldown remaining": { hindi: "कूलडाउन का बचा समय", hinglish: "Cooldown ka baaki time" },
+});
