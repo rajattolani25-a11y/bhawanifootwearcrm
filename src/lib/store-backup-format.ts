@@ -155,6 +155,7 @@ export function clearStoreDrafts(
   local: Pick<Storage, "removeItem">,
   session: Pick<Storage, "removeItem">,
 ) {
+  local.removeItem("solestack-catalog-checkout-pending-v1");
   local.removeItem("solestack-catalog-cart-v1");
   local.removeItem("solestack-catalog-last-deal-v1");
   local.removeItem("solestack-catalog-bargain-client-v1");

@@ -3,6 +3,7 @@ export const CATALOG_ORDER_KEY = "solestack-catalog-order-pending-v1";
 export const CATALOG_ORDER_EVENT = "solestack-catalog-order-recovery";
 export type OrderRequest = {
   variantId: string;
+  cartReady?: boolean;
   bargain?: { id: string; client: string };
   name: string;
   mobile: string;

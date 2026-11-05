@@ -7,7 +7,7 @@ import type { PublicHero } from "./catalog-hero";
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
 export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; bargain_enabled?: boolean; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
-export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number };
+export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number; cart_ready?: boolean };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
 export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null; heroUnavailable?: boolean; presentation?: CatalogPresentation };
 export type BookingResult = { booking_no: string; advance: number; price: number; delivery_charge: number; fulfillment: Fulfillment; upi_id: string; shop: string; phone: string | null; product: string; size: string; hold_hours: number; coupon_code?: string | null; coupon_discount?: number };
@@ -40,9 +40,9 @@ export const getCatalogSnapshot = createServerFn({ method: "GET" }).handler(asyn
   const { data, error } = await sb.rpc("public_catalog");
   if (error) throw new Error("Catalog refresh is unavailable");
   const d = data as unknown as CatalogData;
-  const flags = await sb.rpc("catalog_bargain_enabled").then(({data}) => new Set(Array.isArray(data) ? data as string[] : []), () => new Set<string>());
+  const [flags,cartReady] = await Promise.all([sb.rpc("catalog_bargain_enabled").then(({data}) => new Set(Array.isArray(data) ? data as string[] : []), () => new Set<string>()),sb.rpc("catalog_cart_version").then(({data,error})=>!error&&data===1,()=>false)]);
   if (!d.enabled || !d.shop) return { enabled: false };
-  return { enabled: true, shop: d.shop, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };
+  return { enabled: true, shop: {...d.shop,cart_ready:cartReady}, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };
 });
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;
@@ -67,6 +67,7 @@ export const createBooking = createServerFn({ method: "POST" })
     z.object({
       variantId: z.string().uuid(),
       requestId: z.string().uuid(),
+      cartReady: z.boolean().optional(),
       bargain: z.object({ id: z.string().uuid(), client: z.string().uuid() }).optional(),
       quote: z.object({ price: z.number().finite().nonnegative(), net: z.number().finite().nonnegative(), charge: z.number().finite().nonnegative(), advance: z.number().finite().nonnegative() }),
       name: z.string().trim().min(2).max(60),
@@ -79,6 +80,13 @@ export const createBooking = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<BookingResult> => {
     const sb = await publicClient();
+    if(data.cartReady){
+      const {data:r,error}=await sb.rpc("create_catalog_cart_order",{_request_id:data.requestId,_items:[{variant_id:data.variantId,price:data.quote.price,net:data.quote.net,coupon:data.coupon,...(data.bargain?{bargain_id:data.bargain.id,client:data.bargain.client}:{})}],_name:data.name,_mobile:data.mobile,_fulfillment:data.fulfillment,_address:data.address,_area:data.area,_quote:{net:data.quote.net,charge:data.quote.charge,advance:data.quote.advance}});
+      if(error){const message=error.message.startsWith("CART_BARGAIN_CHANGED:")?"This bargain price has expired or changed. Review the listed price before ordering.":error.message;throw Error((/^[0-9A-Z]{5}$/.test(error.code??"")&&!error.code.startsWith("PGRST")?"ORDER_REJECTED: ":"ORDER_UNCONFIRMED: ")+message);}
+      const cart=r as import("./catalog-cart-checkout").CartOrderResult;
+      if(cart.orders?.length!==1)throw Error("ORDER_UNCONFIRMED: The saved order response was incomplete. Recover the original request.");
+      return {...cart.orders[0]!,upi_id:cart.upi_id,phone:cart.phone,shop:cart.shop,hold_hours:cart.hold_hours};
+    }
     const { data: r, error } = await sb.rpc(data.bargain ? "create_catalog_bargain_order" : "create_catalog_order", { ...(data.bargain ? { _deal_id: data.bargain.id, _client: data.bargain.client } : {}), _variant_id: data.variantId, _name: data.name, _mobile: data.mobile, _fulfillment: data.fulfillment, _address: data.address, _area: data.area, _coupon: data.coupon, _request_id: data.requestId, _quote: data.quote });
     if (error) throw new Error((/^[0-9A-Z]{5}$/.test(error.code ?? "") && !error.code.startsWith("PGRST") ? "ORDER_REJECTED: " : "ORDER_UNCONFIRMED: ") + error.message);
     return r as unknown as BookingResult;
@@ -86,13 +94,13 @@ export const createBooking = createServerFn({ method: "POST" })
 
 export const trackOrder = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ bookingNo: z.string().trim().min(4).max(20), mobile: z.string().trim().regex(mobileRx, "Enter a valid 10-digit mobile number") }).parse(input),
+    z.object({ bookingNo: z.string().trim().min(4).max(64), mobile: z.string().trim().regex(mobileRx, "Enter a valid 10-digit mobile number") }).parse(input),
   )
-  .handler(async ({ data }): Promise<TrackResult> => {
+  .handler(async ({ data }): Promise<TrackResult | import("./catalog-cart-checkout").CartOrderResult> => {
     const sb = await publicClient();
-    const { data: r, error } = await sb.rpc("track_catalog_order", { _booking_no: data.bookingNo, _mobile: data.mobile });
+    const { data: r, error } = await sb.rpc(/^CT-[0-9A-F]{16}$/i.test(data.bookingNo) ? "track_catalog_cart_order" : "track_catalog_order", { ...(/^CT-[0-9A-F]{16}$/i.test(data.bookingNo) ? {_cart_no:data.bookingNo} : {_booking_no:data.bookingNo}), _mobile: data.mobile });
     if (error) throw new Error("Could not check the order right now");
-    return (r as unknown as TrackResult) ?? null;
+    return (r as unknown as TrackResult | import("./catalog-cart-checkout").CartOrderResult) ?? null;
   });
 
 export const checkCoupon = createServerFn({ method: "POST" })

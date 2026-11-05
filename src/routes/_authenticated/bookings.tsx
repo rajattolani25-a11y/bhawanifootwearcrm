@@ -1,3 +1,5 @@
+import { OwnerCartPayment } from "@/components/catalog-commerce/OwnerCartPayment";
+import { cartReference } from "@/lib/catalog-cart-checkout";
 import { useAuth } from "@/hooks/use-auth";
 import { runOperationalRequest } from "@/lib/operational-requests";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
@@ -34,6 +36,7 @@ const STATUS_LABEL: Record<string, string> = { pending: "Order placed", confirme
 function Bookings() {
   const { isOwner } = useAuth();
   const [update, setUpdate] = useState<{ booking: Booking; status: string } | null>(null);
+  const [cartUpdate,setCartUpdate]=useState<{url:string;reference:string}|null>(null);
   const [refunding, setRefunding] = useState<Booking | null>(null);
   const qc = useQueryClient();
   const shop = useShop();
@@ -98,7 +101,8 @@ function Bookings() {
       <div className="grid gap-3 md:grid-cols-2">
         {list.map((b) => (
           <div key={b.id} className="rounded-lg border bg-card p-4">
-            <div className="flex justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><p className="text-xs font-semibold text-primary" data-no-translate>{b.booking_no}</p><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{TYPE_LABEL[b.fulfillment] ?? b.fulfillment}</span><span className="rounded-full border px-2 py-0.5 text-[11px]">{STATUS_LABEL[b.status] ?? b.status}</span></div><p className="font-semibold" data-no-translate>{b.product_name}</p><p className="text-sm"><span>Size</span> {b.size}{b.product_variants?.products?.color && <span data-no-translate> · {b.product_variants.products.color}</span>}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">{b.fulfillment === "pickup" ? "Advance" : "Paid"}</p><p className="font-display text-lg font-bold">{inr(b.advance)}</p>{b.fulfillment === "pickup" ? <p className="text-xs text-muted-foreground"><span>of</span> {inr(b.price)}</p> : b.delivery_charge > 0 && <p className="text-xs text-muted-foreground"><span>incl. delivery</span> {inr(b.delivery_charge)}</p>}</div></div>
+            {cartReference(b.booking_no) && list.find(item=>cartReference(item.booking_no)===cartReference(b.booking_no))?.id===b.id && <OwnerCartPayment reference={cartReference(b.booking_no)!} mobile={b.mobile} refresh={refresh} onUpdate={(url,reference)=>setCartUpdate({url,reference})}/>}
+            <div className="flex justify-between gap-2"><div><div className="flex flex-wrap items-center gap-1.5"><p className="text-xs font-semibold text-primary" data-no-translate>{b.booking_no}</p><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">{TYPE_LABEL[b.fulfillment] ?? b.fulfillment}</span><span className="rounded-full border px-2 py-0.5 text-[11px]">{STATUS_LABEL[b.status] ?? b.status}</span></div><p className="font-semibold" data-no-translate>{b.product_name}</p><p className="text-sm"><span>Size</span> {b.size}{b.product_variants?.products?.color && <span data-no-translate> · {b.product_variants.products.color}</span>}</p></div><div className="text-right"><p className="text-xs text-muted-foreground">{b.fulfillment === "pickup" ? "Advance" : b.receipt_recorded ? "Paid" : "Amount due"}</p><p className="font-display text-lg font-bold">{inr(b.advance)}</p>{b.fulfillment === "pickup" ? <p className="text-xs text-muted-foreground"><span>of</span> {inr(b.price)}</p> : b.delivery_charge > 0 && <p className="text-xs text-muted-foreground"><span>incl. delivery</span> {inr(b.delivery_charge)}</p>}</div></div>
             <p className="mt-2 text-sm"><span data-no-translate>{b.customer_name}</span> · {b.mobile}</p>
             <p className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleString("en-IN")}{b.status === "pending" && <> · <span>Releases at</span> {new Date(b.expires_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</>}</p>
             {b.address && <p className="mt-1 rounded bg-muted p-2 text-xs" data-no-translate>{b.address}{b.area ? `, ${b.area}` : ""}</p>}
@@ -120,6 +124,7 @@ function Bookings() {
         {!isPending && !error && list.length === 0 && <p className="text-sm text-muted-foreground">No bookings here.</p>}
       </div>
       <ListPagination page={page} pageSize={pageSize} total={result?.count ?? 0} busy={isPending} onPage={setPage} />
+      {cartUpdate && <OrderUpdatePrompt url={cartUpdate.url} bookingNo={cartUpdate.reference} onClose={()=>setCartUpdate(null)}/> }
       {update && <OrderUpdatePrompt url={msg(update.booking, update.status)} bookingNo={update.booking.booking_no} onClose={() => setUpdate(null)} />}
       {refunding && <RefundOrder b={refunding} onClose={() => setRefunding(null)} onDone={() => { refresh(); setUpdate({ booking: refunding, status: "refunded" }); }} />}
       {billing && <PickupBill b={billing} onClose={() => setBilling(null)} onDone={() => { refresh(); setUpdate({ booking: billing, status: billing.fulfillment === "pickup" ? "picked" : "delivered" }); }} />}

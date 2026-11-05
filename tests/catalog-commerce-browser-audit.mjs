@@ -39,6 +39,7 @@ const data = {
     free_delivery_above: 2150,
     advance_percent: 20,
     hold_hours: 24,
+    cart_ready: true,
   },
   products: [product],
   hero: null,
@@ -61,6 +62,11 @@ async function setup(page) {
 const key='qa-deal';
 export const getBargain=async()=>{const d=JSON.parse(localStorage.getItem(key)||'null');return d?{...d,server_now:new Date().toISOString()}:null;};
 export const makeBargain=async({data})=>{window.__bids=(window.__bids||[]).concat(data);let d=JSON.parse(localStorage.getItem(key)||'null');if(d&&d.bids.includes(data.offer))return {...d,duplicate:true,server_now:new Date().toISOString()};if(d?.attempts===2)throw Error('Both chances have been used.');d={id:crypto.randomUUID(),product_id:'${product.id}',variant_id:data.variantId,listed_price:2200,price:d?2045:2090,offer:data.offer,attempts:d?2:1,state:d?'final':'counter',heading:d?2:0,bids:[...(d?.bids||[]),data.offer],expires_at:new Date(Date.now()+180000).toISOString(),server_now:new Date().toISOString()};localStorage.setItem(key,JSON.stringify(d));return d;};`,
+      });
+    if (u.pathname.includes("/src/lib/catalog-cart.functions.ts"))
+      return route.fulfill({
+        contentType: "application/javascript",
+        body: `export const createCartOrder=async({data})=>{window.__order=data;const q=JSON.parse(localStorage.getItem('qa-deal'));if(data.items[0].bargain?.id!==q.id||data.items[0].net!==q.price)throw Error('ORDER_REJECTED: Invalid deal');return {cart_no:'CT-1234567890ABCDEF',price:data.quote.net,advance:data.quote.advance,delivery_charge:data.quote.charge,upi_id:'demo@upi',shop:'Bhawani Footwear',phone:'9999999999',hold_hours:24,server_now:new Date().toISOString(),orders:[{booking_no:'CT-1234567890ABCDEF-01',product_id:'${product.id}',variant_id:data.items[0].variantId,product:'Everyday Sports Shoe',color:'White / Green',size:'7',price:data.items[0].net,advance:data.quote.advance,delivery_charge:data.quote.charge,fulfillment:data.fulfillment,status:'pending',receipt_recorded:false,expires_at:new Date(Date.now()+1800000).toISOString()}]};};`,
       });
     if (u.pathname.includes("/src/lib/catalog.functions.ts"))
       return route.fulfill({
@@ -95,6 +101,20 @@ try {
     await page.setViewportSize({ width, height: 844 });
     const box = await page.getByRole("button", { name: "Your cart", exact: true }).boundingBox();
     assert(box.width >= 44 && box.height >= 44);
+    assert(box.y > 700 && box.y + box.height <= 844);
+    assert.equal(
+      await page.locator("header").getByRole("button", { name: "Your cart", exact: true }).count(),
+      0,
+    );
+    const buttons = await page
+      .locator("nav")
+      .filter({ has: page.getByRole("button", { name: "Your cart", exact: true }) })
+      .locator(":scope > *")
+      .allTextContents();
+    assert.equal(buttons.length, 5);
+    assert.equal(buttons[0].trim(), "Shop");
+    assert.equal(buttons[1].trim(), "Orders");
+    assert(buttons[2].includes("Cart"));
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   }
   await page.setViewportSize({ width: 390, height: 844 });
@@ -142,13 +162,12 @@ try {
   await page.getByRole("button", { name: "Add to cart", exact: true }).click();
   await page.getByRole("button", { name: "Back to catalog", exact: true }).click();
   await page.getByRole("button", { name: "Your cart", exact: true }).click();
-  await page.getByRole("button", { name: "Review & order", exact: true }).waitFor();
+  await page.getByRole("button", { name: /^Order · 1$/, exact: false }).waitFor();
   await page.screenshot({ path: out + "/cart-390.png" });
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Your cart", exact: true }).click();
-  assert.equal(await page.getByRole("button", { name: "Review & order", exact: true }).count(), 1);
-  await page.getByRole("button", { name: "Review & order", exact: true }).click();
-  await page.getByRole("button", { name: "Get this pair", exact: true }).click();
+  assert.equal(await page.getByRole("button", { name: /^Order · 1$/, exact: false }).count(), 1);
+  await page.getByRole("button", { name: /^Order · 1$/, exact: false }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByPlaceholder("Your name", { exact: true }).fill("Demo buyer");
   await page.getByPlaceholder("Mobile number", { exact: true }).fill("9999999999");
@@ -157,11 +176,11 @@ try {
   assert(timer.y + timer.height < 844);
   await page.screenshot({ path: out + "/checkout-390.png" });
   await page.getByRole("button", { name: "Place order", exact: true }).click();
-  await page.getByText("BK-DEMO-ORDER", { exact: true }).first().waitFor();
+  await page.getByText("CT-1234567890ABCDEF", { exact: true }).first().waitFor();
   const order = await page.evaluate(() => window.__order);
   assert.equal(order.quote.net, 2045);
   assert.equal(order.quote.advance, 409);
-  assert(order.bargain.id);
+  assert(order.items[0].bargain.id);
   assert.equal(
     await page.evaluate(() => JSON.parse(localStorage.getItem("solestack-catalog-cart-v1")).length),
     0,
@@ -184,7 +203,10 @@ try {
   await e.getByRole("textbox", { name: "Your offer", exact: true }).fill("1900");
   await e.getByRole("button", { name: "Send my offer", exact: true }).click();
   await e.getByRole("button", { name: /Accept price & continue/ }).click();
-  await e.evaluate(()=>{const now=Date.now.bind(Date);Date.now=()=>now()+181000;});
+  await e.evaluate(() => {
+    const now = Date.now.bind(Date);
+    Date.now = () => now() + 181000;
+  });
   await e.waitForTimeout(1100);
   await e
     .getByText("This bargain price has expired. Choose the listed price to continue.", {
@@ -202,7 +224,7 @@ try {
       {
         pass: true,
         checks: [
-          "cart placement320to1440",
+          "bottom nav Shop Orders Cart at320to1440",
           "two bids and duplicate",
           "context headings",
           "fixed180second timer",

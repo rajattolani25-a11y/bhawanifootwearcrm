@@ -1,0 +1,15 @@
+{
+  "pass": true,
+  "checks": [
+    "Shop Orders Cart bottom placement",
+    "selected products enter one checkout",
+    "one coupon target without multiplying discount",
+    "one delivery charge",
+    "single combined UPI amount",
+    "exact original request after real browser restart",
+    "unselected cart product retained",
+    "expired bargain requires explicit listed-price choice",
+    "all products in payment proof and tracking"
+  ],
+  "productionWrites": 0
+}

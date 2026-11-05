@@ -112,3 +112,22 @@ test("missing owner policy from PostgreSQL null composite gets complete usable d
   assert(policyError(1600, { ...policy, kind: null }));
   assert.throws(() => readBargainPolicy({ ...empty, revision: "saved-revision" }));
 });
+test("cart quote computes one delivery charge from the combined net and bounds small advances", async () => {
+  const { cartAmounts } = await import("../src/lib/catalog-cart-checkout.ts");
+  const shop = {
+    local_charge: 90,
+    outside_charge: 150,
+    free_delivery_above: 5000,
+    advance_percent: 20,
+  };
+  assert.deepEqual(cartAmounts(2900, "local", shop), { net: 2900, charge: 90, advance: 2990 });
+  assert.deepEqual(cartAmounts(5000, "local", shop), { net: 5000, charge: 0, advance: 5000 });
+  assert.deepEqual(cartAmounts(2900, "pickup", shop), { net: 2900, charge: 0, advance: 580 });
+  assert.deepEqual(cartAmounts(0.05, "pickup", shop), { net: 0.05, charge: 0, advance: 0.05 });
+});
+test("cart group references do not misgroup ordinary bookings", async () => {
+  const { cartReference } = await import("../src/lib/catalog-cart-checkout.ts");
+  assert.equal(cartReference("CT-ABCDEF1234567890-02"), "CT-ABCDEF1234567890");
+  assert.equal(cartReference("BK-1105-ABCDEF1234"), null);
+  assert.equal(cartReference("CT-bad-01"), null);
+});

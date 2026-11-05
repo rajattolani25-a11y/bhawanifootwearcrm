@@ -323,3 +323,106 @@ Object.assign(COMMERCE, {
     hinglish: "Price badal gayi · Order se pehle check karein",
   },
 });
+
+Object.assign(COMMERCE, { Cart: { hindi: "कार्ट", hinglish: "Cart" } });
+Object.assign(COMMERCE, {
+  Checkout: { hindi: "चेकआउट", hinglish: "Checkout" },
+  "Selected total": { hindi: "चुनी गई जोड़ियों का कुल", hinglish: "Selected pairs ka total" },
+  Select: { hindi: "चुनें", hinglish: "Chunein" },
+  Order: { hindi: "ऑर्डर करें", hinglish: "Order" },
+  pairs: { hindi: "जोड़ियाँ", hinglish: "pairs" },
+  "pairs in one order": { hindi: "जोड़ियाँ एक ऑर्डर में", hinglish: "pairs ek order mein" },
+  "Your pairs are reserved.": {
+    hindi: "आपकी जोड़ियाँ आरक्षित हैं।",
+    hinglish: "Aapke pairs reserved hain.",
+  },
+  "Your cart order": { hindi: "आपका कार्ट ऑर्डर", hinglish: "Aapka cart order" },
+  "Cart order": { hindi: "कार्ट ऑर्डर", hinglish: "Cart order" },
+  "Product total": { hindi: "उत्पादों का कुल", hinglish: "Products ka total" },
+  "Amount to pay": { hindi: "देय राशि", hinglish: "Abhi dena hai" },
+  "Pay before": { hindi: "इस समय से पहले भुगतान करें", hinglish: "Is time se pehle pay karein" },
+  "Check the status of each pair before paying.": {
+    hindi: "भुगतान से पहले हर जोड़ी की स्थिति जाँचें।",
+    hinglish: "Pay karne se pehle har pair ka status check karein.",
+  },
+  "Send your payment screenshot on WhatsApp for store verification.": {
+    hindi: "दुकान की जाँच के लिए भुगतान का स्क्रीनशॉट WhatsApp पर भेजें।",
+    hinglish: "Store verification ke liye payment screenshot WhatsApp par bhejein.",
+  },
+  "Coupon applies to one selected pair.": {
+    hindi: "कूपन एक चुनी हुई जोड़ी पर लागू होगा।",
+    hinglish: "Coupon ek selected pair par lagega.",
+  },
+  "Coupon pair": { hindi: "कूपन वाली जोड़ी", hinglish: "Coupon wala pair" },
+  "This coupon must leave a price above zero.": {
+    hindi: "कूपन के बाद कीमत शून्य से अधिक होनी चाहिए।",
+    hinglish: "Coupon ke baad price zero se zyada honi chahiye.",
+  },
+  "This price needs review before ordering.": {
+    hindi: "ऑर्डर से पहले इस कीमत की जाँच करें।",
+    hinglish: "Order se pehle is price ko check karein.",
+  },
+  "Review the selected pairs before ordering.": {
+    hindi: "ऑर्डर से पहले चुनी हुई जोड़ियों की जाँच करें।",
+    hinglish: "Order se pehle selected pairs check karein.",
+  },
+  "Some selected pairs need attention. Update or unselect them before ordering.": {
+    hindi:
+      "कुछ चुनी हुई जोड़ियों में बदलाव ज़रूरी है। ऑर्डर से पहले उन्हें अपडेट करें या चयन हटाएँ।",
+    hinglish: "Kuch selected pairs ko check karna hai. Order se pehle update ya unselect karein.",
+  },
+  "A bargain price expired or changed. Review the marked pair before ordering.": {
+    hindi: "मोलभाव वाली कीमत समाप्त हुई या बदल गई। ऑर्डर से पहले चिह्नित जोड़ी जाँचें।",
+    hinglish: "Bargain price expire ya change hui. Order se pehle marked pair check karein.",
+  },
+  "Ordering is temporarily unavailable. You can keep shopping or contact the store.": {
+    hindi: "ऑर्डर अभी उपलब्ध नहीं है। खरीदारी जारी रखें या दुकान से संपर्क करें।",
+    hinglish: "Ordering abhi available nahi. Shopping jaari rakhein ya store se contact karein.",
+  },
+  "An earlier cart order response was not confirmed. Recover it before placing another order.": {
+    hindi: "पिछले कार्ट ऑर्डर का जवाब पक्का नहीं हुआ। दूसरा ऑर्डर करने से पहले उसे रिकवर करें।",
+    hinglish:
+      "Pichhle cart order ka response confirm nahi hua. Naye order se pehle use recover karein.",
+  },
+  "Recover saved cart order": {
+    hindi: "सेव कार्ट ऑर्डर रिकवर करें",
+    hinglish: "Saved cart order recover karein",
+  },
+  "Recover the saved cart order before placing another order.": {
+    hindi: "दूसरा ऑर्डर करने से पहले सेव कार्ट ऑर्डर रिकवर करें।",
+    hinglish: "Doosra order karne se pehle saved cart order recover karein.",
+  },
+  "The saved cart order could not be read. Contact the store before placing another order.": {
+    hindi: "सेव कार्ट ऑर्डर पढ़ा नहीं जा सका। दूसरा ऑर्डर करने से पहले दुकान से संपर्क करें।",
+    hinglish: "Saved cart order read nahi hua. Doosre order se pehle store se contact karein.",
+  },
+  "Order saved. Remove these pairs from your cart manually.": {
+    hindi: "ऑर्डर सेव हो गया। इन जोड़ियों को कार्ट से स्वयं हटा दें।",
+    hinglish: "Order save ho gaya. Ye pairs cart se manually hata dein.",
+  },
+  "Combined advance": { hindi: "कुल अग्रिम भुगतान", hinglish: "Total advance" },
+  "One UPI payment covers these pairs. Verify the full receipt before confirming.": {
+    hindi: "इन जोड़ियों के लिए एक UPI भुगतान है। पक्का करने से पहले पूरी रसीद जाँचें।",
+    hinglish:
+      "In pairs ke liye ek UPI payment hai. Confirm karne se pehle poori receipt verify karein.",
+  },
+  "UPI payment received?": { hindi: "UPI भुगतान मिल गया?", hinglish: "UPI payment mil gaya?" },
+  "Confirm cart payment": {
+    hindi: "कार्ट का भुगतान पक्का करें",
+    hinglish: "Cart payment confirm karein",
+  },
+  "Bargaining settings could not be read. Reload before editing.": {
+    hindi: "मोलभाव सेटिंग्स पढ़ी नहीं जा सकीं। एडिट करने से पहले रीफ्रेश करें।",
+    hinglish: "Bargaining settings read nahi hui. Edit se pehle reload karein.",
+  },
+});
+Object.assign(COMMERCE, {
+  "PAYMENT PENDING": { hindi: "भुगतान बाकी है", hinglish: "PAYMENT BAAKI HAI" },
+  "Payment verified": { hindi: "भुगतान सत्यापित हुआ", hinglish: "Payment verify ho gaya" },
+  "Amount due": { hindi: "देय राशि", hinglish: "Dena baaki hai" },
+});
+
+Object.assign(COMMERCE, {
+  "Price unavailable": { hindi: "कीमत उपलब्ध नहीं है", hinglish: "Price available nahi" },
+  "Review required": { hindi: "जाँच ज़रूरी है", hinglish: "Check karna hai" },
+});

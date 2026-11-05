@@ -237,7 +237,7 @@
 }
 @media (min-width: 768px) {
   .dock {
-    bottom: 16px;
+    bottom: 104px;
     left: auto;
     right: 24px;
   }

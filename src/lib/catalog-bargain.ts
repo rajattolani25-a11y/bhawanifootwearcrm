@@ -14,6 +14,7 @@ export type CatalogDeal = {
   heading: number;
   expires_at: string;
   server_now: string;
+  invalidated?: boolean;
   duplicate?: boolean;
   duplicate_offer?: number;
   local_expires_at?: number;
@@ -70,6 +71,7 @@ export function readBargainPolicy(raw: unknown): BargainPolicy {
   };
 }
 export function dealSeconds(deal: CatalogDeal, now: number, offset = 0): number {
+  if(deal.invalidated)return 0;
   return Math.max(
     0,
     Math.min(

@@ -1,3 +1,4 @@
+import { readCartCheckout, CART_PENDING_EVENT } from "@/lib/catalog-cart-checkout";
 import { CatalogDealDock } from "@/components/catalog-commerce/CatalogDealDock";
 import { CatalogCart } from "@/components/catalog-commerce/CatalogCart";
 import { BargainSheet } from "@/components/catalog-commerce/BargainSheet";
@@ -88,6 +89,8 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   useEffect(()=>{try{const q=JSON.parse(localStorage.getItem(LAST_DEAL_KEY)??"null") as CatalogDeal|null;if(q&&typeof q.id==="string"&&Number.isFinite(q.price)&&Number.isFinite(Date.parse(q.expires_at)))setActiveQuote(q);}catch{/* Malformed optional reminder is ignored. */}
     const used=()=>{setActiveQuote(null);try{localStorage.removeItem(LAST_DEAL_KEY);}catch{/* Order already saved. */}};window.addEventListener("solestack-catalog-deal-used",used);return()=>window.removeEventListener("solestack-catalog-deal-used",used);},[]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [pendingCart,setPendingCart]=useState(false);
+  useEffect(()=>{const changed=()=>{try{setPendingCart(!!readCartCheckout());}catch{setPendingCart(true);}};changed();window.addEventListener(CART_PENDING_EVENT,changed);const stored=(event:StorageEvent)=>{if(event.key==="solestack-catalog-checkout-pending-v1")changed();};window.addEventListener("storage",stored);return()=>{window.removeEventListener(CART_PENDING_EVENT,changed);window.removeEventListener("storage",stored);};},[]);
   const [cartError, setCartError] = useState("");
   const [checkoutSelection, setCheckoutSelection] = useState<CatalogCartItem | null>(null);
   useEffect(() => {
@@ -152,7 +155,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [photo, setPhoto] = useState(false);
   const [help, setHelp] = useState(false);
   const [about, setAbout] = useState(false);
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const [fsize, setFsize] = useState("All");
   const [fstyle, setFstyle] = useState("All");
   const [sort, setSort] = useState<CatalogSort>("default");
@@ -238,7 +241,6 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
             <span className={styles["wordmark"]} data-no-translate>{shop.name}</span>
           </a>
           <div className={styles["headerActions"]}>
-            <button className={commerce["cartButton"]} aria-label="Your cart" onClick={() => setCartOpen(true)}><ShoppingCart aria-hidden="true"/>{cart.length>0&&<sup>{cart.length}</sup>}</button>
             <button onClick={() => setTrack("")} aria-label="Track order" className={styles["trackButton"]}><Package aria-hidden="true" /><span>Track order</span></button>
             <LangChip />
             {shop.phone && <a href={`tel:${shop.phone}`} className={styles["iconButton"]} aria-label="Call store"><Phone aria-hidden="true" /></a>}
@@ -247,7 +249,8 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       </header>
       {cartError && <p role="alert" className="px-4 py-2 text-sm">{cartError}<button className="ml-2 min-h-11 underline" onClick={()=>{try{localStorage.removeItem(CART_KEY);window.dispatchEvent(new Event(CART_EVENT));}catch{setCartError("Device storage is unavailable.");}}}>Clear cart</button></p>}
       {activeQuote && !open && !cartOpen && <CatalogDealDock deal={activeQuote} onDismiss={dismissQuote} onReview={()=>{const p=products.find(p=>p.id===activeQuote.product_id);if(p){setCheckoutSelection({productId:p.id,variantId:activeQuote.variant_id,reviewBargain:true});setRecoveryNonce(n=>n+1);setOpen(p);}else setActiveQuote(null);}}/>}
-      {cartOpen && <CatalogCart motionEnabled={presentation.motion_enabled} items={cart} products={products} onClose={()=>setCartOpen(false)} onCheckout={item=>{const product=products.find(p=>p.id===item.productId);if(product){setCheckoutSelection(item);setRecoveryNonce(n=>n+1);setOpen(product);setCartOpen(false);}}}/>}
+      {cartOpen && <CatalogCart motionEnabled={presentation.motion_enabled} items={cart} products={products} shop={shop} onClose={()=>setCartOpen(false)} onTrack={ref=>{setCartOpen(false);setTrack(ref);}}/>}
+      {pendingCart && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>{t("An earlier cart order response was not confirmed. Recover it before placing another order.")}</p><Button variant="outline" onClick={()=>setCartOpen(true)}>{t("Recover saved cart order")}</Button></div>}
       {pendingOrder && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>An earlier order response was not confirmed. Recover it before placing another order.</p><Button variant="outline" onClick={() => { setRecoveryNonce(n=>n+1);setOpen(pendingOrder.product); }}>Recover saved order</Button></div>}
 
       {data.hero ? <CatalogHero theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
@@ -293,6 +296,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       <nav className={styles["bottomNav"]} aria-label={copy.navigation}>
         <a href="#catalog-collection" aria-current="page"><ShoppingBag aria-hidden="true" /><span data-no-translate>{copy.shop}</span></a>
         <button onClick={() => setTrack("")}><Package aria-hidden="true" /><span data-no-translate>{copy.orders}</span></button>
+        <button className={commerce["cartButton"]} aria-label={t("Your cart")} onClick={() => setCartOpen(true)}><span className={styles["navCartIcon"]}><ShoppingCart aria-hidden="true"/>{cart.length>0&&<sup>{cart.length}</sup>}</span><span>{t("Cart")}</span></button>
         <button onClick={() => setHelp(true)}><HelpCircle aria-hidden="true" /><span data-no-translate>{copy.help}</span></button>
         <button onClick={() => setAbout(true)}><Info aria-hidden="true" /><span data-no-translate>{copy.aboutNav}</span></button>
       </nav>
@@ -417,9 +421,10 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
     if (!recover && activeDeal && dealSeconds(activeDeal,Date.now())===0) {setDealExpiry(true);setErr(t("This bargain price has expired. Choose the listed price to continue."));return;}
     setBusy(true); setErr("");
     try {
+      if(readCartCheckout())throw Error(t("Recover the saved cart order before placing another order."));
       const saved = readCatalogOrder();
       if (saved && !recover) throw new Error("Recover the saved order before placing another order.");
-      const payload: OrderRequest = recover && saved ? saved.data : { variantId: chosen.id, ...(activeDeal ? {bargain:{id:activeDeal.id,client:bargainClient()}} : {}), name, mobile: mobile.replace(/[\s-]/g,""), fulfillment: method, address: delivery ? address : "", area: delivery ? area : "", coupon: disc?.code ?? "", requestId: crypto.randomUUID(), quote: { price: product.price, net, charge: charge(method,net), advance: payNow } };
+      const payload: OrderRequest = recover && saved ? saved.data : { variantId: chosen.id, ...(shop.cart_ready?{cartReady:true}:{}), ...(activeDeal ? {bargain:{id:activeDeal.id,client:bargainClient()}} : {}), name, mobile: mobile.replace(/[\s-]/g,""), fulfillment: method, address: delivery ? address : "", area: delivery ? area : "", coupon: disc?.code ?? "", requestId: crypto.randomUUID(), quote: { price: product.price, net, charge: charge(method,net), advance: payNow } };
       if (!saved) saveCatalogOrder({ product, data: payload });
       const result = await createBooking({ data: payload });
       setReservedProduct(saved?.product ?? product); setRes(result); setStep("done");
@@ -565,7 +570,9 @@ function TrackDialog({ initial, onClose }: { initial: string; onClose: () => voi
   const [mobile, setMobile] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [r, setR] = useState<TrackResult | undefined>(undefined);
+  const [tracked, setR] = useState<TrackResult | import("@/lib/catalog-cart-checkout").CartOrderResult | undefined>(undefined);
+  const cartTrack=tracked&&"orders"in tracked?tracked:null;
+  const r=tracked&&!cartTrack?tracked as TrackResult:undefined;
   async function check() {
     setBusy(true); setErr("");
     try { const x = await trackOrder({ data: { bookingNo: no, mobile: mobile.replace(/[\s-]/g, "") } }); if (!x) setErr("No order found. Check the order no. and mobile number."); setR(x); }
@@ -584,6 +591,7 @@ function TrackDialog({ initial, onClose }: { initial: string; onClose: () => voi
         <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="Mobile number" inputMode="numeric" maxLength={14} className="h-11" />
         {err && <p className="text-sm text-destructive">{err}</p>}
         <Button disabled={busy || no.trim().length < 4 || mobile.replace(/\D/g, "").length < 10} onClick={check} className="h-11">{busy ? "Please wait…" : "Check status"}</Button>
+        {cartTrack && <div className="space-y-3"><p className="font-semibold" data-no-translate>{cartTrack.cart_no}</p>{cartTrack.orders.map(item=><article key={item.booking_no} className="rounded-lg border p-3 text-sm"><strong data-no-translate>{item.product}</strong><p><span>Size</span> {item.size} · <span data-no-translate>{item.color}</span></p><p>{STATUS_LABEL[item.status]??item.status}</p><p>{inr(item.price)} · <span data-no-translate>{item.booking_no}</span></p></article>)}</div>}
         {r && <div className="space-y-3 rounded-lg border p-4 text-sm">
           <div className="flex justify-between gap-2"><div><p className="font-semibold" data-no-translate>{r.product}</p><p className="text-muted-foreground"><span>Size</span> {r.size} · <span>{TYPE_LABEL[r.fulfillment]}</span></p></div><p className="font-display font-bold">{inr(r.advance)}</p></div>
           {closed ? <p className="rounded-md bg-destructive/10 p-2 font-semibold text-destructive">{STATUS_LABEL[r.status]}</p> :
