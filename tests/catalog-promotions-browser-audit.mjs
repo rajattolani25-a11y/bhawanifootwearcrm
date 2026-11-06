@@ -20,9 +20,10 @@ page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>t=>t;window.__promoHang=true;window.__promoReads=0;window.__badImages=[];window.__readPayloads=[];document.addEventListener('error',e=>{if(e.target instanceof HTMLImageElement)window.__badImages.push(e.target.src);},true);});
 await page.route('**/*',async route=>{
  const url=new URL(route.request().url());if(route.request().method()!=='GET')writes.push(url.pathname);
- if(url.pathname.includes('/src/lib/catalog-promotion.functions.ts'))return route.fulfill({contentType:'application/javascript',body:`const original=${JSON.stringify(response)};export const getCatalogPromotion=async()=>{window.__promoReads++;if(window.__promoHang)await new Promise(r=>window.__releasePromo=r);window.__readPayloads.push(JSON.stringify(window.__promotion??original));return window.__promotion??original};export const getOwnerPromotion=async()=>null;export const saveOwnerPromotion=async()=>{throw Error('No production writes')};export const signPromotionUpload=async()=>null;export const cleanupPromotionPhoto=async()=>null;`});
+ if(url.pathname.includes('/src/lib/catalog-promotion.functions.ts'))return route.fulfill({contentType:'application/javascript',body:`const original=${JSON.stringify(response)};export const getCatalogPromotion=async()=>{window.__promoReads++;if(window.__promoHang)await new Promise(r=>window.__releasePromo=r);window.__readPayloads.push(JSON.stringify(window.__promotion??original));const response=structuredClone(window.__promotion??original);if(response.value){const elapsed=window.__promotion?performance.now()-(window.__promoSetAt??performance.now()):0;response.value.now=new Date(Date.parse(response.value.now)+elapsed).toISOString();}return response};export const getOwnerPromotion=async()=>null;export const saveOwnerPromotion=async()=>{throw Error('No production writes')};export const signPromotionUpload=async()=>null;export const cleanupPromotionPhoto=async()=>null;`});
  if(url.pathname.includes('/src/lib/catalog.functions.ts'))return route.fulfill({contentType:'application/javascript',body:`const data=${JSON.stringify(data)};export const getCatalog=async()=>data;export const getCatalogSnapshot=async()=>data;export const getCatalogPhotos=async()=>({available:true,images:[]});export const checkCoupon=async()=>null;export const trackOrder=async()=>null;export const createBooking=async()=>{throw Error('No production writes')};`});
  if(url.pathname==='/promotions-audit.html')return route.fulfill({contentType:'text/html',body:await fs.readFile(new URL('./fixtures/presentation-catalog.html',import.meta.url),'utf8')});
+ if(url.pathname==='/native-public.webp')return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="800" height="400" fill="#e1ecda"/></svg>'});
  if(url.hostname==='res.cloudinary.com')return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="800" height="400" fill="#e1ecda"/><text x="80" y="180" font-size="60">Custom owner artwork</text></svg>'});
  if(url.pathname==='/audit-shoe.png'){
   const path=process.env.PROMO_AUDIT_PRODUCT_PHOTO;
@@ -32,7 +33,7 @@ await page.route('**/*',async route=>{
  if(['127.0.0.1','localhost'].includes(url.hostname))return route.continue();return route.abort();
 });
 const ticket=()=>page.locator('[data-catalog-offer-ticket]');
-const refresh=async value=>{await page.evaluate(value=>{window.__promotion=value;window.dispatchEvent(new Event('solestack-catalog-refresh'));},value);};
+const refresh=async value=>{await page.evaluate(value=>{window.__promotion=value;window.__promoSetAt=performance.now();window.dispatchEvent(new Event('solestack-catalog-refresh'));},value);};
 try{
  checkpoint('initial load');await page.goto('http://127.0.0.1:3000/promotions-audit.html');
  await page.getByRole('heading',{name:'Shop the collection',exact:true}).waitFor();
@@ -55,6 +56,7 @@ try{
  await ticket().last().getByRole('button',{name:'Shop the offer',exact:true}).click();
  assert.equal(await page.getByRole('textbox',{name:'Search footwear or brand',exact:true}).inputValue(),'');
  await page.getByRole('navigation',{name:'Footwear categories',exact:true}).getByRole('button',{name:'Women',exact:true}).getAttribute('aria-pressed').then(v=>assert.equal(v,'true'));
+ const crossTabReads=await page.evaluate(()=>window.__promoReads);await page.evaluate(()=>window.dispatchEvent(new StorageEvent('storage',{key:'catalog-promotion-refresh',newValue:'saved'})));await page.waitForFunction(n=>window.__promoReads>n,crossTabReads);
  checkpoint('audience filters');const categories=page.getByRole('navigation',{name:'Footwear categories',exact:true});
  await categories.getByRole('button',{name:'Men',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('[data-catalog-offer-ticket]').length===1);
  assert(/Men’s edit/i.test(await ticket().innerText()));assert.equal(await ticket().locator('img').count(),1);
@@ -68,13 +70,18 @@ try{
  const phaseResponse=structuredClone(response);phaseResponse.value.campaigns=[phaseResponse.value.campaigns[0]];
  phaseResponse.value.now=new Date(start-3000).toISOString();
  await refresh(phaseResponse);await page.waitForFunction(()=>document.querySelector('[data-catalog-offer-ticket]')?.dataset.phase==='advance');
- await page.waitForTimeout(4200);await page.waitForFunction(()=>document.querySelector('[data-catalog-offer-ticket]')?.dataset.phase==='live');
+ const readsBeforeBoundary=await page.evaluate(()=>window.__promoReads);await page.waitForTimeout(4200);await page.waitForFunction(()=>document.querySelector('[data-catalog-offer-ticket]')?.dataset.phase==='live');assert((await page.evaluate(()=>window.__promoReads))>readsBeforeBoundary,'Phase change refreshes newly authorized photos immediately');
  await page.getByRole('button',{name:'Switch theme',exact:true}).click();
  checkpoint('custom artwork');const custom=structuredClone(phaseResponse);custom.value.now=new Date(start+10000).toISOString();custom.value.campaigns[0].campaign.live.image={url:'https://res.cloudinary.com/demo/image/upload/v1/poster.webp',publicId:'solestack-promotions/demo/men/live/10000000-0000-4000-8000-000000000001',bytes:30000,width:800,height:400};
  await refresh(custom);await page.waitForFunction(()=>!!document.querySelector('[data-catalog-offer-ticket] img[src*="cloudinary"]'));
  const art=ticket().locator('img[src*="cloudinary"]');await art.waitFor({state:'visible'});assert.equal(await art.evaluate(el=>getComputedStyle(el).objectFit),'contain');
  const bounds=await art.boundingBox();assert(Math.abs(bounds.width/bounds.height-2)<.03,'Original artwork ratio preserved');
  await page.screenshot({path:out+'/custom-art.png'});
+ const native=structuredClone(custom),nativePath='promotions/men/live/10000000-0000-4000-8000-000000000001.webp';
+ native.value.campaigns[0].campaign.live.image={storage:'shop',path:nativePath,bytes:200000,width:800,height:400};native.value.images={[nativePath]:'/native-public.webp?token=first'};native.value.imagesExpireAt=Date.parse(native.value.now)+55*60000;
+ await refresh(native);const nativeArt=ticket().locator('img[src*="native-public.webp"]');await nativeArt.waitFor({state:'visible'});assert.equal(await nativeArt.getAttribute('src'),'/native-public.webp?token=first');
+ const renewed=structuredClone(native);renewed.value.images[nativePath]='/native-public.webp?token=renewed';await refresh(renewed);await page.waitForTimeout(150);assert.equal(await nativeArt.getAttribute('src'),'/native-public.webp?token=first','Reuse a valid signed URL instead of reloading the same image');
+ const signingFailure=structuredClone(renewed);signingFailure.value.images={};await refresh(signingFailure);await page.waitForTimeout(150);assert.equal(await nativeArt.getAttribute('src'),'/native-public.webp?token=first','Keep a usable native image during an optional signing failure');
  checkpoint('expiry');const ended=structuredClone(phaseResponse);ended.value.now=new Date(end).toISOString();await refresh(ended);await ticket().waitFor({state:'detached'});
  await refresh({available:true,value:null});assert.equal(await ticket().count(),0);
  assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
@@ -82,6 +89,6 @@ try{
  checkpoint('reduced motion');await page.emulateMedia({reducedMotion:'reduce'});media.length=0;
  await page.goto('http://127.0.0.1:3000/promotions-audit.html');await page.evaluate(()=>{window.__promoHang=false;window.__releasePromo?.();});
  await ticket().first().scrollIntoViewIfNeeded();await page.waitForTimeout(500);assert.equal(media.length,0);
- const result={passed:true,optionalReadDoesNotBlockCatalog:true,audiencesSeparate:true,oneAndTwoProductLayouts:true,shopOfferClearsStaleFilters:true,sizes:[320,390,768,1440],calendarDownload:true,clockSkewSafePhaseTransition:true,customArtNotCropped:true,expiryHidesCard:true,reducedMotionMediaRequests:0,productionWrites:0};
+ const result={passed:true,optionalReadDoesNotBlockCatalog:true,audiencesSeparate:true,oneAndTwoProductLayouts:true,shopOfferClearsStaleFilters:true,sizes:[320,390,768,1440],calendarDownload:true,clockSkewSafePhaseTransition:true,customArtNotCropped:true,nativePhotoRenders:true,phaseBoundaryRefreshesImages:true,signedUrlRenewalDoesNotBlink:true,signingFailurePreservesWorkingImage:true,expiryHidesCard:true,reducedMotionMediaRequests:0,productionWrites:0};
  await fs.writeFile(out+'/checks.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 }catch(error){console.error(await page.locator('body').innerText(),errors,await page.evaluate(()=>({badImages:window.__badImages,reads:window.__readPayloads,phase:document.querySelector('[data-catalog-offer-ticket]')?.dataset.phase})));await page.screenshot({path:out+'/failure.png'});throw error;}finally{clearTimeout(deadline);await browser.close();}

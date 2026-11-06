@@ -74,7 +74,7 @@ try {
   await region.getByText("520.00 KB", { exact: true }).waitFor();
   assert.equal(await region.getByText("1.36 MB", { exact: true }).count(), 1);
   assert.equal(await region.getByText("13,62,944", { exact: true }).count(), 1);
-  assert.equal(await region.getByText("Product & hero photos", { exact: true }).count(), 1);
+  assert.equal(await region.getByText("Product, hero & promo photos", { exact: true }).count(), 1);
   await region
     .getByText("No bills are stored. Database allocation can still stay the same after reset.", {
       exact: true,
@@ -133,7 +133,7 @@ try {
     .getByLabel("Photo file storage", { exact: true })
     .getByText("125 B", { exact: true })
     .waitFor();
-  assert.equal(await region.getByText("Product & hero photos", { exact: true }).count(), 1);
+  assert.equal(await region.getByText("Product, hero & promo photos", { exact: true }).count(), 1);
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     assert.equal(

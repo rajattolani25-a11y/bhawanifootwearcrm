@@ -11,20 +11,22 @@ import {
   EMPTY_PROMOTION,
   emptyCampaign,
   promoConfigSchema,
-  promoImageSchema,
+  storedPromoImageSchema,
+  savedPromotionStatus,
   type PromoCampaign,
   type PromoConfig,
-  type PromoImage,
   type PromoSlot,
 } from "@/lib/catalog-promotion";
 import { compressPromotionPhoto } from "@/lib/promotion-images";
 import {
-  cleanupPromotionPhoto,
+  cleanupPromotionUploads,
   getOwnerPromotion,
   saveOwnerPromotion,
-  signPromotionUpload,
+  preparePromotionUpload,
   type PromotionSnapshot,
+  type PromotionStorage,
 } from "@/lib/catalog-promotion.functions";
+import { storageBytes } from "@/lib/storage-usage";
 import { productUrls } from "@/lib/product-images";
 import { parseCategory } from "@/lib/product-categories";
 import type { CatalogOffer, CatalogProduct } from "@/lib/catalog.functions";
@@ -59,13 +61,21 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
     [config, setConfig] = useState<PromoConfig>(EMPTY_PROMOTION);
   const [enabled, setEnabled] = useState(false),
     [audience, setAudience] = useState<PromoCampaign["audience"]>("all"),
-    [previewSlot, setPreviewSlot] = useState<PromoSlot>("advance");
+    [previewSlot, setPreviewSlot] = useState<PromoSlot>("live");
   const [scheduleOn, setScheduleOn] = useState(false),
     [dates, setDates] = useState({ announceAt: "", startsAt: "", endsAt: "" });
   const [busy, setBusy] = useState(false),
     [status, setStatus] = useState(""),
     [dirty, setDirty] = useState(false);
   const [pending, setPending] = useState<Record<string, PendingPhoto>>({});
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [photoUsage, setPhotoUsage] = useState<PromotionStorage | null>(null);
+  useEffect(() => {
+    if (query.data) {
+      setImageUrls((prev) => ({ ...prev, ...query.data.images }));
+      setPhotoUsage(query.data.storage);
+    }
+  }, [query.data]);
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
   useEffect(
@@ -130,7 +140,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
     queryFn: async () => {
       const r = await supabase
         .from("coupons")
-        .select("code,title,kind,value,max_discount,min_bill,starts_at,expires_at")
+        .select("code,title,kind,value,max_discount,min_bill,starts_at,expires_at,usage_limit,used_count")
         .eq("active", true)
         .is("customer_id", null)
         .order("created_at", { ascending: false });
@@ -229,7 +239,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
   }
   async function choosePhoto(slot: PromoSlot, file: File) {
     if (!query.data?.uploadReady) {
-      toast.error("Connect external photo hosting first. Built-in presets work without it.");
+      toast.error("Apply the promotion photo storage SQL update first, then reload.");
       return;
     }
     setBusy(true);
@@ -243,6 +253,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
         return { ...prev, [key]: { ...photo, preview, original: file.size } };
       });
       setDirty(true);
+      setPreviewSlot(slot);
       setStatus(
         `Compressed ${Math.round(file.size / 1024)} KB → ${Math.round(photo.blob.size / 1024)} KB. Not uploaded yet.`,
       );
@@ -287,32 +298,33 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
         for (const slot of ["advance", "live"] as const) {
           const photo = pending[keyOf(c.audience, slot)];
           if (!photo) continue;
-          setStatus(`Uploading ${c.audience} ${slot} poster to external hosting…`);
-          const signed = await signPromotionUpload({
+          setStatus(`Uploading compressed ${c.audience} ${slot} poster…`);
+          const prepared = await preparePromotionUpload({
             data: { token: auth, audience: c.audience, slot },
           });
-          const body = new FormData();
-          body.append("file", photo.blob, "poster.webp");
-          body.append("api_key", signed.apiKey);
-          body.append("signature", signed.signature);
-          Object.entries(signed.params).forEach(([k, v]) => body.append(k, v));
-          const response = await fetch(signed.endpoint, {
-            method: "POST",
-            body,
-            signal: AbortSignal.timeout(60000),
+          const uploaded = await supabase.storage
+            .from(prepared.bucket)
+            .upload(prepared.path, photo.blob, {
+              contentType: "image/webp",
+              upsert: false,
+              cacheControl: "3600",
+            });
+          if (uploaded.error)
+            throw Error(
+              "Photo upload was not confirmed. Retry Save; your saved poster is unchanged.",
+            );
+          const image = storedPromoImageSchema.parse({
+            storage: "shop",
+            path: prepared.path,
+            bytes: photo.blob.size,
+            width: photo.width,
+            height: photo.height,
           });
-          if (!response.ok)
-            throw Error("External photo upload failed. Your saved promotion has not changed.");
-          const json = await response.json();
-          const image = promoImageSchema.parse({
-            url: json.secure_url,
-            publicId: json.public_id,
-            bytes: json.bytes,
-            width: json.width,
-            height: json.height,
-          });
-          if (image.publicId !== signed.params.public_id)
-            throw Error("Unexpected external photo response.");
+          const signed = await supabase.storage
+            .from(prepared.bucket)
+            .createSignedUrl(prepared.path, 3600);
+          if (signed.data?.signedUrl)
+            setImageUrls((prev) => ({ ...prev, [prepared.path]: signed.data.signedUrl }));
           next = {
             ...next,
             campaigns: next.campaigns.map((x) =>
@@ -344,26 +356,33 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
       setSnapshot(saved);
       setConfig(next);
       setDirty(false);
-      setStatus("Promotions saved. Reload the public catalog to check them.");
+      setStatus("Promotions saved. Checking public visibility…");
       void qc.invalidateQueries({ queryKey: ["catalog-offer"] });
       toast.success("Promotions saved");
-      // Save first. Never remove a saved poster before the replacement commits.
-      const used = new Set(
-        next.campaigns.flatMap((c) => [c.advance.image?.publicId, c.live.image?.publicId]),
-      );
-      const old = (snapshot.config?.campaigns ?? [])
-        .flatMap((c) => [c.advance.image, c.live.image])
-        .filter((x): x is PromoImage => !!x && !used.has(x.publicId));
-      for (const image of old) {
+      window.dispatchEvent(new Event("solestack-catalog-refresh"));
+      try {
+        localStorage.setItem("catalog-promotion-refresh", String(Date.now()));
+      } catch { /* Other tabs still refresh on visibility or their normal interval. */ }
+      // Saving the design does not prove that the public coupon/time gates expose it.
+      const verification = await query.refetch();
+      const savedCampaign = next.campaigns.find((c) => c.audience === audience);
+      const publicStatus = savedPromotionStatus(enabled, savedCampaign, verification.isError ? undefined : verification.data?.publication);
+      setStatus(`Promotions saved. ${publicStatus}`);
+      if (!publicStatus.startsWith("Visible now:") && enabled && savedCampaign?.enabled)
+        toast.warning(publicStatus);
+      // The save transaction records old files in the durable cleanup manifest.
+      if (query.data?.uploadReady)
         try {
-          await cleanupPromotionPhoto({ data: { token: auth, image } });
+          setPhotoUsage(await cleanupPromotionUploads({ data: { token: auth } }));
         } catch {
-          toast.warning(
-            "Promotion saved. An old external poster needs cleanup in Cloudinary Media Library.",
-          );
+          toast.warning("Promotion saved. Unused photo cleanup is pending; use Retry cleanup.");
+          void query.refetch();
         }
-      }
+      void qc.invalidateQueries({ queryKey: ["hero-storage-usage"] });
+      void qc.invalidateQueries({ queryKey: ["store-usage"] });
     } catch (e) {
+      void query.refetch();
+      void qc.invalidateQueries({ queryKey: ["hero-storage-usage"] });
       toast.error(e instanceof Error ? e.message : "Could not save promotions");
       setStatus(
         "Save was not confirmed. Your draft is kept; retry the same save or reload to check saved settings.",
@@ -432,6 +451,19 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
           <span>Enable this audience promotion</span>
           <Switch checked={campaign.enabled} onCheckedChange={(v) => setCampaign({ enabled: v })} />
         </label>
+        <div className="rounded-lg border p-3 text-sm space-y-2" aria-label="Saved catalog visibility">
+          <p role="status">
+            {savedPromotionStatus(
+              snapshot?.enabled ?? false,
+              snapshot?.config?.campaigns.find((c) => c.audience === audience),
+              query.data?.publication,
+            )}
+          </p>
+          {dirty && <p className="text-xs text-muted-foreground">This status is for saved settings. Save your changes to update the catalog.</p>}
+          <Button variant="outline" size="sm" disabled={busy || query.isFetching} onClick={() => void query.refetch()}>
+            Refresh catalog status
+          </Button>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="space-y-1 text-sm">
             Promotion title
@@ -450,12 +482,18 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
               onChange={(e) => setCampaign({ coupon: e.target.value })}
             >
               <option value="">No coupon — announcement only</option>
-              {(coupons.data ?? []).map((c) => (
-                <option key={c.code} value={c.code}>
+              {campaign.coupon && coupons.data && !coupons.data.some((c) => c.code === campaign.coupon) && (
+                <option value={campaign.coupon} disabled>{campaign.coupon} — unavailable</option>
+              )}
+              {(coupons.data ?? []).map((c) => {
+                const expired = !!c.expires_at && Date.parse(c.expires_at) <= Date.now();
+                const exhausted = c.usage_limit != null && c.used_count >= c.usage_limit;
+                return <option key={c.code} value={c.code} disabled={expired || exhausted}>
                   {c.code}
                   {c.title ? ` — ${c.title}` : ""}
-                </option>
-              ))}
+                  {expired ? " — expired" : exhausted ? " — usage limit reached" : ""}
+                </option>;
+              })}
             </select>
           </label>
           <label className="space-y-1 text-sm sm:col-span-2">
@@ -537,6 +575,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
             </div>
           )}
           <p className="text-xs text-muted-foreground">
+            {!scheduleOn && "Scheduling is off: only the Live sale design appears on the catalog. Advance artwork needs a schedule. "}
             Choose times in your device’s timezone. Customers see IST. The card switches
             automatically and hides at the end. Coupon validity must cover the live sale; these
             display settings do not change checkout prices.
@@ -602,7 +641,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
                 )}
                 {image && !photo && (
                   <p className="text-xs text-muted-foreground">
-                    External photo: {Math.round(image.bytes / 1024)} KB
+                    Stored photo: {Math.round(image.bytes / 1024)} KB
                   </p>
                 )}
                 <Button variant="outline" size="sm" onClick={() => setPreviewSlot(slot)}>
@@ -614,31 +653,50 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
         </div>
         <p className="text-xs text-muted-foreground">
           Custom artwork shows completely, without cropping or text overlays. JPG, PNG or WebP up to
-          10 MB; compressed on this device to at most 1600 px and 700 KB before external upload.
-          Transparent cutouts look best in the built-in presets. Existing opaque photos remain
-          usable. Custom posters replace product-photo artwork in that phase.
+          10 MB; compressed on this device to at most 1600 px and 400 KB before upload. Transparent
+          cutouts look best in the built-in presets. Existing opaque photos remain usable. Custom
+          posters replace product-photo artwork in that phase.
         </p>
         {!query.data?.uploadReady && (
-          <details className="rounded-xl border p-4 text-sm">
-            <summary className="cursor-pointer font-medium">Connect external photo hosting</summary>
-            <p className="mt-3">
-              Built-in presets and existing product photos work now. Custom uploads need a
-              Cloudinary account. Create an account at cloudinary.com, then add
-              CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET as server secrets
-              in Lovable. Do not paste the secret in chat or add it as a VITE variable. Publish the
-              update after adding the secrets.
-            </p>
-            <Button variant="outline" size="sm" asChild className="mt-3">
-              <a href="https://cloudinary.com/" target="_blank" rel="noreferrer">
-                Open Cloudinary
-              </a>
-            </Button>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Custom files use Cloudinary storage and delivery allowance. Check its current plan
-              before uploading. No promotion image goes into Lovable photo storage.
-            </p>
-          </details>
+          <p role="status" className="rounded-lg border p-3 text-sm">
+            Apply the promotion photo storage SQL update, then reload. No external account is
+            required.
+          </p>
         )}
+        <div className="rounded-xl border p-3 text-sm space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>Promotion photo storage</span>
+            <strong data-no-translate>
+              {photoUsage ? storageBytes(photoUsage.photo_bytes) : "—"}
+            </strong>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {photoUsage ? `${photoUsage.photos} files · ` : "Measurement unavailable · "}Includes
+            saved photos and uploads awaiting cleanup. Only image paths are stored in shop records.
+            Existing product photos are reused without another upload.
+          </p>
+          {!!photoUsage?.pending.length && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  setPhotoUsage(await cleanupPromotionUploads({ data: { token: await token() } }));
+                  void qc.invalidateQueries({ queryKey: ["hero-storage-usage"] });
+                  toast.success("Unused photo cleanup checked");
+                } catch {
+                  toast.error("Unused photo cleanup is pending. Retry when online.");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Retry unused-photo cleanup
+            </Button>
+          )}
+        </div>
         <div>
           <p className="mb-2 text-xs font-medium text-muted-foreground">
             Preview only · {previewSlot === "advance" ? "Advance promotion" : "Live sale"}
@@ -650,6 +708,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
               phase={previewSlot}
               products={previewProducts}
               motionEnabled={false}
+              imageUrls={imageUrls}
               onShop={() => {}}
             />
           </div>

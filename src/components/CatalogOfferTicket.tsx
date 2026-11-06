@@ -6,7 +6,7 @@ import { inr } from "@/lib/modules";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { promotionCalendar, type PromoCampaign } from "@/lib/catalog-promotion";
+import { promotionCalendar, promoImageSource, type PromoCampaign } from "@/lib/catalog-promotion";
 import { PromotionCountdown } from "./PromotionCountdown";
 import { PromotionMotion } from "./PromotionMotion";
 import styles from "./catalog-offer-ticket.module.css";
@@ -68,9 +68,11 @@ export function CatalogOfferTicket({
   onProduct,
   onShop,
   clock,
+  imageUrls = {},
 }: {
   offer: NonNullable<CatalogOffer>;
   motionEnabled: boolean;
+  imageUrls?: Record<string, string>;
   campaign?: PromoCampaign;
   phase?: "advance" | "live";
   now?: number;
@@ -129,7 +131,26 @@ export function CatalogOfferTicket({
   }[lang];
   const image = campaign?.[phase].image;
   const [failedImage, setFailedImage] = useState("");
-  const custom = image && failedImage !== image.url;
+  const imageSrc = promoImageSource(image, imageUrls);
+  const missingKey = image && "path" in image ? `missing:${image.path}` : "";
+  const waitingForImage = !!missingKey && !imageSrc && failedImage !== missingKey;
+  const custom = waitingForImage || (!!imageSrc && failedImage !== imageSrc);
+  useEffect(() => {
+    if (!missingKey || imageSrc) return;
+    const timeout = setTimeout(() => setFailedImage(missingKey), 2000);
+    return () => clearTimeout(timeout);
+  }, [missingKey, imageSrc]);
+  useEffect(() => {
+    const retry = () => {
+      if (!document.hidden) setFailedImage("");
+    };
+    window.addEventListener("online", retry);
+    document.addEventListener("visibilitychange", retry);
+    return () => {
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", retry);
+    };
+  }, []);
   const schedule = campaign?.schedule;
   const target = schedule ? (phase === "advance" ? schedule.startsAt : schedule.endsAt) : null;
   const audience = campaign?.audience ?? "all";
@@ -255,16 +276,24 @@ export function CatalogOfferTicket({
           </button>
         </div>
         {custom ? (
-          <img
-            className={styles["custom"]}
-            src={image.url}
-            width={image.width}
-            height={image.height}
-            loading="lazy"
-            decoding="async"
-            alt={offer.title}
-            onError={() => setFailedImage(image.url)}
-          />
+          waitingForImage ? (
+            <div
+              className={styles["custom"]}
+              style={{ aspectRatio: `${image!.width}/${image!.height}` }}
+              aria-hidden="true"
+            />
+          ) : (
+            <img
+              className={styles["custom"]}
+              src={imageSrc}
+              width={image!.width}
+              height={image!.height}
+              loading="lazy"
+              decoding="async"
+              alt={offer.title}
+              onError={() => setFailedImage(imageSrc)}
+            />
+          )
         ) : (
           <>
             {artworkProducts.length > 0 && (

@@ -51,13 +51,35 @@ export function CatalogPromotions({
           );
           return;
         }
-        setSnapshot({
-          data: response.value,
+        setSnapshot((current) => ({
+          data:
+            response.value &&
+            current?.data?.imagesExpireAt &&
+            current.data.imagesExpireAt > Date.parse(response.value.now) + 60000
+              ? {
+                  ...response.value,
+                  images: Object.fromEntries(
+                    response.value.campaigns
+                      .flatMap(({ campaign }) => [campaign.advance.image, campaign.live.image])
+                      .flatMap((image) => {
+                        if (!image || !("path" in image)) return [];
+                        const url =
+                          current.data?.images?.[image.path] ??
+                          response.value?.images?.[image.path];
+                        return url ? [[image.path, url]] : [];
+                      }),
+                  ),
+                  imagesExpireAt: Math.min(
+                    current.data.imagesExpireAt,
+                    response.value.imagesExpireAt ?? current.data.imagesExpireAt,
+                  ),
+                }
+              : response.value,
           clock: {
             server: response.value ? Date.parse(response.value.now) : 0,
             monotonic: performance.now(),
           },
-        });
+        }));
       } catch {
         if (!disposed && request === id)
           setSnapshot(
@@ -72,8 +94,14 @@ export function CatalogPromotions({
     const first = setTimeout(() => void read(), 300);
     const interval = setInterval(() => void read(), 60000);
     const refresh = () => void read();
+    const savedInAnotherTab = (event: StorageEvent) => {
+      if (event.key === "catalog-promotion-refresh") void read();
+    };
     document.addEventListener("visibilitychange", refresh);
     window.addEventListener("solestack-catalog-refresh", refresh);
+    window.addEventListener("solestack-promotion-phase", refresh);
+    window.addEventListener("online", refresh);
+    window.addEventListener("storage", savedInAnotherTab);
     return () => {
       disposed = true;
       request++;
@@ -81,6 +109,9 @@ export function CatalogPromotions({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("solestack-catalog-refresh", refresh);
+      window.removeEventListener("solestack-promotion-phase", refresh);
+      window.removeEventListener("online", refresh);
+      window.removeEventListener("storage", savedInAnotherTab);
     };
   }, []);
   useEffect(() => {
@@ -101,6 +132,7 @@ export function CatalogPromotions({
       if (next !== phaseSignature.current) {
         phaseSignature.current = next;
         renderPhase((v) => v + 1);
+        window.dispatchEvent(new Event("solestack-promotion-phase"));
       }
     };
     const timer = setInterval(tick, 1000);
@@ -141,6 +173,7 @@ export function CatalogPromotions({
             phase={phase}
             now={now}
             clock={clock}
+            imageUrls={data.images ?? {}}
             products={eligible}
             motionEnabled={motionEnabled}
             onProduct={onProduct}

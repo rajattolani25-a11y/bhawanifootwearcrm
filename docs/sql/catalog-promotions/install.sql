@@ -1,5 +1,6 @@
 -- Definitions only; no reset/sale/file upload is executed. Run this whole file once.
 BEGIN;
+DO $guard$ BEGIN IF to_regprocedure('public.owner_catalog_promotion_storage()') IS NOT NULL THEN RAISE EXCEPTION 'Photo storage is already installed. Use photo-storage.sql instead of replaying this older base installer.'; END IF; END $guard$;
 ALTER TABLE public.store_settings ADD COLUMN IF NOT EXISTS offer_promotion jsonb DEFAULT NULL;
 DO $check$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.store_settings'::regclass AND conname='offer_promotion_bounded') THEN

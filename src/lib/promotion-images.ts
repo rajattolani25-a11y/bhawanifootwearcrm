@@ -1,6 +1,6 @@
 import { PROMO_MAX_BYTES } from "./catalog-promotion";
 
-/** Local-only compression. No Supabase bucket, base64 DB value or localStorage binary. */
+/** Local-only compression. No base64 database value or localStorage binary. */
 export async function compressPromotionPhoto(
   file: File,
 ): Promise<{ blob: Blob; width: number; height: number }> {
@@ -40,7 +40,7 @@ export async function compressPromotionPhoto(
     if (!supportsWebP)
       throw Error("This browser cannot compress the poster to WebP. Try Chrome or Edge.");
     throw Error(
-      "Poster is still over 700 KB after compression. Simplify the artwork or export a smaller image.",
+      "Poster is still over 400 KB after compression. Simplify the artwork or export a smaller image.",
     );
   } finally {
     bitmap.close();

@@ -1,5 +1,10 @@
 // Generated UI translations, keyed by exact English text.
 export const GENERATED: Record<string, { hindi: string; hinglish: string }> = {
+"Product, hero & promo photos": {hindi:"प्रोडक्ट, हीरो और प्रमोशन की तस्वीरें",hinglish:"Product, hero aur promo photos"},
+"Hero & promo files": {hindi:"हीरो और प्रमोशन की तस्वीरें",hinglish:"Hero aur promo files"},
+"Estimated shared hero/promo storage after replacement:": {hindi:"बदलने के बाद अनुमानित साझा हीरो/प्रमोशन स्टोरेज:",hinglish:"Replace karne ke baad estimated shared hero/promo storage:"},
+"Promotion photo storage": {hindi:"प्रमोशन फोटो स्टोरेज",hinglish:"Promotion photo storage"},
+"Retry unused-photo cleanup": {hindi:"अनुपयोगी तस्वीरें हटाने का पुनः प्रयास करें",hinglish:"Unused photos ki cleanup retry karein"},
 "Large sizes": {"hindi": "बड़े साइज़", "hinglish": "Bade size"},
 "Small": {"hindi": "छोटे", "hinglish": "Chhote"},
 "Large": {"hindi": "बड़े", "hinglish": "Bade"},

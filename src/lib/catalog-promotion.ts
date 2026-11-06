@@ -1,7 +1,11 @@
 import { z } from "zod";
 
-export const PROMO_MAX_BYTES = 700 * 1024;
-export const promoImageSchema = z
+export const PROMO_MAX_BYTES = 400 * 1024;
+export const PROMO_BUCKET = "catalog-hero-images";
+export const promoPathSchema = z
+  .string()
+  .regex(/^promotions\/(all|men|women)\/(advance|live)\/[a-f0-9-]{36}\.webp$/);
+const externalImageSchema = z
   .object({
     url: z
       .string()
@@ -13,11 +17,31 @@ export const promoImageSchema = z
       .string()
       .max(240)
       .regex(/^solestack-promotions\/[a-z0-9_-]+\/(all|men|women)\/(advance|live)\/[a-f0-9-]{36}$/),
+    bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(700 * 1024),
+    width: z.number().int().min(1).max(1600),
+    height: z.number().int().min(1).max(1600),
+  })
+  .strict();
+export const storedPromoImageSchema = z
+  .object({
+    storage: z.literal("shop"),
+    path: promoPathSchema,
     bytes: z.number().int().positive().max(PROMO_MAX_BYTES),
     width: z.number().int().min(1).max(1600),
     height: z.number().int().min(1).max(1600),
   })
   .strict();
+export const promoImageSchema = z.union([externalImageSchema, storedPromoImageSchema]);
+export function promoImageSource(
+  image: z.infer<typeof promoImageSchema> | null | undefined,
+  urls: Record<string, string> = {},
+) {
+  return !image ? "" : "path" in image ? (urls[image.path] ?? "") : image.url;
+}
 const slotSchema = z
   .object({ layout: z.enum(["classic", "split"]), image: promoImageSchema.nullable() })
   .strict();
@@ -93,6 +117,37 @@ export function promotionPhase(config: PromoCampaign, now: number): "hidden" | "
   if (!s) return "live";
   if (now < Date.parse(s.announceAt) || now >= Date.parse(s.endsAt)) return "hidden";
   return now < Date.parse(s.startsAt) ? "advance" : "live";
+}
+export type PromotionPublication = {
+  checked: boolean;
+  now: string | null;
+  audiences: string[];
+  legacy: boolean;
+};
+/** Report the saved public state, never the owner's unsaved design preview. */
+export function savedPromotionStatus(
+  enabled: boolean,
+  campaign: PromoCampaign | undefined,
+  publication: PromotionPublication | undefined,
+) {
+  if (!enabled) return "Hidden: Show promotions on catalog is off.";
+  if (!campaign?.enabled) return "Hidden: this audience promotion is off.";
+  if (!publication?.checked || !publication.now)
+    return "Public visibility could not be checked. Retry catalog status.";
+  if (publication.legacy)
+    return "The catalog is using the previous offer. Save this promotion to publish its design.";
+  const now = Date.parse(publication.now);
+  if (!Number.isFinite(now)) return "Public visibility could not be checked. Retry catalog status.";
+  const phase = promotionPhase(campaign, now);
+  if (phase === "hidden")
+    return now < Date.parse(campaign.schedule!.announceAt)
+      ? "Scheduled: hidden until the advance notice time."
+      : "Hidden: this promotion has ended.";
+  if (!publication.audiences.includes(campaign.audience))
+    return "Not visible in the public catalog. Check catalog availability and the selected coupon's validity or usage limit.";
+  return phase === "advance"
+    ? "Visible now: Advance promotion. Live artwork appears when the sale starts."
+    : "Visible now: Live sale. This is the artwork customers see.";
 }
 export function promotionCountdown(target: string, now: number) {
   const seconds = Math.max(0, Math.ceil((Date.parse(target) - now) / 1000));

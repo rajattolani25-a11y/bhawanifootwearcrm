@@ -1,6 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { promoConfigSchema, promoImageSchema } from "./catalog-promotion";
+import {
+  promoConfigSchema,
+  promoPathSchema,
+  PROMO_BUCKET,
+  promotionPhase,
+  type PromotionPublication,
+} from "./catalog-promotion";
 import { publicClient } from "./catalog.functions";
 import type { CatalogOffer } from "./catalog.functions";
 import type { PromoConfig, PromoCampaign } from "./catalog-promotion";
@@ -17,6 +23,8 @@ export type PublicPromotion = {
   legacy?: boolean;
   campaigns: { campaign: PromoCampaign; offer: CatalogOffer }[];
   now: string;
+  images?: Record<string, string>;
+  imagesExpireAt?: number;
 } | null;
 const tokenSchema = z.string().min(20).max(8000);
 async function ownerClient(token: string) {
@@ -31,22 +39,33 @@ async function ownerClient(token: string) {
   if (role.error || role.data !== true) throw Error("Owner access required.");
   return sb;
 }
-function hosting() {
-  const cloud = process.env["CLOUDINARY_CLOUD_NAME"],
-    key = process.env["CLOUDINARY_API_KEY"],
-    secret = process.env["CLOUDINARY_API_SECRET"];
-  if (!cloud || !/^[a-z0-9_-]+$/.test(cloud) || !key || !secret) return null;
-  const project = new URL(process.env["SUPABASE_URL"]!).hostname.split(".")[0]!;
-  return { cloud, key, secret, prefix: `solestack-promotions/${project}/` };
+export type PromotionStorage = {
+  version: number;
+  photo_bytes: number;
+  photos: number;
+  pending: string[];
+};
+function nativePaths(config: PromoConfig | null) {
+  return [
+    ...new Set(
+      (config?.campaigns ?? [])
+        .flatMap((c) => [c.advance.image, c.live.image])
+        .flatMap((i) => (i && "path" in i ? [i.path] : [])),
+    ),
+  ];
 }
-async function sign(params: Record<string, string>, secret: string) {
-  const payload =
-    Object.keys(params)
-      .sort()
-      .map((k) => `${k}=${params[k]}`)
-      .join("&") + secret;
-  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(payload));
-  return [...new Uint8Array(digest)].map((n) => n.toString(16).padStart(2, "0")).join("");
+async function photoUrls(sb: Awaited<ReturnType<typeof publicClient>>, paths: string[]) {
+  if (!paths.length) return {} as Record<string, string>;
+  try {
+    const r = await sb.storage.from(PROMO_BUCKET).createSignedUrls(paths, 3600);
+    return Object.fromEntries(
+      (r.data ?? []).flatMap((i) => (i.path && i.signedUrl ? [[i.path, i.signedUrl]] : [])),
+    );
+  } catch {
+    // Keep saved campaign metadata/editing available during a photo-service outage.
+    // The storefront reuses a valid previous URL or falls back to the preset.
+    return {} as Record<string, string>;
+  }
 }
 export const getCatalogPromotion = createServerFn({ method: "GET" }).handler(async () => {
   const sb = await publicClient();
@@ -68,18 +87,47 @@ export const getCatalogPromotion = createServerFn({ method: "GET" }).handler(asy
     )
   )
     return { available: false, value: null as PublicPromotion };
-  return { available: true, value: v };
+  const paths = v.campaigns.flatMap(({ campaign }) => {
+    const phase = promotionPhase(campaign, Date.parse(v.now));
+    if (phase === "hidden") return [];
+    const image = campaign[phase].image;
+    return image && "path" in image ? [image.path] : [];
+  });
+  const images = await photoUrls(sb, [...new Set(paths)]);
+  return {
+    available: true,
+    value: { ...v, images, imagesExpireAt: Date.parse(v.now) + 55 * 60 * 1000 },
+  };
 });
 export const getOwnerPromotion = createServerFn({ method: "POST" })
   .inputValidator((v: unknown) => z.object({ token: tokenSchema }).parse(v))
   .handler(async ({ data }) => {
     const sb = await ownerClient(data.token);
-    const { data: snapshot, error } = await sb.rpc("owner_catalog_promotion");
+    const [{ data: snapshot, error }, usage, published] = await Promise.all([
+      sb.rpc("owner_catalog_promotion"),
+      sb.rpc("owner_catalog_promotion_storage"),
+      sb.rpc("public_catalog_promotion"),
+    ]);
     if (error)
       throw Error(
         "Promotion settings update is not installed yet. Existing catalog offers still work.",
       );
-    return { snapshot: snapshot as PromotionSnapshot, uploadReady: !!hosting() };
+    const current = snapshot as PromotionSnapshot;
+    return {
+      snapshot: current,
+      uploadReady: !usage.error && usage.data?.version === 1,
+      images: await photoUrls(sb, nativePaths(current.config)),
+      storage: usage.error ? null : (usage.data as PromotionStorage),
+      publication: {
+        checked: !published.error,
+        // NULL means the master/catalog gate is off. Still use a server clock.
+        now: published.data?.now ?? (!published.error ? new Date().toISOString() : null),
+        audiences: (published.data?.campaigns ?? []).map(
+          ({ campaign }: { campaign: PromoCampaign }) => campaign.audience,
+        ),
+        legacy: published.data?.legacy === true,
+      } satisfies PromotionPublication,
+    };
   });
 export const saveOwnerPromotion = createServerFn({ method: "POST" })
   .inputValidator((v: unknown) =>
@@ -109,7 +157,7 @@ export const saveOwnerPromotion = createServerFn({ method: "POST" })
     if (result.error) throw Error(result.error.message);
     return result.data as PromotionSnapshot;
   });
-export const signPromotionUpload = createServerFn({ method: "POST" })
+export const preparePromotionUpload = createServerFn({ method: "POST" })
   .inputValidator((v: unknown) =>
     z
       .object({
@@ -120,59 +168,31 @@ export const signPromotionUpload = createServerFn({ method: "POST" })
       .parse(v),
   )
   .handler(async ({ data }) => {
-    await ownerClient(data.token);
-    const h = hosting();
-    if (!h)
-      throw Error("External photo hosting is not connected. Built-in presets do not need it.");
-    const params = {
-      timestamp: String(Math.floor(Date.now() / 1000)),
-      public_id: `${h.prefix}${data.audience}/${data.slot}/${crypto.randomUUID()}`,
-      overwrite: "false",
-      transformation: "c_limit,w_1600,h_1600,q_90,f_webp",
-    };
-    return {
-      endpoint: `https://api.cloudinary.com/v1_1/${h.cloud}/image/upload`,
-      apiKey: h.key,
-      params,
-      signature: await sign(params, h.secret),
-    };
+    const sb = await ownerClient(data.token);
+    const r = await sb.rpc("prepare_catalog_promotion_photo", {
+      _audience: data.audience,
+      _slot: data.slot,
+    });
+    if (r.error) throw Error("Apply the promotion photo storage SQL update, then reload.");
+    return { bucket: PROMO_BUCKET, path: promoPathSchema.parse(r.data) };
   });
-/** Only superseded assets in this shop's promotion folder can be removed. */
-export const cleanupPromotionPhoto = createServerFn({ method: "POST" })
-  .inputValidator((v: unknown) =>
-    z.object({ token: tokenSchema, image: promoImageSchema }).parse(v),
-  )
+/** Files are removed only via the Storage API, after metadata save. RLS preserves saved images. */
+export const cleanupPromotionUploads = createServerFn({ method: "POST" })
+  .inputValidator((v: unknown) => z.object({ token: tokenSchema }).parse(v))
   .handler(async ({ data }) => {
-    const sb = await ownerClient(data.token),
-      h = hosting();
-    if (!h || !data.image.publicId.startsWith(h.prefix))
-      throw Error("This is not a promotion photo owned by this shop.");
-    const current = await sb.rpc("owner_catalog_promotion");
-    if (current.error) throw Error("Could not check the currently saved posters.");
-    const cfg = (current.data as PromotionSnapshot).config;
-    if (
-      cfg?.campaigns.some((c) =>
-        [c.advance.image?.publicId, c.live.image?.publicId].includes(data.image.publicId),
-      )
-    )
-      throw Error("The saved poster is still in use.");
-    const params = {
-      public_id: data.image.publicId,
-      timestamp: String(Math.floor(Date.now() / 1000)),
-      invalidate: "true",
-    };
-    const body = new URLSearchParams({
-      ...params,
-      api_key: h.key,
-      signature: await sign(params, h.secret),
-    });
-    const result = await fetch(`https://api.cloudinary.com/v1_1/${h.cloud}/image/destroy`, {
-      method: "POST",
-      body,
-      signal: AbortSignal.timeout(15000),
-    });
-    const json = (await result.json()) as { result?: string };
-    if (!result.ok || !["ok", "not found"].includes(json.result ?? ""))
-      throw Error("Old external poster cleanup failed. Remove it in Cloudinary Media Library.");
-    return true;
+    const sb = await ownerClient(data.token);
+    const usage = await sb.rpc("owner_catalog_promotion_storage");
+    if (usage.error) throw Error("Promotion photo cleanup is unavailable. Reload and retry.");
+    const paths = z.array(promoPathSchema).max(50).parse(usage.data.pending);
+    if (paths.length) {
+      const removed = await sb.storage.from(PROMO_BUCKET).remove(paths);
+      if (removed.error) throw Error("Unused photo cleanup is pending. Retry cleanup.");
+      const ack = await sb.rpc("ack_store_file_cleanup", { _bucket: PROMO_BUCKET, _paths: paths });
+      if (ack.error) throw Error("Photo cleanup confirmation is pending. Retry cleanup.");
+    }
+    const next = await sb.rpc("owner_catalog_promotion_storage");
+    if (next.error) throw Error("Could not refresh promotion photo storage.");
+    if ((next.data.pending as string[]).some((p) => paths.includes(p)))
+      throw Error("Some unused photos could not be removed. Retry cleanup.");
+    return next.data as PromotionStorage;
   });

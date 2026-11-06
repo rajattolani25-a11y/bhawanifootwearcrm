@@ -360,7 +360,7 @@ export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?:
           </b>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">All hero files</p>
+          <p className="text-xs text-muted-foreground">Hero & promo files</p>
           <b>
             {usage.data
               ? `${kb(Number(usage.data.photo_bytes))} · ${usage.data.photos} files`
@@ -375,7 +375,7 @@ export function CatalogHeroPreview({ previewTheme = "studio" }: { previewTheme?:
         </div>
         {blob && usage.data && (
           <p className="text-xs text-muted-foreground sm:col-span-3">
-            Estimated hero storage after replacement:{" "}
+            Estimated shared hero/promo storage after replacement:{" "}
             {kb(
               Math.max(0, Number(usage.data.photo_bytes) - Number(usage.data.current_bytes ?? 0)) +
                 blob.size,
