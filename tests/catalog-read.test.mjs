@@ -184,3 +184,19 @@ test("whole-cart coupon readiness requires version 2 and preserves basic cart on
   assert.equal(result.shop.cart_ready, false);
   assert.equal(result.shop.cart_coupon_ready, false);
 });
+
+test("large catalogs sign covers in bounded overlapping batches without dropping products", async () => {
+  const {sb}=catalogFixture();const rpc=sb.rpc.bind(sb);
+  sb.rpc=async name=>{const result=await rpc(name);if(name==='public_catalog')result.data.products=Array.from({length:350},(_,i)=>({...result.data.products[0],id:'p'+i,image:'photo-'+i+'.webp'}));return result;};
+  let active=0,maxActive=0;const sizes=[];
+  const storage=sb.storage.from.bind(sb.storage);
+  sb.storage.from=bucket=>({...storage(bucket),createSignedUrls:async paths=>{sizes.push(paths.length);maxActive=Math.max(maxActive,++active);await new Promise(r=>setTimeout(r,15));active--;return {data:paths.map(path=>({path,signedUrl:'https://fixture.invalid/'+path}))};}});
+  const result=await readPublicCatalog(sb);
+  assert.equal(result.products.length,350);assert(result.products.every(p=>p.image && p.price===999));assert.deepEqual(sizes,[100,100,100,50]);assert.equal(maxActive,3);
+});
+test("cover signing failure keeps products, fresh prices and size availability",async()=>{
+ const {sb,state}=catalogFixture();const storage=sb.storage.from.bind(sb.storage);
+ sb.storage.from=bucket=>({...storage(bucket),createSignedUrls:async()=>{throw Error('Photo signing service unavailable');}});
+ state.price=1200;state.available=false;const result=await readPublicCatalog(sb);
+ assert.equal(result.enabled,true);assert.equal(result.products.length,2);assert(result.products.every(p=>p.image===null&&p.price===1200&&p.sizes[0].available===false));
+});

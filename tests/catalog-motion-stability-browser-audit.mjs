@@ -156,6 +156,12 @@ try {
       (img) => img.complete && img.naturalWidth > 0,
     ),
   );
+  // The hero was just remounted; finish Spotlight's starting-style entrance
+  // before measuring the separate next-product crossfade.
+  await p.waitForFunction(() => {
+    const current = document.querySelector('[data-spotlight-product] [data-slot="current"]');
+    return current && +getComputedStyle(current).opacity === 1;
+  });
   await spot()
     .locator('[data-slot="current"] img')
     .evaluate((img) => (window.__oldPair = img));
@@ -186,7 +192,7 @@ try {
     motion.incoming > 0 && motion.incoming < 1 && motion.outgoing > 0 && motion.outgoing < 1,
     JSON.stringify(motion),
   );
-  assert(motion.incoming + motion.outgoing > 0.9);
+  assert(motion.incoming + motion.outgoing > 0.9, JSON.stringify(motion));
   assert(motion.images <= 3);
   await p.screenshot({ path: out + "/spotlight-crossfade.png" });
   await p.waitForTimeout(600);

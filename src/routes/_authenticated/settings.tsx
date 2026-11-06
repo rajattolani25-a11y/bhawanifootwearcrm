@@ -1,6 +1,8 @@
+import { useVisitedTabs } from "@/hooks/use-visited-tabs";
+import { VisitedTabsContent } from "@/components/VisitedTabsContent";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -11,10 +13,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { importLegacy } from "@/lib/legacy-import";
 import { ThemeControl } from "@/components/ThemeControl";
 import { LanguageSelect } from "@/lib/i18n";
-import { StoreMaintenance } from "@/components/StoreMaintenance";
-import { OwnershipTransfer } from "@/components/OwnershipTransfer";
-import { StorageMeter } from "@/components/StorageMeter";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const StoreMaintenance = lazy(()=>import("@/components/StoreMaintenance").then(module=>({default:module.StoreMaintenance})));
+
+const OwnershipTransfer = lazy(()=>import("@/components/OwnershipTransfer").then(module=>({default:module.OwnershipTransfer})));
+
+const StorageMeter = lazy(()=>import("@/components/StorageMeter").then(module=>({default:module.StorageMeter})));
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -33,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const { isOwner, loading, user } = useAuth();
   const qc = useQueryClient();
-  const [section, setSection] = useState("store");
+  const [section, setSection, visited] = useVisitedTabs("store");
   const [f, setF] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
   const editF = (next: Record<string,string>) => { setDirty(true); setF(next); };
@@ -50,7 +55,7 @@ function SettingsPage() {
   });
   const { data: team = [] } = useQuery({
     queryKey: ["team"],
-    enabled: isOwner,
+    enabled: !loading && isOwner && visited.has("team"),
     queryFn: async () => {
       const [{ data: roles }, { data: profiles }] = await Promise.all([
         supabase.from("user_roles").select("user_id,role"),
@@ -194,7 +199,7 @@ function SettingsPage() {
             </TabsTrigger>
           ))}
         </TabsList>
-        <TabsContent value="store" forceMount className="space-y-5 data-[state=inactive]:hidden">
+        <VisitedTabsContent visited={visited.has("store")} value="store" forceMount className="space-y-5 data-[state=inactive]:hidden">
           <section className="rounded-xl border bg-card p-5">
             <h2 className="mb-4 font-semibold">Store details</h2>
             <div className="grid gap-3 md:grid-cols-2">
@@ -209,8 +214,8 @@ function SettingsPage() {
               Save
             </Button>
           </section>
-        </TabsContent>
-        <TabsContent value="billing" forceMount className="space-y-5 data-[state=inactive]:hidden">
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("billing")} value="billing" forceMount className="space-y-5 data-[state=inactive]:hidden">
           <section className="rounded-xl border bg-card p-5">
             <h2 className="mb-1 font-semibold">Bill printing</h2>
             <div className="my-4 grid gap-3 sm:grid-cols-3">
@@ -272,9 +277,8 @@ function SettingsPage() {
               Save print settings
             </Button>
           </section>
-        </TabsContent>
-        <TabsContent
-          value="appearance"
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("appearance")} value="appearance"
           forceMount
           className="space-y-5 data-[state=inactive]:hidden"
         >
@@ -290,8 +294,8 @@ function SettingsPage() {
             </p>
             <LanguageSelect />
           </section>
-        </TabsContent>
-        <TabsContent value="team" forceMount className="space-y-5 data-[state=inactive]:hidden">
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("team")} value="team" forceMount className="space-y-5 data-[state=inactive]:hidden">
           <section className="rounded-xl border bg-card p-5">
             <h2 className="font-semibold">Team</h2>
             <p className="mb-3 text-sm text-muted-foreground">
@@ -347,11 +351,11 @@ function SettingsPage() {
               ))}
             </ul>
           </section>
-          <OwnershipTransfer />
-        </TabsContent>
-        <TabsContent value="data" forceMount className="space-y-5 data-[state=inactive]:hidden">
-          <StoreMaintenance />
-          <StorageMeter />
+          <Suspense fallback={<p role="status">Loading controls…</p>}><OwnershipTransfer /></Suspense>
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("data")} value="data" forceMount className="space-y-5 data-[state=inactive]:hidden">
+          <Suspense fallback={<p role="status">Loading controls…</p>}><StoreMaintenance /></Suspense>
+          <Suspense fallback={<p role="status">Loading controls…</p>}><StorageMeter /></Suspense>
           <details className="rounded-xl border bg-card p-5">
             <summary className="cursor-pointer font-semibold">
               Import from the old offline app
@@ -382,7 +386,7 @@ function SettingsPage() {
               )}
             </div>
           </details>
-        </TabsContent>
+        </VisitedTabsContent>
       </Tabs>
       <footer className="border-t py-4 text-center text-xs text-muted-foreground">
         SoleStack · Built for footwear retailers · Rajat Tolani

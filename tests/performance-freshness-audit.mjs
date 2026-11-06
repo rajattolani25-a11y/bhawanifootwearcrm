@@ -59,7 +59,7 @@ const emit = async () =>
   });
 const data = async (panel) => JSON.parse(await p.locator(`[data-panel=${panel}]`).innerText());
 try {
-  await p.goto("http://localhost:8080/performance.html");
+  await p.goto("http://127.0.0.1:3000/performance.html");
   await p.waitForFunction(() =>
     document.querySelector("[data-panel=pos]")?.textContent?.startsWith("["),
   );

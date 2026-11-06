@@ -458,7 +458,7 @@ function POS() {
         </div>}
         <div className={styles["productGrid"]}>
           {list.slice(0, visibleCount).map((p) => <article key={p.id} className={styles["productCard"]}>
-            <div className={styles["productPhoto"]}>{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} loading="lazy" /> : <div className={styles["photoFallback"]}><PackagePlus aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}</div>
+            <div className={styles["productPhoto"]}>{p.image_src ? <img src={p.image_src} alt={`${p.brand} ${p.article}`} loading="lazy" decoding="async" /> : <div className={styles["photoFallback"]}><PackagePlus aria-hidden="true" /><span data-no-translate>{p.brand}</span></div>}</div>
             <div className={styles["productInfo"]}><p className={styles["productBrand"]} data-no-translate>{p.brand}</p><h2 data-no-translate>{p.article}</h2>{p.color && <p className="text-xs text-muted-foreground" data-no-translate>{p.color}</p>}<strong>{inr(p.selling_price)}</strong></div>
             <div className={styles["quickSizes"]} role="group" aria-label={`${p.brand} ${p.article} sizes`}>
               {[...p.product_variants].sort((a, b) => sizeSort(a.size, b.size)).map((v) => <button key={v.id} onClick={() => addVariant(p, v)} aria-label={`${p.brand} ${p.article}, size ${v.size}, ${v.stock} in stock`} data-available={v.stock > 0}>

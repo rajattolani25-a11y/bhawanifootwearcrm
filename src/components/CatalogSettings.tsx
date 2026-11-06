@@ -1,9 +1,10 @@
-import { CatalogPromotionSettings } from "./CatalogPromotionSettings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useVisitedTabs } from "@/hooks/use-visited-tabs";
+import { VisitedTabsContent } from "./VisitedTabsContent";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogPresentationSettings } from "@/components/CatalogPresentationSettings";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Copy, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,10 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { CatalogHeroPreview } from "@/components/CatalogHeroPreview";
 import { CatalogThemeSettings } from "@/components/CatalogThemeSettings";
 import type { CatalogThemeId } from "@/lib/catalog-themes";
-import { CatalogProductControls } from "@/components/CatalogProductControls";
+
+const CatalogPromotionSettings = lazy(()=>import("./CatalogPromotionSettings").then(module=>({default:module.CatalogPromotionSettings})));
+
+const CatalogHeroPreview = lazy(()=>import("./CatalogHeroPreview").then(module=>({default:module.CatalogHeroPreview})));
+
+const CatalogProductControls = lazy(()=>import("./CatalogProductControls").then(module=>({default:module.CatalogProductControls})));
 
 const COLS =
   "business_name,business_phone,catalog_enabled,booking_enabled,pickup_enabled,delivery_enabled,outside_enabled,local_charge,outside_charge,free_delivery_above,delivery_note,show_few_left,upi_id,advance_percent,hold_hours";
@@ -49,7 +54,7 @@ export function CatalogSettings() {
   const [f, setF] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [previewTheme, setPreviewTheme] = useState<CatalogThemeId>("studio");
-  const [section, setSection] = useState("appearance");
+  const [section, setSection, visited] = useVisitedTabs("appearance");
   useEffect(() => {
     if (data)
       setF({
@@ -199,19 +204,19 @@ export function CatalogSettings() {
             Products & visibility
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="appearance" forceMount className="data-[state=inactive]:hidden">
+        <VisitedTabsContent visited={visited.has("appearance")} value="appearance" forceMount className="data-[state=inactive]:hidden">
           <CatalogThemeSettings value={previewTheme} onChange={setPreviewTheme} />
           <Button variant="outline" className="mt-3" onClick={() => setSection("design")}>
             Preview selected theme
           </Button>
           <CatalogPresentationSettings />
-        </TabsContent>
-        <TabsContent value="design" forceMount className="data-[state=inactive]:hidden">
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("design")} value="design" forceMount className="data-[state=inactive]:hidden">
           <div id="catalog-hero-controls" className="scroll-mt-20">
-            <CatalogHeroPreview previewTheme={previewTheme} />
+            <Suspense fallback={<p role="status">Loading hero editor…</p>}><CatalogHeroPreview previewTheme={previewTheme} /></Suspense>
           </div>
-        </TabsContent>
-        <TabsContent value="orders" forceMount className="data-[state=inactive]:hidden">
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("orders")} value="orders" forceMount className="data-[state=inactive]:hidden">
           <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Shop WhatsApp number</Label>
@@ -317,14 +322,14 @@ export function CatalogSettings() {
           <Button onClick={save} disabled={saving} className="mt-4">
             {saving ? "Saving…" : "Save catalog settings"}
           </Button>
-        </TabsContent>
-        <TabsContent value="offers" forceMount className="data-[state=inactive]:hidden">
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("offers")} value="offers" forceMount className="data-[state=inactive]:hidden">
           <div id="catalog-offer-controls" className="scroll-mt-20">
-            <CatalogPromotionSettings fallback={<OfferSettings />}/>
+            <Suspense fallback={<p role="status">Loading promotions…</p>}><CatalogPromotionSettings fallback={<OfferSettings />}/></Suspense>
           </div>
-        </TabsContent>
-        <TabsContent value="products" forceMount className="data-[state=inactive]:hidden">
-          <CatalogProductControls />
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("products")} value="products" forceMount className="data-[state=inactive]:hidden">
+          <Suspense fallback={<p role="status">Loading product editor…</p>}><CatalogProductControls /></Suspense>
           <Row k="catalog_enabled" title="Show catalog to customers" />
           <Row
             k="show_few_left"
@@ -343,7 +348,7 @@ export function CatalogSettings() {
           <Button onClick={save} disabled={saving} className="ml-2">
             {saving ? "Saving…" : "Save catalog settings"}
           </Button>
-        </TabsContent>
+        </VisitedTabsContent>
       </Tabs>
     </section>
   );

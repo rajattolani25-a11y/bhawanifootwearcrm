@@ -26,7 +26,10 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     ({ data }) => new Set<string>(Array.isArray(data) ? data : []),
     () => new Set<string>(),
   );
-  const cartRequest=Promise.resolve(sb.rpc("catalog_cart_version")).then(({data,error})=>!error && (data === 1 || data === 2) ? data : 0,()=>0);
+  const cartRequest = Promise.resolve(sb.rpc("catalog_cart_version")).then(
+    ({ data, error }) => (!error && (data === 1 || data === 2) ? data : 0),
+    () => 0,
+  );
   let heroUnavailable = false;
   const heroRequest = (async (): Promise<PublicHero | null> => {
     // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
@@ -70,12 +73,28 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
   })();
   const paths = [...new Set(d.products.map((p) => p.image).filter((x): x is string => !!x))];
   const urls = new Map<string, string>();
-  if (paths.length) {
-    const { data: signed } = await sb.storage
-      .from("product-images")
-      .createSignedUrls(paths, 6 * 3600);
-    signed?.forEach((s) => s.path && s.signedUrl && urls.set(s.path, s.signedUrl));
-  }
+  // Bound signing payloads and overlap up to three requests on larger catalogs.
+  // Only URLs are optional: every live price/size from public_catalog is retained.
+  const batches = Array.from({ length: Math.ceil(paths.length / 100) }, (_, i) =>
+    paths.slice(i * 100, (i + 1) * 100),
+  );
+  let nextBatch = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(3, batches.length) }, async () => {
+      for (let index = nextBatch++; index < batches.length; index = nextBatch++) {
+        try {
+          const { data: signed } = await sb.storage
+            .from("product-images")
+            .createSignedUrls(batches[index]!, 6 * 3600);
+          signed?.forEach((s) => {
+            if (s.path && s.signedUrl) urls.set(s.path, s.signedUrl);
+          });
+        } catch {
+          /* A photo service failure must not hide products or cache old prices. */
+        }
+      }
+    }),
+  );
   const [presentation, offer, hero, bargainEnabled, cartReady] = await Promise.all([
     presentationRequest,
     offerRequest,
@@ -89,7 +108,7 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     hero,
     ...(heroUnavailable ? { heroUnavailable: true } : {}),
     offer,
-    shop: {...d.shop,cart_ready:cartReady>=1,cart_coupon_ready:cartReady>=2},
+    shop: { ...d.shop, cart_ready: cartReady >= 1, cart_coupon_ready: cartReady >= 2 },
     products: d.products.map((p) => ({
       ...p,
       bargain_enabled: bargainEnabled.has(p.id),

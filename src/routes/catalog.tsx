@@ -26,7 +26,7 @@ import { BlurReveal } from "@/components/motion/blur-reveal";
 import { CatalogReservation } from "@/components/catalog-reservation";
 import reservationStyles from "@/components/catalog-reservation.module.css";
 import { createFileRoute } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Info, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, ShoppingCart, Sun, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
@@ -117,7 +117,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         if (stopped) return;
         const previous = snapshotRef.current;
         const oldProducts = new Map((previous.products ?? []).map(p => [p.id, p]));
-        const needPhotos = (fresh.products ?? []).some(p => p.image_key && p.image_key !== oldProducts.get(p.id)?.image_key);
+        const needPhotos = (fresh.products ?? []).some(p => p.image_key && (p.image_key !== oldProducts.get(p.id)?.image_key || !oldProducts.get(p.id)?.image));
         setData({ ...previous, ...fresh, products: (fresh.products ?? []).map(p => {
           const old = oldProducts.get(p.id);
           return { ...p, image: p.image_key && p.image_key===old?.image_key ? old?.image ?? null : null };
@@ -156,6 +156,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [help, setHelp] = useState(false);
   const [about, setAbout] = useState(false);
   const { lang, t } = useLang();
+  const deferredQuery=useDeferredValue(q);
   const [fsize, setFsize] = useState("All");
   const [fstyle, setFstyle] = useState("All");
   const [sort, setSort] = useState<CatalogSort>("default");
@@ -181,7 +182,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const sizeGroups = useMemo(() => catalogSizeGroups(products.filter(product => catalogStyleMatches(product.category, fstyle)), filter), [products, filter, fstyle]);
   const styleGroups = useMemo(() => catalogStyleGroups(products, filter), [products, filter]);
   const list = useMemo(() => {
-    const s = q.toLowerCase().trim();
+    const s = deferredQuery.toLowerCase().trim();
     const filtered = products.filter((p) => categoryMatches(p.category, filter) && catalogStyleMatches(p.category, fstyle) &&
       (fsize === "All" || p.sizes.some((x) => x.available && catalogSizeMatches(p.category, x.size, fsize))) &&
       (!s || [p.brand, p.article, p.color, p.category, categoryLabel(p.category)].some((f) => f?.toLowerCase().includes(s))));
@@ -193,7 +194,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       filtered.sort((a, b) => discount(b) - discount(a));
     }
     return filtered;
-  }, [products, q, filter, fsize, fstyle, sort]);
+  }, [products, deferredQuery, filter, fsize, fstyle, sort]);
 
   if (!data.enabled || !data.shop) return <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>;
   const shop = data.shop;
@@ -274,7 +275,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
 
       {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
-        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${fstyle}-${q}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
+        {presentation.gallery_enabled && list.length > 1 && <CatalogSpotlight key={`${filter}-${fsize}-${fstyle}-${deferredQuery}`} products={list} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
         <CatalogPromotions offer={data.offer ?? null} products={products} department={filter} motionEnabled={presentation.motion_enabled} onProduct={openProduct} onShop={audience=>{setQ("");setFilter(audience === "men" ? "Men" : audience === "women" ? "Women" : "All");setFsize("All");setFstyle("All");window.requestAnimationFrame(()=>document.getElementById("catalog-products")?.scrollIntoView({behavior: presentation.motion_enabled && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto", block:"start"}));}} />
         <div className={styles["collectionHeader"]}>
           <h2 id="catalog-products">Shop the collection</h2>

@@ -1,0 +1,14 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
+import {createRootRoute,createRouter,createMemoryHistory,RouterProvider} from '@tanstack/react-router';
+import {LanguageProvider} from '/src/lib/i18n.tsx';
+import {CatalogSettings} from '/src/components/CatalogSettings.tsx';
+import {Route} from '/src/routes/_authenticated/settings.tsx';
+Object.assign(window,{__React:React});
+const Settings=Route.options.component as React.ComponentType;
+const client=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity}}});
+const studio=new URLSearchParams(location.search).has('studio');
+const rootRoute=createRootRoute({component:()=>studio?<CatalogSettings/>:<Settings/>});
+const router=createRouter({routeTree:rootRoute,history:createMemoryHistory({initialEntries:['/']})});
+createRoot(document.getElementById('root')!).render(<QueryClientProvider client={client}><LanguageProvider><RouterProvider router={router}/></LanguageProvider></QueryClientProvider>);
