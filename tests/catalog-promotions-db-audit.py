@@ -41,13 +41,16 @@ try:
  assert call('public.public_catalog_promotion',who='',role='anon')is None
  product='10000000-0000-4000-8000-000000000001'
  sql(f"INSERT INTO products(id)VALUES('{product}');INSERT INTO coupons(code,kind,value,min_bill,starts_at,expires_at)VALUES('REAL200','fixed',200,1499,now()+interval '1 hour',now()+interval '3 hours');")
- dates=json.loads(sql("SELECT jsonb_build_object('announceAt',now()-interval '1 hour','startsAt',now()+interval '1 hour 1 second','endsAt',now()+interval '2 hours');").stdout)
+ dates=json.loads(sql("SELECT jsonb_build_object('announceAt',now()+interval '30 minutes','startsAt',now()+interval '1 hour 1 second','endsAt',now()+interval '2 hours');").stdout)
  campaign={'audience':'men','enabled':True,'title':'Real campaign','subtitle':'Actual conditions','coupon':'REAL200','productIds':[product],'advance':{'layout':'classic','image':None},'live':{'layout':'split','image':None},'schedule':dates}
  settings={**snap,'enabled':True,'config':{'version':1,'campaigns':[campaign]}}
  q=lambda x:"'"+json.dumps(x).replace("'","''")+"'::jsonb"
  saved=call('public.save_catalog_promotion',q(settings)+','+q(snap));assert saved==settings
  pub=call('public.public_catalog_promotion',who='',role='anon');assert pub['campaigns'][0]['offer']['value']==200 and pub['campaigns'][0]['offer']['min_bill']==1499
  assert 'customer_id' not in json.dumps(pub)
+ assert pub['campaigns'][0]['campaign']['schedule']['announceAt']==pub['now']
+ assert pub['campaigns'][0]['campaign']['schedule']['startsAt']==dates['startsAt']
+ assert call('public.owner_catalog_promotion')['config']['campaigns'][0]['schedule']==dates
  assert call('public.save_catalog_promotion',q(settings)+','+q(snap),ok=False).returncode # stale-save protection
  invalid={**settings,'config':{'version':1,'campaigns':[{**campaign,'schedule':{**dates,'endsAt':dates['announceAt']}}]}}
  assert call('public.save_catalog_promotion',q(invalid)+','+q(saved),ok=False).returncode

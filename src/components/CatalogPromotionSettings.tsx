@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import promoStyles from "./catalog-offer-ticket.module.css";
+import editorStyles from "./catalog-promotion-settings.module.css";
 import { CatalogOfferTicket } from "./CatalogOfferTicket";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -13,6 +14,7 @@ import {
   promoConfigSchema,
   storedPromoImageSchema,
   savedPromotionStatus,
+  promotionTimeIST,
   type PromoCampaign,
   type PromoConfig,
   type PromoSlot,
@@ -70,6 +72,33 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
   const [pending, setPending] = useState<Record<string, PendingPhoto>>({});
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [photoUsage, setPhotoUsage] = useState<PromotionStorage | null>(null);
+  const [setupSql, setSetupSql] = useState("");
+  const [manualSql, setManualSql] = useState(false);
+  async function copySetupSql() {
+    try {
+      const sql =
+        setupSql ||
+        (
+          await Promise.all([
+            import("../../docs/sql/catalog-promotions/photo-storage.sql?raw"),
+            import("../../docs/sql/catalog-promotions/verify-photo-storage.sql?raw"),
+          ])
+        )
+          .map((m) => m.default)
+          .join("\n");
+      setSetupSql(sql);
+      try {
+        await navigator.clipboard.writeText(sql);
+        setManualSql(false);
+        toast.success("Photo upload setup SQL copied");
+      } catch {
+        setManualSql(true);
+        toast.info("Select and copy the setup SQL below.");
+      }
+    } catch {
+      toast.error("Setup SQL could not be loaded. Try again when online.");
+    }
+  }
   useEffect(() => {
     if (query.data) {
       setImageUrls((prev) => ({ ...prev, ...query.data.images }));
@@ -140,7 +169,9 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
     queryFn: async () => {
       const r = await supabase
         .from("coupons")
-        .select("code,title,kind,value,max_discount,min_bill,starts_at,expires_at,usage_limit,used_count")
+        .select(
+          "code,title,kind,value,max_discount,min_bill,starts_at,expires_at,usage_limit,used_count",
+        )
         .eq("active", true)
         .is("customer_id", null)
         .order("created_at", { ascending: false });
@@ -218,7 +249,14 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
     },
   };
   function rememberDates(next: typeof dates, on = scheduleOn) {
-    setDates(next);
+    const serverNow = Date.parse(query.data?.publication?.now ?? "");
+    const starts = Date.parse(next.startsAt);
+    const publishAt = Math.min(
+      Number.isFinite(serverNow) ? serverNow : Date.now(),
+      Number.isFinite(starts) ? starts : Infinity,
+    );
+    const announceAt = new Date(publishAt).toISOString();
+    setDates({ ...next, announceAt: localDate(announceAt) });
     setScheduleOn(on);
     setDirty(true);
     if (!on) {
@@ -226,12 +264,14 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
       return;
     }
     if (
-      Object.values(next).every(Boolean) &&
-      Object.values(next).every((v) => Number.isFinite(Date.parse(v)))
+      next.startsAt &&
+      next.endsAt &&
+      Number.isFinite(starts) &&
+      Number.isFinite(Date.parse(next.endsAt))
     )
       setCampaign({
         schedule: {
-          announceAt: new Date(next.announceAt).toISOString(),
+          announceAt,
           startsAt: new Date(next.startsAt).toISOString(),
           endsAt: new Date(next.endsAt).toISOString(),
         },
@@ -276,8 +316,8 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
   }
   async function save() {
     if (!snapshot) return;
-    if (scheduleOn && Object.values(dates).some((v) => !v)) {
-      toast.error("Choose all three promotion times.");
+    if (scheduleOn && (!dates.startsAt || !dates.endsAt)) {
+      toast.error("Choose the sale start and end times.");
       return;
     }
     const parsed = promoConfigSchema.safeParse(config);
@@ -354,7 +394,7 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
         data: { token: auth, expected: snapshot, settings },
       });
       setSnapshot(saved);
-      setConfig(next);
+      setConfig(saved.config ?? next);
       setDirty(false);
       setStatus("Promotions saved. Checking public visibility…");
       void qc.invalidateQueries({ queryKey: ["catalog-offer"] });
@@ -362,11 +402,17 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
       window.dispatchEvent(new Event("solestack-catalog-refresh"));
       try {
         localStorage.setItem("catalog-promotion-refresh", String(Date.now()));
-      } catch { /* Other tabs still refresh on visibility or their normal interval. */ }
+      } catch {
+        /* Other tabs still refresh on visibility or their normal interval. */
+      }
       // Saving the design does not prove that the public coupon/time gates expose it.
       const verification = await query.refetch();
-      const savedCampaign = next.campaigns.find((c) => c.audience === audience);
-      const publicStatus = savedPromotionStatus(enabled, savedCampaign, verification.isError ? undefined : verification.data?.publication);
+      const savedCampaign = (saved.config ?? next).campaigns.find((c) => c.audience === audience);
+      const publicStatus = savedPromotionStatus(
+        enabled,
+        savedCampaign,
+        verification.isError ? undefined : verification.data?.publication,
+      );
       setStatus(`Promotions saved. ${publicStatus}`);
       if (!publicStatus.startsWith("Visible now:") && enabled && savedCampaign?.enabled)
         toast.warning(publicStatus);
@@ -401,8 +447,9 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
     return (
       <div>
         <p className="mt-4 rounded-lg border p-3 text-sm">
-          Sale promotions need the small promotion settings SQL update. Existing offers still work
-          below.
+          {query.error.message.includes("not installed")
+            ? "Sale promotions need the small promotion settings SQL update. Existing offers still work below."
+            : query.error.message}
         </p>
         {fallback}
         <Button variant="outline" onClick={() => void query.refetch()}>
@@ -410,33 +457,37 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
         </Button>
       </div>
     );
+  const activePhoto = pending[keyOf(audience, previewSlot)];
+  const activeImage = campaign[previewSlot].image;
+  const needsSetup = query.data?.uploadState !== "unavailable";
   return (
-    <section className="mt-5 space-y-5" aria-label="Sale promotions">
-      <div>
-        <h3 className="font-semibold">Sale promotions</h3>
-        <p className="text-sm text-muted-foreground">
-          Advance notice and live offers below Spotlight. Separate designs for everyone, Men and
-          Women.
-        </p>
-      </div>
-      <fieldset disabled={busy} className="space-y-5 min-w-0">
-        <label className="flex items-center justify-between gap-4">
+    <section className={editorStyles["editor"]} aria-label="Sale promotions">
+      <header className={editorStyles["header"]}>
+        <div>
+          <h3 className="text-lg font-semibold">Sale promotions</h3>
+          <p className="text-sm text-muted-foreground">Choose your audience, timing and poster.</p>
+        </div>
+        <label className={editorStyles["master"]}>
           <span>Show promotions on catalog</span>
           <Switch
             checked={enabled}
+            disabled={busy}
             onCheckedChange={(v) => {
               setEnabled(v);
               setDirty(true);
             }}
           />
         </label>
-        <div className="grid grid-cols-3 gap-2" aria-label="Promotion audience">
+      </header>
+      <fieldset disabled={busy} className="min-w-0 space-y-4">
+        <div className={editorStyles["audiences"]} aria-label="Promotion audience">
           {(["all", "men", "women"] as const).map((v) => (
             <Button
               key={v}
-              variant={audience === v ? "default" : "outline"}
+              variant={audience === v ? "default" : "ghost"}
+              aria-pressed={audience === v}
               onClick={() => {
-                if (scheduleOn && Object.values(dates).some((x) => !x)) {
+                if (scheduleOn && (!dates.startsAt || !dates.endsAt)) {
                   toast.error("Complete the dates or switch scheduling off first.");
                   return;
                 }
@@ -447,281 +498,401 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
             </Button>
           ))}
         </div>
-        <label className="flex items-center justify-between gap-4">
-          <span>Enable this audience promotion</span>
-          <Switch checked={campaign.enabled} onCheckedChange={(v) => setCampaign({ enabled: v })} />
-        </label>
-        <div className="rounded-lg border p-3 text-sm space-y-2" aria-label="Saved catalog visibility">
-          <p role="status">
-            {savedPromotionStatus(
-              snapshot?.enabled ?? false,
-              snapshot?.config?.campaigns.find((c) => c.audience === audience),
-              query.data?.publication,
-            )}
-          </p>
-          {dirty && <p className="text-xs text-muted-foreground">This status is for saved settings. Save your changes to update the catalog.</p>}
-          <Button variant="outline" size="sm" disabled={busy || query.isFetching} onClick={() => void query.refetch()}>
-            Refresh catalog status
-          </Button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1 text-sm">
-            Promotion title
-            <Input
-              value={campaign.title}
-              maxLength={60}
-              placeholder="Your sale name"
-              onChange={(e) => setCampaign({ title: e.target.value })}
-            />
-          </label>
-          <label className="space-y-1 text-sm">
-            Coupon
-            <select
-              className="h-10 w-full rounded-md border bg-background px-3"
-              value={campaign.coupon}
-              onChange={(e) => setCampaign({ coupon: e.target.value })}
-            >
-              <option value="">No coupon — announcement only</option>
-              {campaign.coupon && coupons.data && !coupons.data.some((c) => c.code === campaign.coupon) && (
-                <option value={campaign.coupon} disabled>{campaign.coupon} — unavailable</option>
-              )}
-              {(coupons.data ?? []).map((c) => {
-                const expired = !!c.expires_at && Date.parse(c.expires_at) <= Date.now();
-                const exhausted = c.usage_limit != null && c.used_count >= c.usage_limit;
-                return <option key={c.code} value={c.code} disabled={expired || exhausted}>
-                  {c.code}
-                  {c.title ? ` — ${c.title}` : ""}
-                  {expired ? " — expired" : exhausted ? " — usage limit reached" : ""}
-                </option>;
-              })}
-            </select>
-          </label>
-          <label className="space-y-1 text-sm sm:col-span-2">
-            Short message
-            <Input
-              value={campaign.subtitle}
-              maxLength={120}
-              onChange={(e) => setCampaign({ subtitle: e.target.value })}
-            />
-          </label>
-        </div>
-        {coupons.error && (
-          <p role="alert" className="text-sm text-destructive">
-            Coupons could not be loaded. Retry before changing the coupon.
-          </p>
-        )}
-        <div className="rounded-xl border p-4 space-y-3">
-          <h4 className="font-medium">Featured products (optional, up to 2)</h4>
-          <p className="text-xs text-muted-foreground">
-            One pair uses the spotlight layout; two pairs use a balanced split. Existing photos are
-            reused without another upload. Prices shown are current listed prices; the coupon is
-            validated at checkout.
-          </p>
-          {[0, 1].map((i) => (
-            <label key={i} className="block text-sm">
-              Product {i + 1}
-              <select
-                className="mt-1 h-11 w-full rounded-md border bg-background px-2"
-                value={campaign.productIds[i] ?? ""}
-                onChange={(e) => {
-                  const ids = [...campaign.productIds];
-                  ids[i] = e.target.value;
-                  setCampaign({ productIds: ids.filter(Boolean) });
-                }}
-              >
-                <option value="">None</option>
-                {available
-                  .filter(
-                    (p) => !campaign.productIds.includes(p.id) || campaign.productIds[i] === p.id,
-                  )
-                  .map((p) => (
-                    <option value={p.id} key={p.id}>
-                      {p.brand} {p.article}
-                      {p.color ? ` · ${p.color}` : ""}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          ))}
-          {productsQuery.error && (
-            <p role="alert" className="text-sm text-destructive">
-              Products could not be loaded.
-            </p>
-          )}
-        </div>
-        <div className="rounded-xl border p-4 space-y-3">
-          <label className="flex items-center justify-between gap-4">
-            <span>Schedule advance & live phases</span>
-            <Switch checked={scheduleOn} onCheckedChange={(v) => rememberDates(dates, v)} />
-          </label>
-          {scheduleOn && (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {(
-                [
-                  ["announceAt", "Show advance notice"],
-                  ["startsAt", "Sale starts"],
-                  ["endsAt", "Sale ends"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="space-y-1 text-sm min-w-0">
-                  {label}
-                  <Input
-                    type="datetime-local"
-                    value={dates[key]}
-                    onChange={(e) => rememberDates({ ...dates, [key]: e.target.value })}
+        <div className={editorStyles["workspace"]}>
+          <div className={editorStyles["controls"]}>
+            <section className={editorStyles["panel"]} aria-label="Campaign details">
+              <div className={editorStyles["panelHeading"]}>
+                <h4 className="font-semibold">Campaign details</h4>
+                <label className={editorStyles["audienceSwitch"]}>
+                  <span>Enable this audience promotion</span>
+                  <Switch
+                    checked={campaign.enabled}
+                    onCheckedChange={(v) => setCampaign({ enabled: v })}
                   />
                 </label>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {!scheduleOn && "Scheduling is off: only the Live sale design appears on the catalog. Advance artwork needs a schedule. "}
-            Choose times in your device’s timezone. Customers see IST. The card switches
-            automatically and hides at the end. Coupon validity must cover the live sale; these
-            display settings do not change checkout prices.
-          </p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {(["advance", "live"] as const).map((slot) => {
-            const photo = pending[keyOf(audience, slot)],
-              image = campaign[slot].image;
-            return (
-              <div key={slot} className="rounded-xl border p-4 min-w-0 space-y-3">
-                <h4 className="font-semibold">
-                  {slot === "advance" ? "Advance promotion" : "Live sale"}
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["classic", "split"] as const).map((layout) => (
-                    <button
-                      key={layout}
-                      type="button"
-                      aria-pressed={campaign[slot].layout === layout}
-                      aria-label={layout === "classic" ? "Street Drop" : "Sticker Edit"}
-                      className={`rounded-lg border p-3 text-left ${campaign[slot].layout === layout ? "ring-2 ring-primary" : ""}`}
-                      onClick={() => setCampaign({ [slot]: { ...campaign[slot], layout } })}
+              </div>
+              <div className={editorStyles["fields"]}>
+                <label>
+                  Promotion title
+                  <Input
+                    value={campaign.title}
+                    maxLength={60}
+                    placeholder="Your sale name"
+                    onChange={(e) => setCampaign({ title: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Coupon
+                  <select
+                    value={campaign.coupon}
+                    onChange={(e) => setCampaign({ coupon: e.target.value })}
+                  >
+                    <option value="">No coupon — announcement only</option>
+                    {campaign.coupon &&
+                      coupons.data &&
+                      !coupons.data.some((c) => c.code === campaign.coupon) && (
+                        <option value={campaign.coupon} disabled>
+                          {campaign.coupon} — unavailable
+                        </option>
+                      )}
+                    {(coupons.data ?? []).map((c) => {
+                      const expired = !!c.expires_at && Date.parse(c.expires_at) <= Date.now();
+                      const exhausted = c.usage_limit != null && c.used_count >= c.usage_limit;
+                      return (
+                        <option key={c.code} value={c.code} disabled={expired || exhausted}>
+                          {c.code}
+                          {c.title ? ` — ${c.title}` : ""}
+                          {expired ? " — expired" : exhausted ? " — usage limit reached" : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+                <label className={editorStyles["fullWidth"]}>
+                  Short message
+                  <Input
+                    value={campaign.subtitle}
+                    maxLength={120}
+                    placeholder="Optional message for your customers"
+                    onChange={(e) => setCampaign({ subtitle: e.target.value })}
+                  />
+                </label>
+              </div>
+              {coupons.error && (
+                <p role="alert" className="text-sm text-destructive">
+                  Coupons could not be loaded. Retry before changing the coupon.
+                </p>
+              )}
+            </section>
+            <section className={editorStyles["panel"]} aria-label="Promotion timing">
+              <h4 className="font-semibold">When should it appear?</h4>
+              <div className={editorStyles["modeButtons"]}>
+                <Button
+                  variant={!scheduleOn ? "default" : "outline"}
+                  aria-pressed={!scheduleOn}
+                  onClick={() => {
+                    rememberDates(dates, false);
+                    setPreviewSlot("live");
+                  }}
+                >
+                  Show now
+                </Button>
+                <Button
+                  variant={scheduleOn ? "default" : "outline"}
+                  aria-pressed={scheduleOn}
+                  onClick={() => {
+                    rememberDates(dates, true);
+                    setPreviewSlot("advance");
+                  }}
+                >
+                  Schedule sale
+                </Button>
+              </div>
+              {scheduleOn ? (
+                <>
+                  <p className={editorStyles["hint"]}>
+                    Advance poster appears as soon as you save. It switches to Live automatically
+                    when the sale starts.
+                  </p>
+                  <div className={editorStyles["fields"]}>
+                    {(
+                      [
+                        ["startsAt", "Sale starts"],
+                        ["endsAt", "Sale ends"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label key={key}>
+                        {label}
+                        <Input
+                          type="datetime-local"
+                          value={dates[key]}
+                          onChange={(e) => rememberDates({ ...dates, [key]: e.target.value })}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <p className={editorStyles["hint"]}>
+                    Enter your local time. The poster hides at the end. Coupon validity must cover
+                    the sale.
+                  </p>
+                  {campaign.schedule && (
+                    <p className={editorStyles["hint"]}>
+                      Live: {promotionTimeIST(campaign.schedule.startsAt)} →{" "}
+                      {promotionTimeIST(campaign.schedule.endsAt)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className={editorStyles["hint"]}>
+                  Live sale artwork appears after saving while this campaign and the catalog are
+                  enabled. Coupon rules still apply.
+                </p>
+              )}
+            </section>
+            <details className={editorStyles["panel"]}>
+              <summary className={editorStyles["summary"]}>
+                Featured products <span>{campaign.productIds.length}/2 · optional</span>
+              </summary>
+              <p className={editorStyles["hint"]}>
+                Reuse existing product photos. One pair gets a single-product layout; two pairs use
+                a split layout.
+              </p>
+              <div className={editorStyles["fields"]}>
+                {[0, 1].map((i) => (
+                  <label key={i}>
+                    Product {i + 1}
+                    <select
+                      value={campaign.productIds[i] ?? ""}
+                      onChange={(e) => {
+                        const ids = [...campaign.productIds];
+                        ids[i] = e.target.value;
+                        setCampaign({ productIds: ids.filter(Boolean) });
+                      }}
                     >
-                      <span
-                        className={promoStyles["swatch"]}
-                        data-layout={layout}
-                        aria-hidden="true"
+                      <option value="">None</option>
+                      {available
+                        .filter(
+                          (p) =>
+                            !campaign.productIds.includes(p.id) || campaign.productIds[i] === p.id,
+                        )
+                        .map((p) => (
+                          <option value={p.id} key={p.id}>
+                            {p.brand} {p.article}
+                            {p.color ? ` · ${p.color}` : ""}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              {productsQuery.error && (
+                <p role="alert" className="text-sm text-destructive">
+                  Products could not be loaded.
+                </p>
+              )}
+            </details>
+            <section className={editorStyles["panel"]} aria-label="Poster design">
+              <h4 className="font-semibold">Poster design</h4>
+              <div className={editorStyles["modeButtons"]} aria-label="Poster phase">
+                {(["advance", "live"] as const).map((slot) => (
+                  <Button
+                    key={slot}
+                    variant={previewSlot === slot ? "default" : "outline"}
+                    aria-pressed={previewSlot === slot}
+                    onClick={() => setPreviewSlot(slot)}
+                  >
+                    {slot === "advance" ? "Advance promotion" : "Live sale"}
+                  </Button>
+                ))}
+              </div>
+              <p className={editorStyles["hint"]}>
+                {previewSlot === "advance"
+                  ? "Shown before the scheduled sale starts."
+                  : "Shown during the sale, or immediately in Show now mode."}
+              </p>
+              <div className={editorStyles["presets"]}>
+                {(["classic", "split"] as const).map((layout) => (
+                  <button
+                    key={layout}
+                    type="button"
+                    aria-pressed={campaign[previewSlot].layout === layout}
+                    aria-label={layout === "classic" ? "Street Drop" : "Sticker Edit"}
+                    className={editorStyles["preset"]}
+                    data-selected={campaign[previewSlot].layout === layout}
+                    onClick={() =>
+                      setCampaign({ [previewSlot]: { ...campaign[previewSlot], layout } })
+                    }
+                  >
+                    <span className={promoStyles["swatch"]} data-layout={layout} aria-hidden="true">
+                      <span>{layout === "classic" ? "NEXT" : "THE"}</span>
+                      <span>{layout === "classic" ? "BIG DROP" : "EDIT"}</span>
+                    </span>
+                    <span>{layout === "classic" ? "Street Drop" : "Sticker Edit"}</span>
+                  </button>
+                ))}
+              </div>
+              <details className={editorStyles["subpanel"]}>
+                <summary className={editorStyles["summary"]}>
+                  Custom poster <span>optional</span>
+                </summary>
+                {!query.data?.uploadReady && (
+                  <div className="space-y-2 rounded-lg bg-muted/50 p-3 text-sm" role="status">
+                    <p>
+                      {needsSetup
+                        ? "Photo uploads need a one-time setup. Built-in designs work without it."
+                        : "Photo upload status could not be checked. Retry when online."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {needsSetup && (
+                        <Button variant="outline" size="sm" onClick={() => void copySetupSql()}>
+                          Copy photo setup SQL
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={query.isFetching}
+                        onClick={() => void query.refetch()}
                       >
-                        <span>{layout === "classic" ? "NEXT" : "THE"}</span>
-                        <span>{layout === "classic" ? "BIG DROP" : "EDIT"}</span>
-                      </span>
-                      <span className="text-xs">
-                        {layout === "classic" ? "Street Drop" : "Sticker Edit"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                        Check photo setup
+                      </Button>
+                    </div>
+                    {setupSql && (
+                      <p className={editorStyles["hint"]}>
+                        Run the copied SQL once in your database SQL Editor, then check setup again.
+                        No external account is needed.
+                      </p>
+                    )}
+                    {manualSql && (
+                      <label className="block">
+                        Photo setup SQL
+                        <textarea
+                          aria-label="Photo setup SQL"
+                          className="mt-2 h-44 w-full rounded border bg-background p-2 font-mono text-xs"
+                          readOnly
+                          value={setupSql}
+                          onFocus={(e) => e.currentTarget.select()}
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
                 <label className="block text-sm">
-                  {photo || image ? "Replace custom poster" : "Upload custom poster (optional)"}
+                  {activePhoto || activeImage
+                    ? "Replace custom poster"
+                    : "Upload custom poster (optional)"}
                   <Input
                     type="file"
-                    className="mt-1"
+                    className="mt-2"
                     accept="image/jpeg,image/png,image/webp"
                     disabled={!query.data?.uploadReady}
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
+                      const file = e.target.files?.[0];
                       e.target.value = "";
-                      if (f) void choosePhoto(slot, f);
+                      if (file) void choosePhoto(previewSlot, file);
                     }}
                   />
                 </label>
-                {(photo || image) && (
-                  <Button variant="outline" size="sm" onClick={() => removePhoto(slot)}>
+                {(activePhoto || activeImage) && (
+                  <Button variant="outline" size="sm" onClick={() => removePhoto(previewSlot)}>
                     Remove photo · use preset
                   </Button>
                 )}
-                {photo && (
-                  <p className="text-xs text-muted-foreground">
-                    {Math.round(photo.original / 1024)} KB → {Math.round(photo.blob.size / 1024)} KB
-                    · ready to upload on Save
+                {activePhoto && (
+                  <p className={editorStyles["hint"]}>
+                    {Math.round(activePhoto.original / 1024)} KB →{" "}
+                    {Math.round(activePhoto.blob.size / 1024)} KB · ready to upload on Save
                   </p>
                 )}
-                {image && !photo && (
-                  <p className="text-xs text-muted-foreground">
-                    Stored photo: {Math.round(image.bytes / 1024)} KB
+                {activeImage && !activePhoto && (
+                  <p className={editorStyles["hint"]}>
+                    Stored photo: {Math.round(activeImage.bytes / 1024)} KB
                   </p>
                 )}
-                <Button variant="outline" size="sm" onClick={() => setPreviewSlot(slot)}>
-                  Preview {slot === "advance" ? "advance" : "live"}
-                </Button>
+                <p className={editorStyles["hint"]}>
+                  JPG, PNG or WebP up to 10 MB. Compressed before upload to at most 1600 px / 400
+                  KB. Artwork stays uncropped. Transparent product cutouts work best in the built-in
+                  presets.
+                </p>
+              </details>
+            </section>
+          </div>
+          <aside
+            className={editorStyles["previewColumn"]}
+            aria-label="Promotion preview and status"
+          >
+            <div className={editorStyles["panel"]}>
+              <div className={editorStyles["panelHeading"]}>
+                <h4 className="font-semibold">Catalog preview</h4>
+                <span className={editorStyles["previewLabel"]}>
+                  {previewSlot === "advance" ? "Advance" : "Live"} · preview only
+                </span>
               </div>
-            );
-          })}
+              {previewSlot === "advance" && !scheduleOn && (
+                <p className={editorStyles["hint"]}>
+                  Choose Schedule sale to show the advance poster before launch.
+                </p>
+              )}
+              <div className={editorStyles["preview"]}>
+                <CatalogOfferTicket
+                  offer={offer}
+                  campaign={previewCampaign}
+                  phase={previewSlot}
+                  products={previewProducts}
+                  motionEnabled={false}
+                  imageUrls={imageUrls}
+                  onShop={() => {}}
+                />
+              </div>
+            </div>
+            <div className={editorStyles["panel"]} aria-label="Saved catalog visibility">
+              <h4 className="font-semibold">On your catalog</h4>
+              <p role="status" className="text-sm">
+                {savedPromotionStatus(
+                  snapshot?.enabled ?? false,
+                  snapshot?.config?.campaigns.find((c) => c.audience === audience),
+                  query.data?.publication,
+                )}
+              </p>
+              {dirty && (
+                <p className={editorStyles["hint"]}>
+                  This is the saved status. Save your draft to apply changes.
+                </p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy || query.isFetching}
+                onClick={() => void query.refetch()}
+              >
+                Refresh catalog status
+              </Button>
+            </div>
+            <details className={editorStyles["panel"]}>
+              <summary className={editorStyles["summary"]}>
+                Photo storage <span>{photoUsage ? storageBytes(photoUsage.photo_bytes) : "—"}</span>
+              </summary>
+              <p className={editorStyles["hint"]}>
+                {photoUsage ? `${photoUsage.photos} files. ` : "Measurement unavailable. "}Includes
+                saved and pending uploads. Existing product photos are reused.
+              </p>
+              {!!photoUsage?.pending.length && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      setPhotoUsage(
+                        await cleanupPromotionUploads({ data: { token: await token() } }),
+                      );
+                      void qc.invalidateQueries({ queryKey: ["hero-storage-usage"] });
+                      toast.success("Unused photo cleanup checked");
+                    } catch {
+                      toast.error("Unused photo cleanup is pending. Retry when online.");
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Retry unused-photo cleanup
+                </Button>
+              )}
+            </details>
+          </aside>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Custom artwork shows completely, without cropping or text overlays. JPG, PNG or WebP up to
-          10 MB; compressed on this device to at most 1600 px and 400 KB before upload. Transparent
-          cutouts look best in the built-in presets. Existing opaque photos remain usable. Custom
-          posters replace product-photo artwork in that phase.
-        </p>
-        {!query.data?.uploadReady && (
-          <p role="status" className="rounded-lg border p-3 text-sm">
-            Apply the promotion photo storage SQL update, then reload. No external account is
-            required.
-          </p>
-        )}
-        <div className="rounded-xl border p-3 text-sm space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span>Promotion photo storage</span>
-            <strong data-no-translate>
-              {photoUsage ? storageBytes(photoUsage.photo_bytes) : "—"}
-            </strong>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {photoUsage ? `${photoUsage.photos} files · ` : "Measurement unavailable · "}Includes
-            saved photos and uploads awaiting cleanup. Only image paths are stored in shop records.
-            Existing product photos are reused without another upload.
-          </p>
-          {!!photoUsage?.pending.length && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  setPhotoUsage(await cleanupPromotionUploads({ data: { token: await token() } }));
-                  void qc.invalidateQueries({ queryKey: ["hero-storage-usage"] });
-                  toast.success("Unused photo cleanup checked");
-                } catch {
-                  toast.error("Unused photo cleanup is pending. Retry when online.");
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Retry unused-photo cleanup
+        <footer className={editorStyles["savebar"]}>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => void save()} disabled={!dirty || busy}>
+              {busy ? "Saving…" : "Save promotions"}
             </Button>
-          )}
-        </div>
-        <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">
-            Preview only · {previewSlot === "advance" ? "Advance promotion" : "Live sale"}
-          </p>
-          <div className="max-w-xl">
-            <CatalogOfferTicket
-              offer={offer}
-              campaign={previewCampaign}
-              phase={previewSlot}
-              products={previewProducts}
-              motionEnabled={false}
-              imageUrls={imageUrls}
-              onShop={() => {}}
-            />
+            <span className={editorStyles["hint"]}>
+              {dirty ? "Unsaved changes" : "Saved settings"}
+            </span>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => void save()} disabled={!dirty || busy}>
-            {busy ? "Saving…" : "Save promotions"}
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {dirty ? "Unsaved changes" : "Saved settings"}
-          </span>
           <Button
-            variant="ghost"
+            variant="outline"
             disabled={busy}
             onClick={() => {
               if (dirty && !window.confirm("Discard unsaved promotion changes and reload?")) return;
@@ -737,11 +908,13 @@ export function CatalogPromotionSettings({ fallback }: { fallback: ReactNode }) 
           >
             Reload saved
           </Button>
-        </div>
+        </footer>
       </fieldset>
-      <p role="status" className="text-sm text-muted-foreground">
-        {status}
-      </p>
+      {!!status && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {status}
+        </p>
+      )}
     </section>
   );
 }

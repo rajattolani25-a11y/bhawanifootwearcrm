@@ -123,7 +123,34 @@ export type PromotionPublication = {
   now: string | null;
   audiences: string[];
   legacy: boolean;
+  phases?: Record<string, "hidden" | "advance" | "live">;
 };
+/** New scheduled campaigns advertise immediately; the sale's dates never move. */
+export function publishAdvanceImmediately(config: PromoConfig, now: number): PromoConfig {
+  return {
+    ...config,
+    campaigns: config.campaigns.map((campaign) =>
+      campaign.enabled && campaign.schedule && Date.parse(campaign.schedule.announceAt) > now
+        ? {
+            ...campaign,
+            schedule: { ...campaign.schedule, announceAt: new Date(now).toISOString() },
+          }
+        : campaign,
+    ),
+  };
+}
+export function promotionTimeIST(value: string) {
+  return (
+    new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(new Date(value)) + " IST"
+  );
+}
 /** Report the saved public state, never the owner's unsaved design preview. */
 export function savedPromotionStatus(
   enabled: boolean,
@@ -138,16 +165,18 @@ export function savedPromotionStatus(
     return "The catalog is using the previous offer. Save this promotion to publish its design.";
   const now = Date.parse(publication.now);
   if (!Number.isFinite(now)) return "Public visibility could not be checked. Retry catalog status.";
-  const phase = promotionPhase(campaign, now);
+  const phase = publication.phases?.[campaign.audience] ?? promotionPhase(campaign, now);
+  if (phase !== "live" && !campaign.schedule)
+    return "Promotion settings changed during the check. Refresh catalog status.";
   if (phase === "hidden")
     return now < Date.parse(campaign.schedule!.announceAt)
-      ? "Scheduled: hidden until the advance notice time."
+      ? `Scheduled: hidden until ${promotionTimeIST(campaign.schedule!.announceAt)}.`
       : "Hidden: this promotion has ended.";
   if (!publication.audiences.includes(campaign.audience))
     return "Not visible in the public catalog. Check catalog availability and the selected coupon's validity or usage limit.";
   return phase === "advance"
-    ? "Visible now: Advance promotion. Live artwork appears when the sale starts."
-    : "Visible now: Live sale. This is the artwork customers see.";
+    ? `Visible now: Advance promotion. Live artwork starts ${promotionTimeIST(campaign.schedule!.startsAt)}.`
+    : `Visible now: Live sale.${campaign.schedule ? ` Hides ${promotionTimeIST(campaign.schedule.endsAt)}.` : " No display end time is set."}`;
 }
 export function promotionCountdown(target: string, now: number) {
   const seconds = Math.max(0, Math.ceil((Date.parse(target) - now) / 1000));

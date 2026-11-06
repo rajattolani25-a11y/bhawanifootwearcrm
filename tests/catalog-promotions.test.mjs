@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyCampaign,promoConfigSchema,promotionPhase,promotionCountdown,promotionCalendar,promoImageSchema,promoImageSource,storedPromoImageSchema,PROMO_MAX_BYTES,savedPromotionStatus} from '../src/lib/catalog-promotion.ts';
+import {emptyCampaign,promoConfigSchema,promotionPhase,promotionCountdown,promotionCalendar,promoImageSchema,promoImageSource,storedPromoImageSchema,PROMO_MAX_BYTES,savedPromotionStatus,publishAdvanceImmediately,promotionTimeIST} from '../src/lib/catalog-promotion.ts';
 const start='2026-11-08T12:00:00Z',end='2026-11-08T14:00:00Z',announce='2026-11-07T12:00:00Z';
 test('advance, live and end boundaries are exact and disabled campaigns stay hidden',()=>{
  const c={...emptyCampaign('men'),enabled:true,schedule:{announceAt:announce,startsAt:start,endsAt:end}};
@@ -48,8 +48,23 @@ test('saved visibility reports the real phase, disabled gates and unavailable pu
  assert.match(savedPromotionStatus(true,c,published),/Visible now: Live sale/);
  assert.match(savedPromotionStatus(true,c,{...published,audiences:[]}),/coupon's validity or usage limit/);
  assert.match(savedPromotionStatus(true,c,{...published,legacy:true}),/previous offer/);
+ assert.match(savedPromotionStatus(true,c,{...published,phases:{men:'hidden'}}),/Refresh catalog status/);
  const scheduled={...c,schedule:{announceAt:announce,startsAt:start,endsAt:end}};
  assert.match(savedPromotionStatus(true,scheduled,{...published,now:new Date(Date.parse(announce)-1).toISOString()}),/hidden until/);
  assert.match(savedPromotionStatus(true,scheduled,{...published,now:announce}),/Visible now: Advance promotion/);
  assert.match(savedPromotionStatus(true,scheduled,{...published,now:end}),/has ended/);
+ assert.match(savedPromotionStatus(true,scheduled,{...published,now:new Date(Date.parse(announce)-1).toISOString(),phases:{men:'advance'}}),/Visible now: Advance promotion/);
+});
+test('scheduled advance publishes now while sale dates, coupon and disabled campaigns stay unchanged',()=>{
+ const scheduled={...emptyCampaign('all'),enabled:true,coupon:'EXISTING',schedule:{announceAt:announce,startsAt:start,endsAt:end}};
+ const config={version:1,campaigns:[scheduled,{...scheduled,audience:'men',enabled:false}]};
+ const now=Date.parse(announce)-60000,result=publishAdvanceImmediately(config,now);
+ assert.equal(result.campaigns[0].schedule.announceAt,new Date(now).toISOString());
+ assert.equal(promotionPhase(result.campaigns[0],now),'advance');
+ assert.equal(promotionPhase(result.campaigns[0],Date.parse(start)),'live');
+ assert.equal(promotionPhase(result.campaigns[0],Date.parse(end)),'hidden');
+ assert.equal(result.campaigns[0].schedule.startsAt,start);assert.equal(result.campaigns[0].schedule.endsAt,end);
+ assert.equal(result.campaigns[0].coupon,'EXISTING');assert.equal(config.campaigns[0].schedule.announceAt,announce);
+ assert.deepEqual(result.campaigns[1],config.campaigns[1]);
+ assert.match(promotionTimeIST('2026-11-06T06:45:00Z'),/12:15.*IST/);
 });

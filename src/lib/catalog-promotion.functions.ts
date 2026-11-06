@@ -5,6 +5,7 @@ import {
   promoPathSchema,
   PROMO_BUCKET,
   promotionPhase,
+  publishAdvanceImmediately,
   type PromotionPublication,
 } from "./catalog-promotion";
 import { publicClient } from "./catalog.functions";
@@ -110,12 +111,21 @@ export const getOwnerPromotion = createServerFn({ method: "POST" })
     ]);
     if (error)
       throw Error(
-        "Promotion settings update is not installed yet. Existing catalog offers still work.",
+        ["PGRST202", "42883", "42703"].includes(error.code)
+          ? "Promotion settings update is not installed yet. Existing catalog offers still work."
+          : "Promotion settings could not be loaded. Check your connection and retry.",
       );
     const current = snapshot as PromotionSnapshot;
     return {
       snapshot: current,
       uploadReady: !usage.error && usage.data?.version === 1,
+      uploadState: usage.error
+        ? ["PGRST202", "42883"].includes(usage.error.code)
+          ? ("setup-required" as const)
+          : ("unavailable" as const)
+        : usage.data?.version === 1
+          ? ("ready" as const)
+          : ("setup-required" as const),
       images: await photoUrls(sb, nativePaths(current.config)),
       storage: usage.error ? null : (usage.data as PromotionStorage),
       publication: {
@@ -126,6 +136,12 @@ export const getOwnerPromotion = createServerFn({ method: "POST" })
           ({ campaign }: { campaign: PromoCampaign }) => campaign.audience,
         ),
         legacy: published.data?.legacy === true,
+        phases: Object.fromEntries(
+          (published.data?.campaigns ?? []).map(({ campaign }: { campaign: PromoCampaign }) => [
+            campaign.audience,
+            promotionPhase(campaign, Date.parse(published.data.now)),
+          ]),
+        ),
       } satisfies PromotionPublication,
     };
   });
@@ -151,7 +167,10 @@ export const saveOwnerPromotion = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const sb = await ownerClient(data.token);
     const result = await sb.rpc("save_catalog_promotion", {
-      _settings: data.settings,
+      _settings: {
+        ...data.settings,
+        config: publishAdvanceImmediately(data.settings.config, Date.now()),
+      },
       _expected: data.expected,
     });
     if (result.error) throw Error(result.error.message);

@@ -21,6 +21,10 @@ BEGIN
  IF s.offer_promotion IS NULL THEN RETURN jsonb_build_object('legacy',true,'campaigns',result,'now',now()); END IF;
  FOR campaign IN SELECT value FROM jsonb_array_elements(s.offer_promotion->'campaigns') LOOP
   IF (campaign->>'enabled')::boolean IS NOT TRUE THEN CONTINUE; END IF;
+  -- Advance notice starts immediately; sale start/end and coupon rules stay unchanged.
+  IF campaign->'schedule'<>'null'::jsonb AND (campaign->'schedule'->>'announceAt')::timestamptz>now() THEN
+   campaign:=jsonb_set(campaign,'{schedule,announceAt}',to_jsonb(now()));
+  END IF;
   c:=NULL;
   IF coalesce(campaign->>'coupon','')<>'' THEN
    SELECT * INTO c FROM public.coupons WHERE code=upper(btrim(campaign->>'coupon')) AND active AND customer_id IS NULL

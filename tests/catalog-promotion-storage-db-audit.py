@@ -45,11 +45,15 @@ try:
  live='promotions/men/live/'+str(uuid.uuid4())+'.webp';file(live)
  assert not visible(p)
  assert asrole("INSERT INTO storage.objects(bucket_id,name)VALUES('catalog-hero-images','promotions/staff.webp');",staff,ok=False).returncode
- dates=json.loads(sql("SELECT jsonb_build_object('announceAt',now()-interval '1 hour','startsAt',now()+interval '1 hour','endsAt',now()+interval '2 hours');").stdout)
+ dates=json.loads(sql("SELECT jsonb_build_object('announceAt',now()+interval '30 minutes','startsAt',now()+interval '1 hour','endsAt',now()+interval '2 hours');").stdout)
  image=lambda path,size=200000:{'storage':'shop','path':path,'bytes':size,'width':1200,'height':600}
  campaign={'audience':'men','enabled':True,'title':'Store edit','subtitle':'','coupon':'','productIds':[],'advance':{'layout':'classic','image':image(p)},'live':{'layout':'split','image':image(live)},'schedule':dates}
  settings={**snapshot(),'enabled':True,'config':{'version':1,'campaigns':[campaign]}};save(settings)
  assert visible(p) and not visible(live)
+ public=json.loads(asrole('SELECT public_catalog_promotion();',who='',role='anon').stdout)
+ assert public['campaigns'][0]['campaign']['schedule']['announceAt']==public['now']
+ assert public['campaigns'][0]['campaign']['schedule']['startsAt']==dates['startsAt']
+ assert snapshot()['config']['campaigns'][0]['schedule']==dates
  assert asrole("UPDATE storage.objects SET metadata='{}' WHERE name='"+p+"' RETURNING name;").stdout.strip()==''
  # Saved files remain protected even if marketing is OFF.
  assert asrole("DELETE FROM storage.objects WHERE name='"+p+"' RETURNING name;").stdout.strip()==''
@@ -101,5 +105,5 @@ try:
  sql("UPDATE public.store_settings SET offer_promotion=jsonb_set(offer_promotion,'{campaigns,1,coupon}','\"EXPIREDPROMO\"'::jsonb) WHERE id=1;")
  candidate=snapshot();assert sql(fix,False).returncode;assert snapshot()==candidate
  assert sql(unchanged).stdout==before
- print(json.dumps({'passed':True,'fullSchema':True,'ownerOnlyUploads':True,'currentPhasePublicRead':True,'savedPhotosDeleteProtected':True,'immutableIdentities':True,'sizeAndPathValidation':True,'durableReplacementCleanup':True,'orphanRecoveryGrace':True,'backupResetRestoreRoundtrip':True,'usageIncludesPhotos':True,'expiredScheduleFixScopedAndRepeatable':True,'offAndFutureCampaignsProtected':True,'invalidCouponRollsBackScheduleChange':True,'financialAndMaintenanceDefinitionsUnchanged':True,'liveWrites':0}))
+ print(json.dumps({'passed':True,'fullSchema':True,'ownerOnlyUploads':True,'currentPhasePublicRead':True,'advanceImmediateBeforeOriginalNoticeTime':True,'savedPhotosDeleteProtected':True,'immutableIdentities':True,'sizeAndPathValidation':True,'durableReplacementCleanup':True,'orphanRecoveryGrace':True,'backupResetRestoreRoundtrip':True,'usageIncludesPhotos':True,'expiredScheduleFixScopedAndRepeatable':True,'offAndFutureCampaignsProtected':True,'invalidCouponRollsBackScheduleChange':True,'financialAndMaintenanceDefinitionsUnchanged':True,'liveWrites':0}))
 finally:run(['docker','rm','-f',container])

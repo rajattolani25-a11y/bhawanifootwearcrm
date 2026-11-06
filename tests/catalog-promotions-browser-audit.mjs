@@ -15,11 +15,11 @@ const men=campaign('men',[id(1)],{announceAt:new Date(Date.now()-60000).toISOStr
 const women=campaign('women',[id(3),id(4)],null);
 const response={available:true,value:{legacy:false,campaigns:[{campaign:men,offer:{...offer,title:men.title}},{campaign:women,offer:{...offer,title:women.title}}],now:new Date().toISOString()}};
 const data={enabled:true,shop:{name:'Bhawani Footwear',phone:'9999999999',booking:true},products,hero:null,offer,presentation:{gallery_enabled:true,category_accents:true,motion_enabled:true,theme:'ivory'}};
-const errors=[],writes=[],media=[];
+const errors=[],writes=[],media=[],setupRequests=[];
 page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{window.__vite_plugin_react_preamble_installed__=true;window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>t=>t;window.__promoHang=true;window.__promoReads=0;window.__badImages=[];window.__readPayloads=[];document.addEventListener('error',e=>{if(e.target instanceof HTMLImageElement)window.__badImages.push(e.target.src);},true);});
 await page.route('**/*',async route=>{
- const url=new URL(route.request().url());if(route.request().method()!=='GET')writes.push(url.pathname);
+ const url=new URL(route.request().url());if(url.pathname.includes('/docs/sql/'))setupRequests.push(url.pathname);if(route.request().method()!=='GET')writes.push(url.pathname);
  if(url.pathname.includes('/src/lib/catalog-promotion.functions.ts'))return route.fulfill({contentType:'application/javascript',body:`const original=${JSON.stringify(response)};export const getCatalogPromotion=async()=>{window.__promoReads++;if(window.__promoHang)await new Promise(r=>window.__releasePromo=r);window.__readPayloads.push(JSON.stringify(window.__promotion??original));const response=structuredClone(window.__promotion??original);if(response.value){const elapsed=window.__promotion?performance.now()-(window.__promoSetAt??performance.now()):0;response.value.now=new Date(Date.parse(response.value.now)+elapsed).toISOString();}return response};export const getOwnerPromotion=async()=>null;export const saveOwnerPromotion=async()=>{throw Error('No production writes')};export const signPromotionUpload=async()=>null;export const cleanupPromotionPhoto=async()=>null;`});
  if(url.pathname.includes('/src/lib/catalog.functions.ts'))return route.fulfill({contentType:'application/javascript',body:`const data=${JSON.stringify(data)};export const getCatalog=async()=>data;export const getCatalogSnapshot=async()=>data;export const getCatalogPhotos=async()=>({available:true,images:[]});export const checkCoupon=async()=>null;export const trackOrder=async()=>null;export const createBooking=async()=>{throw Error('No production writes')};`});
  if(url.pathname==='/promotions-audit.html')return route.fulfill({contentType:'text/html',body:await fs.readFile(new URL('./fixtures/presentation-catalog.html',import.meta.url),'utf8')});
@@ -84,7 +84,7 @@ try{
  const signingFailure=structuredClone(renewed);signingFailure.value.images={};await refresh(signingFailure);await page.waitForTimeout(150);assert.equal(await nativeArt.getAttribute('src'),'/native-public.webp?token=first','Keep a usable native image during an optional signing failure');
  checkpoint('expiry');const ended=structuredClone(phaseResponse);ended.value.now=new Date(end).toISOString();await refresh(ended);await ticket().waitFor({state:'detached'});
  await refresh({available:true,value:null});assert.equal(await ticket().count(),0);
- assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
+ assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);assert.deepEqual(setupRequests,[]);
  // Reduced-motion on a fresh visit must never fetch the video.
  checkpoint('reduced motion');await page.emulateMedia({reducedMotion:'reduce'});media.length=0;
  await page.goto('http://127.0.0.1:3000/promotions-audit.html');await page.evaluate(()=>{window.__promoHang=false;window.__releasePromo?.();});
