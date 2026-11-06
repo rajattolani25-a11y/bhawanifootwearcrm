@@ -85,5 +85,21 @@ try:
  assert asrole("DELETE FROM storage.objects WHERE name='"+replacement+"' RETURNING name;").stdout.strip()==''
  assert sql(unchanged).stdout==before
  assert all(x=='t' for x in sql((root/'docs/sql/catalog-promotions/verify-photo-storage.sql').read_text()).stdout.strip().split('|'))
- print(json.dumps({'passed':True,'fullSchema':True,'ownerOnlyUploads':True,'currentPhasePublicRead':True,'savedPhotosDeleteProtected':True,'immutableIdentities':True,'sizeAndPathValidation':True,'durableReplacementCleanup':True,'orphanRecoveryGrace':True,'backupResetRestoreRoundtrip':True,'usageIncludesPhotos':True,'financialAndMaintenanceDefinitionsUnchanged':True,'liveWrites':0}))
+ # Manual expired Everyone fix preserves the other audience and all artwork/coupon fields.
+ fix=(root/'docs/sql/catalog-promotions/show-expired-everyone-live.sql').read_text()
+ expired=json.loads(sql("SELECT jsonb_build_object('announceAt',now()-interval '3 hours','startsAt',now()-interval '2 hours','endsAt',now()-interval '1 hour');").stdout)
+ everyone={**campaign,'audience':'all','schedule':expired,'advance':{'layout':'classic','image':None},'live':{'layout':'split','image':None}}
+ setup={**settings,'config':{'version':1,'campaigns':[settings['config']['campaigns'][0],everyone]}}
+ save(setup);sql(fix);fixed=snapshot()
+ expected=json.loads(json.dumps(setup));expected['config']['campaigns'][1]['schedule']=None
+ assert fixed==expected
+ sql(fix);assert snapshot()==fixed # repeatable, no extra edits
+ for change in [{'enabled':False},{'config':{'version':1,'campaigns':[settings['config']['campaigns'][0],{**everyone,'schedule':dates}]}}]:
+  candidate={**setup,**change};save(candidate);assert sql(fix,False).returncode;assert snapshot()==candidate
+ save(setup)
+ sql("INSERT INTO public.coupons(code,title,kind,value,active)VALUES('EXPIREDPROMO','Unavailable','flat',10,false);")
+ sql("UPDATE public.store_settings SET offer_promotion=jsonb_set(offer_promotion,'{campaigns,1,coupon}','\"EXPIREDPROMO\"'::jsonb) WHERE id=1;")
+ candidate=snapshot();assert sql(fix,False).returncode;assert snapshot()==candidate
+ assert sql(unchanged).stdout==before
+ print(json.dumps({'passed':True,'fullSchema':True,'ownerOnlyUploads':True,'currentPhasePublicRead':True,'savedPhotosDeleteProtected':True,'immutableIdentities':True,'sizeAndPathValidation':True,'durableReplacementCleanup':True,'orphanRecoveryGrace':True,'backupResetRestoreRoundtrip':True,'usageIncludesPhotos':True,'expiredScheduleFixScopedAndRepeatable':True,'offAndFutureCampaignsProtected':True,'invalidCouponRollsBackScheduleChange':True,'financialAndMaintenanceDefinitionsUnchanged':True,'liveWrites':0}))
 finally:run(['docker','rm','-f',container])

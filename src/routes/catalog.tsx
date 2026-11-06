@@ -51,7 +51,7 @@ export const Route = createFileRoute("/catalog")({
     const desc = `See new footwear designs, prices and available sizes at ${name}. Visit the store, order for delivery or ask on WhatsApp.`;
     return { meta: [{ title }, { name: "description", content: desc }, { property: "og:title", content: title }, { property: "og:description", content: desc }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] };
   },
-  errorComponent: () => <div className="flex min-h-screen items-center justify-center p-6 text-center text-muted-foreground">Catalog is not available right now. Please try again later.</div>,
+  errorComponent: () => <div className="flex min-h-screen items-center justify-center p-6 text-center"><div><h1 className="text-xl font-semibold">Catalog couldn't load</h1><p className="mt-2 text-sm text-muted-foreground">Check your connection and try again.</p><Button className="mt-5" onClick={() => window.location.reload()}>Try again</Button></div></div>,
   notFoundComponent: () => <div className="p-6">Not found</div>,
   component: () => <InterfaceMotion><LanguageProvider><Catalog /></LanguageProvider></InterfaceMotion>,
 });
@@ -140,7 +140,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("track"); if (t) setTrack(t); }, []);
   // Catalog has its own customer theme (light by default, customer can switch in footer), independent of the app's setting.
   const [dark, setDark] = useState(false);
-  useEffect(() => { if (localStorage.getItem("catalog-theme") === "dark") setDark(true); }, []);
+  useEffect(() => { try { if (localStorage.getItem("catalog-theme") === "dark") setDark(true); } catch { /* Theme is optional when device storage is blocked. */ } }, []);
   useEffect(() => {
     const el = document.documentElement;
     const wasDark = el.classList.contains("dark");
@@ -151,7 +151,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
     obs.observe(el, { attributes: true, attributeFilter: ["class"] });
     return () => { obs.disconnect(); el.classList.toggle("dark", wasDark); el.style.colorScheme = prev; };
   }, [dark]);
-  const toggleTheme = () => { const d = !dark; setDark(d); localStorage.setItem("catalog-theme", d ? "dark" : "light"); };
+  const toggleTheme = () => { const d = !dark; setDark(d); try { localStorage.setItem("catalog-theme", d ? "dark" : "light"); } catch { /* Session-only theme still works. */ } };
   const [photo, setPhoto] = useState(false);
   const [help, setHelp] = useState(false);
   const [about, setAbout] = useState(false);

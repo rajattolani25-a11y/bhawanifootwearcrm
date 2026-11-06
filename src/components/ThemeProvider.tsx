@@ -15,8 +15,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [resolved, setResolved] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved === "light" || saved === "dark" || saved === "system") setModeState(saved);
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark" || saved === "system") setModeState(saved);
+    } catch { /* A blocked preference store must not crash the shop or public catalog. */ }
   }, []);
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [mode]);
 
   const setMode = (next: ThemeMode) => {
-    localStorage.setItem(THEME_KEY, next);
+    try { localStorage.setItem(THEME_KEY, next); } catch { /* Keep a working session-only theme. */ }
     setModeState(next);
   };
 
