@@ -3,9 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { catalogPresentation, PRESENTATION_DEFAULTS } from "./catalog-presentation.ts";
 import { HERO_BUCKET, type PublicHero } from "./catalog-hero.ts";
 import type { CatalogData, CatalogOffer } from "./catalog.functions.ts";
+import type { PublicCatalogPhotoCache } from "./public-catalog-photo-cache.ts";
 
 /** Parallel, request-scoped public reads. No response cache or change to database RPCs. */
-export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData> {
+export async function readPublicCatalog(
+  sb: SupabaseClient,
+  photos?: PublicCatalogPhotoCache,
+): Promise<CatalogData> {
   const { data, error } = await sb.rpc("public_catalog");
   if (error) throw new Error("Catalog is not available right now");
   const d = data as unknown as CatalogData;
@@ -58,10 +62,16 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
         .safeParse(raw);
       if (parsed.success) {
         const { image_path, ...settings } = parsed.data;
-        const { data: signed } = await sb.storage
-          .from(HERO_BUCKET)
-          .createSignedUrl(image_path, 3600);
-        if (signed?.signedUrl) hero = { ...settings, image: signed.signedUrl };
+        const sign = async () => {
+          const { data: signed } = await sb.storage
+            .from(HERO_BUCKET)
+            .createSignedUrl(image_path, 3600);
+          return new Map(signed?.signedUrl ? [[image_path, signed.signedUrl]] : []);
+        };
+        const signed = photos
+          ? await photos.getMany(HERO_BUCKET, [image_path], sign)
+          : await sign();
+        if (signed.get(image_path)) hero = { ...settings, image: signed.get(image_path)! };
         else heroUnavailable = true;
       } else if (raw !== null && raw !== undefined) heroUnavailable = true;
     } catch {
@@ -79,22 +89,31 @@ export async function readPublicCatalog(sb: SupabaseClient): Promise<CatalogData
     paths.slice(i * 100, (i + 1) * 100),
   );
   let nextBatch = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(3, batches.length) }, async () => {
-      for (let index = nextBatch++; index < batches.length; index = nextBatch++) {
-        try {
-          const { data: signed } = await sb.storage
-            .from("product-images")
-            .createSignedUrls(batches[index]!, 6 * 3600);
-          signed?.forEach((s) => {
-            if (s.path && s.signedUrl) urls.set(s.path, s.signedUrl);
-          });
-        } catch {
-          /* A photo service failure must not hide products or cache old prices. */
+  if (photos) {
+    const signed = await photos.getMany("product-images", paths, async (batch) => {
+      const { data } = await sb.storage.from("product-images").createSignedUrls(batch, 6 * 3600);
+      return new Map(
+        (data ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl]] : [])),
+      );
+    });
+    signed.forEach((url, path) => urls.set(path, url));
+  } else
+    await Promise.all(
+      Array.from({ length: Math.min(3, batches.length) }, async () => {
+        for (let index = nextBatch++; index < batches.length; index = nextBatch++) {
+          try {
+            const { data: signed } = await sb.storage
+              .from("product-images")
+              .createSignedUrls(batches[index]!, 6 * 3600);
+            signed?.forEach((s) => {
+              if (s.path && s.signedUrl) urls.set(s.path, s.signedUrl);
+            });
+          } catch {
+            /* A photo service failure must not hide products or cache old prices. */
+          }
         }
-      }
-    }),
-  );
+      }),
+    );
   const [presentation, offer, hero, bargainEnabled, cartReady] = await Promise.all([
     presentationRequest,
     offerRequest,

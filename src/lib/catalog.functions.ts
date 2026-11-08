@@ -31,7 +31,8 @@ export async function publicClient() {
 
 // Public: only safe fields (no cost, no stock counts) come from the public_catalog DB function.
 export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Promise<CatalogData> => {
-  return readPublicCatalog(await publicClient());
+  const { publicCatalogPhotoCache } = await import("./public-catalog-photo-cache");
+  return readPublicCatalog(await publicClient(), publicCatalogPhotoCache(`${process.env["SUPABASE_URL"]}:${process.env["SUPABASE_PUBLISHABLE_KEY"]}`));
 });
 
 /** Public metadata only; existing signed photo URLs are reused when paths are unchanged. */
@@ -56,9 +57,14 @@ export const getCatalogPhotos = createServerFn({ method: "GET" })
     if (error) return { images: [], available: false };
     const paths = z.array(z.string()).max(8).safeParse(data);
     if (!paths.success || !paths.data.length) return { images: [], available: true };
-    const { data: signed, error: signingError } = await sb.storage.from("product-images").createSignedUrls(paths.data, 3600);
-    if (signingError) return { images: [], available: false };
-    const images = (signed ?? []).flatMap(row => row.signedUrl ? [row.signedUrl] : []);
+    const { publicCatalogPhotoCache } = await import("./public-catalog-photo-cache");
+    const cache = publicCatalogPhotoCache(`${process.env["SUPABASE_URL"]}:${process.env["SUPABASE_PUBLISHABLE_KEY"]}`);
+    const signed = await cache.getMany("product-images", paths.data, async batch => {
+      const { data, error } = await sb.storage.from("product-images").createSignedUrls(batch, 3600);
+      if (error) throw error;
+      return new Map((data ?? []).flatMap(row => row.path && row.signedUrl ? [[row.path, row.signedUrl]] : []));
+    });
+    const images = paths.data.flatMap(path => signed.get(path) ? [signed.get(path)!] : []);
     return { images, available: images.length === paths.data.length };
   });
 

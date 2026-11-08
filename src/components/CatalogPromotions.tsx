@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import styles from "./catalog-offer-ticket.module.css";
 import { CatalogOfferTicket } from "./CatalogOfferTicket";
-import { getCatalogPromotion, type PublicPromotion } from "@/lib/catalog-promotion.functions";
+import type { PublicPromotion } from "@/lib/catalog-promotion.functions";
 import { promotionPhase } from "@/lib/catalog-promotion";
 import type { CatalogOffer, CatalogProduct } from "@/lib/catalog.functions";
 import { parseCategory } from "@/lib/product-categories";
@@ -38,6 +38,8 @@ export function CatalogPromotions({
       if (document.hidden || !supported) return;
       const id = ++request;
       try {
+        const { getCatalogPromotion } = await import("@/lib/catalog-promotion.functions");
+        if (disposed || request !== id) return;
         const response = await getCatalogPromotion();
         if (disposed || request !== id) return;
         if (!response.available) {

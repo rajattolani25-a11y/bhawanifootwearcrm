@@ -13,7 +13,7 @@ export const CatalogProductGrid = memo(function CatalogProductGrid({
 }) {
   return (
     <div className={styles["productGrid"]}>
-      {products.map((p) => {
+      {products.map((p, index) => {
         const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0;
         const available = p.sizes.filter((size) => size.available);
         return (
@@ -28,7 +28,7 @@ export const CatalogProductGrid = memo(function CatalogProductGrid({
                 <img
                   src={p.image}
                   alt={`${p.brand} ${p.article}`}
-                  loading="lazy"
+                  loading={index < 2 ? "eager" : "lazy"}
                   decoding="async"
                   width="500"
                   height="500"

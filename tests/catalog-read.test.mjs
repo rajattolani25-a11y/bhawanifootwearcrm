@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readPublicCatalog } from "../src/lib/catalog-read.ts";
+import { PublicCatalogPhotoCache, publicCatalogPhotoCache } from "../src/lib/public-catalog-photo-cache.ts";
 
 export function catalogFixture(latency = 0) {
   const events = [];
@@ -199,4 +200,45 @@ test("cover signing failure keeps products, fresh prices and size availability",
  sb.storage.from=bucket=>({...storage(bucket),createSignedUrls:async()=>{throw Error('Photo signing service unavailable');}});
  state.price=1200;state.available=false;const result=await readPublicCatalog(sb);
  assert.equal(result.enabled,true);assert.equal(result.products.length,2);assert(result.products.every(p=>p.image===null&&p.price===1200&&p.sizes[0].available===false));
+});
+
+test("warm public photo URLs skip signing while all product prices and availability stay fresh", async () => {
+  const {sb,state,events}=catalogFixture();const photos=new PublicCatalogPhotoCache();
+  const first=await readPublicCatalog(sb,photos);
+  state.price=1500;state.available=false;
+  const second=await readPublicCatalog(sb,photos);
+  assert.equal(second.products[0].price,1500);assert.equal(second.products[0].sizes[0].available,false);
+  assert.equal(second.products[0].image,first.products[0].image);assert.equal(second.hero.image,first.hero.image);
+  assert.equal(events.filter(e=>e[0]==='start'&&e[1]==='public_catalog').length,2);
+  assert.equal(events.filter(e=>e[0]==='start'&&e[1]==='photos').length,1);
+  assert.equal(events.filter(e=>e[0]==='start'&&e[1]==='hero-photo').length,1);
+});
+test("cached URLs never revive an OFF catalog/hero or a removed cover", async () => {
+  const {sb,state}=catalogFixture();const photos=new PublicCatalogPhotoCache();
+  await readPublicCatalog(sb,photos);state.enabled=false;
+  assert.deepEqual(await readPublicCatalog(sb,photos),{enabled:false});
+  state.enabled=true;const rpc=sb.rpc.bind(sb);
+  sb.rpc=async name=>{const r=await rpc(name);if(name==='public_catalog')r.data.products.forEach(p=>p.image=null);if(name==='public_catalog_hero')r.data=null;return r;};
+  const fresh=await readPublicCatalog(sb,photos);assert.equal(fresh.hero,null);assert(fresh.products.every(p=>p.image===null));
+});
+test("only new cover paths sign again; photo failures retry and public namespaces are isolated",async()=>{
+ const {sb,state}=catalogFixture();const photos=new PublicCatalogPhotoCache();await readPublicCatalog(sb,photos);
+ const rpc=sb.rpc.bind(sb);sb.rpc=async name=>{const r=await rpc(name);if(name==='public_catalog')r.data.products.forEach(p=>p.image='replacement.webp');return r;};
+ await readPublicCatalog(sb,photos);assert.deepEqual(state.signedPaths,[['shared.webp'],['replacement.webp']]);
+ const other=new PublicCatalogPhotoCache();await readPublicCatalog(sb,other);assert.equal(state.signedPaths.length,3);
+ assert.equal(publicCatalogPhotoCache('anonymous-backend-A'),publicCatalogPhotoCache('anonymous-backend-A'));
+ assert.notEqual(publicCatalogPhotoCache('anonymous-backend-A'),publicCatalogPhotoCache('anonymous-backend-B'));
+});
+test("concurrent public reads coalesce URL requests and expired links renew",async()=>{
+ let now=0;const photos=new PublicCatalogPhotoCache(()=>now);const {sb,state,events}=catalogFixture(10);
+ await Promise.all([readPublicCatalog(sb,photos),readPublicCatalog(sb,photos)]);
+ assert.equal(state.signedPaths.length,1);assert.equal(events.filter(e=>e[0]==='start'&&e[1]==='hero-photo').length,1);
+ now=55*60*1000+1;await readPublicCatalog(sb,photos);assert.equal(state.signedPaths.length,2);
+});
+test("public photo buckets stay isolated and failed signatures are never cached",async()=>{
+ const cache=new PublicCatalogPhotoCache();let attempts=0;
+ assert.equal((await cache.getMany('product-images',['same'],async()=>{attempts++;throw Error('Offline');})).size,0);
+ const product=await cache.getMany('product-images',['same'],async paths=>{attempts++;return new Map(paths.map(p=>[p,'product-url']));});
+ const hero=await cache.getMany('catalog-hero-images',['same'],async paths=>new Map(paths.map(p=>[p,'hero-url'])));
+ assert.equal(attempts,2);assert.equal(product.get('same'),'product-url');assert.equal(hero.get('same'),'hero-url');
 });

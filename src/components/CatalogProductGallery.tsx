@@ -25,10 +25,28 @@ export function CatalogProductGallery({
     setIndex(0);
     setImages(cover ? [cover] : []);
     getCatalogPhotos({ data: { productId } })
-      .then((result) => {
+      .then(async (result) => {
         if (!active) return;
-        if (result.images.length) setImages(result.images);
-        setFailed(!result.available);
+        let decodeFailed = false;
+        const first = result.images[0];
+        if (first && first !== cover) {
+          // Keep the visible cover until its replacement is decoded. Never block opening.
+          const next = new Image();
+          next.decoding = "async";
+          if (typeof next.decode === "function") {
+            next.src = first;
+            try { await next.decode(); } catch { decodeFailed = true; }
+          } else {
+            decodeFailed = !await new Promise<boolean>(resolve => {
+              next.onload = () => resolve(true);
+              next.onerror = () => resolve(false);
+              next.src = first;
+            });
+          }
+        }
+        if (!active) return;
+        if (result.images.length && !decodeFailed) setImages(result.images);
+        setFailed(!result.available || decodeFailed);
       })
       .catch(() => {
         if (active) setFailed(true);
@@ -50,6 +68,8 @@ export function CatalogProductGallery({
             src={images[index]}
             alt={`${label} — view ${index + 1}`}
             className="h-full w-full object-contain p-3"
+            decoding="async"
+            fetchPriority="high"
             onError={() => {
               if (images[index] !== cover && cover) {
                 setImages([cover]);
@@ -81,6 +101,7 @@ export function CatalogProductGallery({
                 alt={`Angle ${i + 1}`}
                 className="h-full w-full object-contain"
                 loading="lazy"
+                decoding="async"
               />
             </button>
           ))}
