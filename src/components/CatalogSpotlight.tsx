@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
 import { decodeImage } from "@/lib/decode-image";
-import { spotlightStyle } from "@/lib/catalog-spotlight-style";
+import { spotlightLabel, spotlightStyle } from "@/lib/catalog-spotlight-style";
 import type { CatalogProduct } from "@/lib/catalog.functions";
 import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
@@ -164,6 +164,8 @@ export function CatalogSpotlight({
   }, [running, index, pairs, present]);
   if (!current) return null;
   const appearance = spotlightStyle(current.category);
+  const customWord = spotlightLabel(current.spotlight_label);
+  const word = customWord || appearance.word;
   const move = (step: number) => {
     if (pairs.length > 1) void present((index + step + pairs.length) % pairs.length);
   };
@@ -244,11 +246,13 @@ export function CatalogSpotlight({
       >
         <div
           className={styles["word"]}
-          data-long={appearance.word.length > 6}
+          data-long={word.length > 6}
+          data-custom={!!customWord}
+          style={{ "--spot-word-length": word.length } as CSSProperties}
           aria-hidden="true"
           data-no-translate
         >
-          {appearance.word}
+          {word}
         </div>
         <span className={styles["accentShape"]} aria-hidden="true" />
         {pairs.length > 1 && (

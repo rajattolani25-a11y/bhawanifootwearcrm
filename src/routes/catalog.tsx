@@ -232,9 +232,11 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       </div>
     </div>
   </section>;
+  const spotlightFirst = presentation.gallery_enabled && products.length > 0;
+  const banner = data.hero ? <CatalogHero theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>;
 
   return (
-    <div className={styles["store"]} data-theme={dark ? "dark" : "light"} data-palette={presentation.theme ?? "studio"} data-tone={presentation.category_accents ? filter : "All"} data-motion={presentation.motion_enabled}>
+    <div className={styles["store"]} data-spotlight-first={spotlightFirst} data-theme={dark ? "dark" : "light"} data-palette={presentation.theme ?? "studio"} data-tone={presentation.category_accents ? filter : "All"} data-motion={presentation.motion_enabled}>
       <header className={styles["header"]}>
         <div className={styles["headerInner"]}>
           <a href="#catalog-collection" className={styles["identity"]} aria-label={shop.name}>
@@ -254,7 +256,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       {pendingCart && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>{t("An earlier cart order response was not confirmed. Recover it before placing another order.")}</p><Button variant="outline" onClick={()=>setCartOpen(true)}>{t("Recover saved cart order")}</Button></div>}
       {pendingOrder && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>An earlier order response was not confirmed. Recover it before placing another order.</p><Button variant="outline" onClick={() => { setRecoveryNonce(n=>n+1);setOpen(pendingOrder.product); }}>Recover saved order</Button></div>}
 
-      {data.hero ? <CatalogHero theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>}
+      {!spotlightFirst && banner}
 
       <div className={styles["discovery"]}>
         <div className={styles["discoveryInner"]}>
@@ -285,6 +287,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
           onClear={() => { setFsize("All"); setFstyle("All"); setSort("default"); }} />
         <CatalogProductGrid products={list} onOpen={openProduct} />
         {list.length === 0 && <div className={styles["empty"]}><Search aria-hidden="true" /><h3>No designs found.</h3><p>Try another search or category.</p><button onClick={resetFilters} data-no-translate>{copy.reset}</button></div>}
+        {spotlightFirst && banner}
         <footer className={styles["footer"]}>
           <div><p data-no-translate>{shop.name}</p>{shop.address && <span data-no-translate>{shop.address}</span>}</div>
           <div className={styles["footerActions"]}>

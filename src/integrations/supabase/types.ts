@@ -667,6 +667,7 @@ export type Database = {
           article: string
           brand: string
           catalog_description: string | null
+          catalog_spotlight_label: string | null
           catalog_visible: boolean
           category: string
           color: string | null
@@ -684,6 +685,7 @@ export type Database = {
           article: string
           brand?: string
           catalog_description?: string | null
+          catalog_spotlight_label?: string | null
           catalog_visible?: boolean
           category?: string
           color?: string | null
@@ -701,6 +703,7 @@ export type Database = {
           article?: string
           brand?: string
           catalog_description?: string | null
+          catalog_spotlight_label?: string | null
           catalog_visible?: boolean
           category?: string
           color?: string | null

@@ -54,7 +54,7 @@ await page.route("**/*", async (route) => {
   if (u.pathname.includes("/src/lib/catalog.functions.ts"))
     return route.fulfill({
       contentType: "application/javascript",
-      body: `const data={enabled:true,shop:{name:'Bhawani Footwear',phone:null,booking:false,local:false,outside:false},products:${JSON.stringify(products)},hero:null,presentation:{gallery_enabled:!location.search.includes('gallery=off'),category_accents:!location.search.includes('accents=off'),motion_enabled:!location.search.includes('motion=off'),theme:'ivory'}};export const getCatalog=async()=>data;export const getCatalogSnapshot=async()=>data;export const getCatalogPhotos=async()=>({available:true,images:[]});export const checkCoupon=async()=>null;export const trackOrder=async()=>null;export const createBooking=async()=>{throw Error('No live writes')};`,
+      body: `const data={enabled:true,shop:{name:'Bhawani Footwear',phone:null,booking:false,local:false,outside:false},products:${JSON.stringify(products)}.map(p=>({...p,spotlight_label:location.search.includes('custom=1')?'WALK-COMFORT':location.search.includes('invalid=1')?'<bad>':null})),hero:null,presentation:{gallery_enabled:!location.search.includes('gallery=off'),category_accents:!location.search.includes('accents=off'),motion_enabled:!location.search.includes('motion=off'),theme:'ivory'}};export const getCatalog=async()=>data;export const getCatalogSnapshot=async()=>data;export const getCatalogPhotos=async()=>({available:true,images:[]});export const checkCoupon=async()=>null;export const trackOrder=async()=>null;export const createBooking=async()=>{throw Error('No live writes')};`,
     });
   if (u.pathname.includes("/src/lib/catalog-promotion.functions.ts"))
     return route.fulfill({
@@ -178,6 +178,22 @@ try {
   await spot().waitFor({ state: "detached" });
   await page.goto("http://127.0.0.1:3000/category-audit.html?gallery=off");
   assert.equal(await spot().count(), 0);
+  await page.goto("http://127.0.0.1:3000/category-audit.html?custom=1&motion=off");
+  await spot().waitFor();
+  assert.equal(await spot().locator("[data-custom=true]").innerText(), "WALK-COMFORT");
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const fits = await spot()
+      .locator("[data-custom=true]")
+      .evaluate(
+        (n) =>
+          n.getBoundingClientRect().right <= n.closest("section").getBoundingClientRect().right,
+      );
+    assert(fits, "Longest custom word fits the Spotlight");
+  }
+  await page.goto("http://127.0.0.1:3000/category-audit.html?invalid=1&motion=off");
+  await spot().waitFor();
+  assert.equal(await spot().locator("[data-custom=true]").count(), 0);
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);
   console.log(

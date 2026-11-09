@@ -1,5 +1,14 @@
 import { parseCategory } from "./product-categories.ts";
 
+export const SPOTLIGHT_LABEL_LIMIT = 12;
+
+/** Defensive public rendering also tolerates older/malformed catalog responses. */
+export function spotlightLabel(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const label = value.trim().toUpperCase();
+  return /^[A-Z][A-Z0-9-]{0,11}$/.test(label) ? label : "";
+}
+
 /** Presentation only: use the saved taxonomy, never guess a style from an article name. */
 export function spotlightStyle(category: string | null | undefined) {
   const { department, subcategory } = parseCategory(category);

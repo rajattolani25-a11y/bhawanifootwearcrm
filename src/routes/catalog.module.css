@@ -67,6 +67,12 @@
 .category:hover { border-color: var(--catalog-accent); color: var(--catalog-accent); }
 .categories svg { width: 16px; height: 16px; }
 .collection { padding: 25px 32px 0; scroll-margin-top: 180px; }
+.store[data-spotlight-first="true"] .collection { padding-top: 12px; }
+@media (max-width: 767px) {
+  .store[data-spotlight-first="true"] .collection {
+    --spotlight-stage-height: clamp(110px, calc(100svh - 455px), 240px);
+  }
+}
 .collectionHeader { display: flex; flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 12px; }
 .collectionHeader h2 { font-family: var(--font-sans); font-size: 18px; font-weight: 700; }
 .filterPanel { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 8px 0 18px; }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { refreshOperationalData } from "@/lib/refresh-operational-data";
 import { CatalogDescriptionEditor } from "./CatalogDescriptionEditor";
+import { SpotlightHeadingEditor } from "./SpotlightHeadingEditor";
 const noPreview = () => {};
 const noEditing = () => {};
 export function ProductDetailsEditor({
@@ -164,6 +165,7 @@ export function ProductDetailsEditor({
       >
         Save product details
       </Button>
+      <SpotlightHeadingEditor key={id} productId={id} />
       <BargainPolicyEditor productId={id} price={sellingPrice} />
       <CatalogDescriptionEditor productId={id} onPreview={noPreview} onEditing={noEditing} />
     </section>

@@ -106,7 +106,7 @@
 }
 .stage {
   position: relative;
-  height: 310px;
+  height: var(--spotlight-stage-height, 310px);
   margin: 10px -4px 8px;
   touch-action: pan-y;
   isolation: isolate;
@@ -128,6 +128,9 @@
 }
 .word[data-long="true"] {
   font-size: clamp(46px, 16cqi, 96px);
+}
+.word[data-custom="true"] {
+  font-size: min(114px, calc(125cqi / var(--spot-word-length)));
 }
 .accentShape {
   position: absolute;
@@ -327,7 +330,7 @@
     border-radius: 14px;
   }
   .stage {
-    height: 240px;
+    height: var(--spotlight-stage-height, 240px);
   }
   .header h2 {
     font-size: 14px;
@@ -349,7 +352,7 @@
 }
 @media (max-width: 350px) {
   .stage {
-    height: 218px;
+    height: var(--spotlight-stage-height, 218px);
   }
   .details {
     flex-wrap: wrap;

@@ -6,7 +6,7 @@ import type { PublicHero } from "./catalog-hero";
 
 export type Fulfillment = "pickup" | "local" | "outside";
 export type CatalogSize = { id: string; size: string; available: boolean };
-export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; bargain_enabled?: boolean; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
+export type CatalogProduct = { id: string; brand: string; article: string; category: string; gender: string | null; color: string | null; description?: string | null; spotlight_label?: string | null; bargain_enabled?: boolean; mrp: number; price: number; image: string | null; image_key?: string | null; few_left?: boolean; sizes: CatalogSize[] };
 export type CatalogShop = { name: string; phone: string | null; address: string | null; booking: boolean; local: boolean; outside: boolean; local_charge: number; outside_charge: number; free_delivery_above: number | null; delivery_note: string | null; advance_percent: number; hold_hours: number; cart_ready?: boolean; cart_coupon_ready?: boolean };
 export type CatalogOffer = { title: string; subtitle: string | null; card: boolean; code: string | null; kind: string | null; value: number | null; max_discount: number | null; min_bill: number | null } | null;
 export type CatalogData = { enabled: boolean; shop?: CatalogShop; products?: CatalogProduct[]; offer?: CatalogOffer; hero?: PublicHero | null; heroUnavailable?: boolean; presentation?: CatalogPresentation };
