@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
 import { decodeImage } from "@/lib/decode-image";
+import { spotlightStyle } from "@/lib/catalog-spotlight-style";
 import type { CatalogProduct } from "@/lib/catalog.functions";
 import { useLang } from "@/lib/i18n";
 import { inr } from "@/lib/modules";
@@ -27,10 +28,12 @@ export function CatalogSpotlight({
   products,
   onOpen,
   motionEnabled = true,
+  categoryAccents = true,
 }: {
   products: CatalogProduct[];
   onOpen: (product: CatalogProduct) => void;
   motionEnabled?: boolean;
+  categoryAccents?: boolean;
 }) {
   const [active, setActive] = useState(0);
   const request = useRef(0);
@@ -139,7 +142,7 @@ export function CatalogSpotlight({
       setOutgoing(!nearby.includes(pairs[index]!.id) ? pairs[index]! : null);
       if (nextOrder) setOrder(nextOrder);
       setActive(target);
-      settle.current = setTimeout(() => setOutgoing(null), 680);
+      settle.current = setTimeout(() => setOutgoing(null), 800);
     },
     [pairs, products, failedImages, index],
   );
@@ -160,6 +163,7 @@ export function CatalogSpotlight({
     return () => window.clearTimeout(timer);
   }, [running, index, pairs, present]);
   if (!current) return null;
+  const appearance = spotlightStyle(current.category);
   const move = (step: number) => {
     if (pairs.length > 1) void present((index + step + pairs.length) % pairs.length);
   };
@@ -193,6 +197,8 @@ export function CatalogSpotlight({
       data-spotlight-product={current.id}
       data-autoplay={running}
       data-transitions={motionEnabled && !reduce}
+      data-tone={appearance.tone}
+      data-accents={categoryAccents}
       style={{ visibility: order.length ? undefined : "hidden" }}
       onPointerEnter={(e) => {
         if (e.pointerType === "mouse") setHovered(true);
@@ -205,7 +211,7 @@ export function CatalogSpotlight({
     >
       <div className={styles["header"]}>
         <div>
-          <p>{t("Discover your next pair")}</p>
+          <p>{t(appearance.label)}</p>
           <h2>{t("In the spotlight")}</h2>
         </div>
         <span className={styles["position"]} data-no-translate>
@@ -236,6 +242,15 @@ export function CatalogSpotlight({
           }
         }}
       >
+        <div
+          className={styles["word"]}
+          data-long={appearance.word.length > 6}
+          aria-hidden="true"
+          data-no-translate
+        >
+          {appearance.word}
+        </div>
+        <span className={styles["accentShape"]} aria-hidden="true" />
         {pairs.length > 1 && (
           <button
             type="button"
@@ -247,7 +262,7 @@ export function CatalogSpotlight({
           </button>
         )}
         <div className={styles["featured"]}>
-          {(pairs.length > 2 ? [-1, 0, 1] : [0, 1]).map((offset) => {
+          {(pairs.length > 2 ? [-1, 0, 1] : pairs.length > 1 ? [0, 1] : [0]).map((offset) => {
             const product =
               offset === -1 && outgoing
                 ? outgoing

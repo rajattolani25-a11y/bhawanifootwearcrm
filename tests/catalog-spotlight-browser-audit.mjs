@@ -182,7 +182,13 @@ try {
   }
   await categories.getByRole("button", { name: "All", exact: true }).click();
   await page.getByRole("textbox", { name: "Search footwear or brand", exact: true }).fill("Pair 0");
-  assert.equal(await spotlight().count(), 0);
+  await page.waitForFunction(
+    () =>
+      document.querySelector("[data-spotlight-product]")?.getAttribute("data-spotlight-product") ===
+        "p0" && document.querySelectorAll("[data-spotlight-product] img").length === 1,
+  );
+  assert.equal(await selected(), "p0");
+  assert.equal(await spotlight().locator("img").count(), 1);
   await page.reload();
   await spotlight().waitFor();
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -220,7 +226,7 @@ try {
         "New shuffled opener across5reloads, no immediate repeat; no Pause/Play controls",
         "Automatic3second advance with at most3images; manual arrows visit each eligible pair once and open exact product",
         "Mouse hover, hidden tab and offscreen pause; owner motionOFF and reduced motion stop autoplay",
-        "Women filter restricts spotlight; one-result search hides it;320px category strip scrolls with no scrollbar",
+        "Women filter restricts spotlight; one-result search keeps one matching pair;320px category strip scrolls with no scrollbar",
         "Restricted session storage retains working carousel",
       ],
       openers,
