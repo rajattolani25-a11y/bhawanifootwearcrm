@@ -242,3 +242,87 @@ test("public photo buckets stay isolated and failed signatures are never cached"
  const hero=await cache.getMany('catalog-hero-images',['same'],async paths=>new Map(paths.map(p=>[p,'hero-url'])));
  assert.equal(attempts,2);assert.equal(product.get('same'),'product-url');assert.equal(hero.get('same'),'hero-url');
 });
+
+import { readCatalogBootstrap } from "../src/lib/catalog-bootstrap.ts";
+test("bundled public read retains fresh products, flags and signing without extra metadata RPCs", async () => {
+  const { sb, state } = catalogFixture();
+  const original = sb.rpc.bind(sb),
+    calls = [];
+  sb.rpc = async (name) => {
+    calls.push(name);
+    assert.equal(name, "public_catalog_bootstrap");
+    const main = await original("public_catalog");
+    return {
+      data: {
+        version: 1,
+        catalog: main.data,
+        presentation: {
+          gallery_enabled: true,
+          category_accents: false,
+          motion_enabled: false,
+          theme: "ivory",
+        },
+        hero: null,
+        offer: null,
+        hero_unavailable: false,
+        bargain_ids: ["p1"],
+        cart_version: 2,
+      },
+      error: null,
+    };
+  };
+  const photos = new PublicCatalogPhotoCache();
+  const first = await readPublicCatalog(sb, photos, await readCatalogBootstrap(sb, "bundle-ready"));
+  state.price = 1500;
+  state.available = false;
+  const second = await readPublicCatalog(
+    sb,
+    photos,
+    await readCatalogBootstrap(sb, "bundle-ready"),
+  );
+  assert.deepEqual(calls, ["public_catalog_bootstrap", "public_catalog_bootstrap"]);
+  assert.equal(first.shop.cart_coupon_ready, true);
+  assert.equal(second.products[0].price, 1500);
+  assert.equal(second.products[0].sizes[0].available, false);
+  assert.equal(second.products[0].bargain_enabled, true);
+  assert.equal(second.products[1].bargain_enabled, false);
+  assert.equal(second.presentation.motion_enabled, false);
+  assert.equal(second.presentation.category_accents, false);
+  assert.equal(second.products[0].image, first.products[0].image);
+  state.enabled = false;
+  assert.deepEqual(
+    await readPublicCatalog(sb, photos, await readCatalogBootstrap(sb, "bundle-ready")),
+    { enabled: false },
+  );
+});
+test("only a known missing bootstrap API uses a bounded capability fallback, never cached data", async () => {
+  let calls = 0;
+  const sb = {
+    rpc: async () => {
+      calls++;
+      return { data: null, error: { code: "PGRST202" } };
+    },
+  };
+  assert.equal(await readCatalogBootstrap(sb, "missing-backend", 100), null);
+  assert.equal(await readCatalogBootstrap(sb, "missing-backend", 200), null);
+  assert.equal(calls, 1);
+  assert.equal(await readCatalogBootstrap(sb, "missing-backend", 60101), null);
+  assert.equal(calls, 2);
+  assert.equal(await readCatalogBootstrap(sb, "other-backend", 200), null);
+  assert.equal(calls, 3);
+});
+test("bootstrap errors and malformed enabled payloads fail closed instead of reusing old products", async () => {
+  for (const result of [
+    { data: null, error: { code: "57014" } },
+    { data: { version: 2, catalog: { enabled: true } }, error: null },
+    { data: { version: 1, catalog: { enabled: true, shop: {} } }, error: null },
+  ])
+    await assert.rejects(() => readCatalogBootstrap({ rpc: async () => result }, "bad-response"));
+  const b = await readCatalogBootstrap(
+    { rpc: async () => ({ data: { version: 1, catalog: { enabled: false } }, error: null }) },
+    "off-response",
+  );
+  const { sb, events } = catalogFixture();
+  assert.deepEqual(await readPublicCatalog(sb, undefined, b), { enabled: false });
+  assert.equal(events.length, 0);
+});

@@ -169,13 +169,14 @@ export function CatalogSpotlight({
   const move = (step: number) => {
     if (pairs.length > 1) void present((index + step + pairs.length) % pairs.length);
   };
-  const photo = (product: CatalogProduct) =>
+  const photo = (product: CatalogProduct, featured: boolean) =>
     product.image && !failedImages[product.image] ? (
       <img
         src={product.image}
         alt={`${product.brand} ${product.article}`}
         loading="eager"
         decoding="async"
+        fetchPriority={featured ? "high" : "low"}
         draggable={false}
         onLoad={(event) => {
           if (event.currentTarget.naturalWidth > 0) readyImages.current.add(product.image!);
@@ -278,7 +279,7 @@ export function CatalogSpotlight({
                 data-slot={offset === 0 ? "current" : offset < 0 ? "previous" : "next"}
                 aria-hidden={offset !== 0}
               >
-                {photo(product)}
+                {order.length > 0 && photo(product, offset === 0)}
               </div>
             );
           })}

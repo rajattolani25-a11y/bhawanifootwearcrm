@@ -4,42 +4,61 @@ import { catalogPresentation, PRESENTATION_DEFAULTS } from "./catalog-presentati
 import { HERO_BUCKET, type PublicHero } from "./catalog-hero.ts";
 import type { CatalogData, CatalogOffer } from "./catalog.functions.ts";
 import type { PublicCatalogPhotoCache } from "./public-catalog-photo-cache.ts";
+import { bootstrapBargains, type CatalogBootstrap } from "./catalog-bootstrap.ts";
 
 /** Parallel, request-scoped public reads. No response cache or change to database RPCs. */
 export async function readPublicCatalog(
   sb: SupabaseClient,
   photos?: PublicCatalogPhotoCache,
+  bootstrap?: CatalogBootstrap | null,
 ): Promise<CatalogData> {
-  const { data, error } = await sb.rpc("public_catalog");
+  const { data, error } = bootstrap
+    ? { data: bootstrap.catalog, error: null }
+    : await sb.rpc("public_catalog");
   if (error) throw new Error("Catalog is not available right now");
   const d = data as unknown as CatalogData;
   if (!d.enabled || !d.products) return { enabled: false };
   // Only public-safe boolean flags; missing storage preserves the working catalog.
-  const presentationRequest = Promise.resolve(
-    sb.from("catalog_presentation_settings").select("*").eq("id", 1).maybeSingle(),
-  ).then(
-    ({ data }) => catalogPresentation(data),
-    () => ({ ...PRESENTATION_DEFAULTS }),
-  );
+  const presentationRequest = bootstrap
+    ? Promise.resolve(catalogPresentation(bootstrap.presentation))
+    : Promise.resolve(
+        sb.from("catalog_presentation_settings").select("*").eq("id", 1).maybeSingle(),
+      ).then(
+        ({ data }) => catalogPresentation(data),
+        () => ({ ...PRESENTATION_DEFAULTS }),
+      );
   if (!d.shop) return { enabled: false };
-  const offerRequest = Promise.resolve(sb.rpc("public_catalog_offer")).then(
-    ({ data }) => (data as unknown as CatalogOffer) ?? null,
-    () => null,
-  );
-  const bargainRequest = Promise.resolve(sb.rpc("catalog_bargain_enabled")).then(
-    ({ data }) => new Set<string>(Array.isArray(data) ? data : []),
-    () => new Set<string>(),
-  );
-  const cartRequest = Promise.resolve(sb.rpc("catalog_cart_version")).then(
-    ({ data, error }) => (!error && (data === 1 || data === 2) ? data : 0),
-    () => 0,
-  );
+  const offerRequest = bootstrap
+    ? Promise.resolve((bootstrap.offer as CatalogOffer) ?? null)
+    : Promise.resolve(sb.rpc("public_catalog_offer")).then(
+        ({ data }) => (data as unknown as CatalogOffer) ?? null,
+        () => null,
+      );
+  const bargainRequest = bootstrap
+    ? Promise.resolve(bootstrapBargains(bootstrap.bargain_ids))
+    : Promise.resolve(sb.rpc("catalog_bargain_enabled")).then(
+        ({ data }) => new Set<string>(Array.isArray(data) ? data : []),
+        () => new Set<string>(),
+      );
+  const cartRequest = bootstrap
+    ? Promise.resolve(
+        bootstrap.cart_version === 1 || bootstrap.cart_version === 2 ? bootstrap.cart_version : 0,
+      )
+    : Promise.resolve(sb.rpc("catalog_cart_version")).then(
+        ({ data, error }) => (!error && (data === 1 || data === 2) ? data : 0),
+        () => 0,
+      );
   let heroUnavailable = false;
   const heroRequest = (async (): Promise<PublicHero | null> => {
     // Optional presentation: an unapplied migration, RPC or signing failure must not break shopping.
     let hero: PublicHero | null = null;
     try {
-      const { data: raw, error } = await sb.rpc("public_catalog_hero");
+      const { data: raw, error } = bootstrap
+        ? {
+            data: bootstrap.hero ?? null,
+            error: bootstrap.hero_unavailable ? { message: "Hero unavailable" } : null,
+          }
+        : await sb.rpc("public_catalog_hero");
       if (error) {
         heroUnavailable = true;
         return null;

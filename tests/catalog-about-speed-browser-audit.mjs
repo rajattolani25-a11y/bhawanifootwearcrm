@@ -98,6 +98,8 @@ try {
       await about.getByRole("link", { name: /Call store/ }).getAttribute("href"),
       "tel:+919999999999",
     );
+    await p.evaluate(() => document.fonts.ready);
+    await about.evaluate(n => Promise.all(n.getAnimations().map(a => a.finished.catch(() => {}))));
     const box = await about.boundingBox();
     assert(
       box.x >= 0 &&

@@ -7,9 +7,11 @@ import styles from "@/routes/catalog.module.css";
 export const CatalogProductGrid = memo(function CatalogProductGrid({
   products,
   onOpen,
+  prioritizeFirst = true,
 }: {
   products: CatalogProduct[];
   onOpen: (product: CatalogProduct) => void;
+  prioritizeFirst?: boolean;
 }) {
   return (
     <div className={styles["productGrid"]}>
@@ -28,7 +30,8 @@ export const CatalogProductGrid = memo(function CatalogProductGrid({
                 <img
                   src={p.image}
                   alt={`${p.brand} ${p.article}`}
-                  loading={index < 2 ? "eager" : "lazy"}
+                  loading={prioritizeFirst && index < 2 ? "eager" : "lazy"}
+                  fetchPriority={prioritizeFirst && index < 2 ? "high" : "low"}
                   decoding="async"
                   width="500"
                   height="500"
@@ -51,7 +54,11 @@ export const CatalogProductGrid = memo(function CatalogProductGrid({
                 {p.brand}
               </p>
               <h3 data-no-translate>{p.article}</h3>
-              {p.color && <p className="mt-1 text-xs text-muted-foreground" data-no-translate>{p.color}</p>}
+              {p.color && (
+                <p className="mt-1 text-xs text-muted-foreground" data-no-translate>
+                  {p.color}
+                </p>
+              )}
               <p className={styles["price"]}>
                 <strong>{inr(p.price)}</strong>
                 {off > 0 && <del>{inr(p.mrp)}</del>}

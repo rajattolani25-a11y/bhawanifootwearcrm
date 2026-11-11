@@ -166,6 +166,7 @@ try {
   await page.screenshot({ path: out + "/cart-390.png" });
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Your cart", exact: true }).click();
+  await page.getByRole("button", { name: /^Order · 1$/, exact: false }).waitFor();
   assert.equal(await page.getByRole("button", { name: /^Order · 1$/, exact: false }).count(), 1);
   await page.getByRole("button", { name: /^Order · 1$/, exact: false }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();

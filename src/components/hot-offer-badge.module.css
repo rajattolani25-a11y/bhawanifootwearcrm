@@ -1,0 +1,122 @@
+.badge {
+  display: inline-block;
+  position: relative;
+  width: 79px;
+  height: 43px;
+  isolation: isolate;
+  vertical-align: middle;
+  pointer-events: none;
+  background: transparent;
+}
+.pill {
+  position: absolute;
+  left: 17px;
+  right: 0;
+  top: 10px;
+  height: 29px;
+  border-radius: 999px;
+  background: linear-gradient(155deg, #ff973b 5%, #ff7148 45%, #ff357d 100%);
+  box-shadow: inset 0 0 0 1px #ff7647;
+  overflow: hidden;
+}
+.pill::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1.5px solid #fff;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.text {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding-left: 10px;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: #fff;
+}
+.fire {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 43px;
+  transform-origin: 50% 94%;
+}
+.inner,
+.core {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.shine {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-145%) skewX(-24deg);
+  background: linear-gradient(
+    90deg,
+    transparent 36%,
+    #ffffff70 46%,
+    #ffffffab 50%,
+    #ffffff70 54%,
+    transparent 64%
+  );
+}
+.fire {
+  animation: hot-flame 1500ms ease-in-out infinite;
+}
+.inner {
+  animation: hot-inner 1100ms ease-in-out infinite alternate;
+}
+.core {
+  animation: hot-inner 850ms ease-in-out infinite alternate-reverse;
+}
+.shine {
+  animation: hot-shine 3200ms cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+.badge[data-playing="false"] * {
+  animation-play-state: paused;
+}
+@keyframes hot-flame {
+  0%,
+  100% {
+    transform: rotate(-2deg) scale(0.98, 1);
+  }
+  50% {
+    transform: translateY(-0.7px) rotate(2deg) scale(1.02, 0.97);
+  }
+}
+@keyframes hot-inner {
+  from {
+    transform: scale(0.96, 0.94);
+    opacity: 0.85;
+  }
+  to {
+    transform: scale(1.03, 1.04);
+    opacity: 1;
+  }
+}
+@keyframes hot-shine {
+  0%,
+  38% {
+    transform: translateX(-145%) skewX(-24deg);
+    opacity: 0;
+  }
+  42% {
+    opacity: 1;
+  }
+  76%,
+  100% {
+    transform: translateX(145%) skewX(-24deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge * {
+    animation: none !important;
+  }
+}

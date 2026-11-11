@@ -12,11 +12,13 @@ export function CatalogHero({
   onAction,
   fallback,
   theme = "studio",
+  priority = true,
 }: {
   hero: PublicHero;
   onAction?: () => void;
   fallback?: ReactNode;
   theme?: CatalogThemeId;
+  priority?: boolean;
 }) {
   const root = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -89,7 +91,8 @@ export function CatalogHero({
             width="1200"
             height="900"
             alt="Featured footwear"
-            fetchPriority="high"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "low"}
             decoding="async"
             style={{ width: `${hero.image_scale}%` }}
             onLoad={() => {

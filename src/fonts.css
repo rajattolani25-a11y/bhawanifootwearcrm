@@ -1,0 +1,62 @@
+/* Same storefront families, self-hosted to avoid a blocking external stylesheet. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin-cabaa97b26.woff2") format("woff2");
+  unicode-range:
+    U+20-7E, U+A0-FF, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+2000-200D,
+    U+2010-2015, U+2018-201A, U+201C-201E, U+2020-2022, U+2026, U+2028-2029, U+202F-2030,
+    U+2032-2033, U+2039-203A, U+2044, U+2074, U+20A1, U+20A4, U+20A6, U+20A8-20AE, U+20B1-20B2,
+    U+20B4-20B5, U+20B8-20BA, U+20BD, U+20BF, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-extended-9aa7d4749f.woff2") format("woff2");
+  unicode-range:
+    U+100-130, U+132-151, U+154-17F, U+18F, U+192, U+1A0-1A1, U+1AF-1B0, U+1CD-1DC, U+1FA-1FF,
+    U+218-21B, U+237, U+259, U+2C7, U+2D8-2D9, U+2DB, U+2DD, U+300-303, U+306-307, U+309-30C, U+312,
+    U+315, U+31B, U+323, U+326-328, U+37E, U+384-38A, U+38C, U+38E-3A1, U+3A3-3CE, U+400-45F,
+    U+462-463, U+46A-46B, U+472-475, U+490-4C2, U+4CF-4D9, U+4DC-4E9, U+4EE-4F9, U+524-525, U+E3F,
+    U+1E80-1E85, U+1E9E, U+1EA0-1EF9, U+2070, U+2075-2079, U+2080-2089, U+2113, U+2116, U+2126,
+    U+212E, U+2150-2151, U+2153-215E, U+2190, U+2192, U+2194-2199, U+21A9-21AA, U+21B0-21B3,
+    U+21B6-21B7, U+21BA-21BB, U+21C4, U+21C6, U+2202, U+2206, U+220F, U+2211, U+2219-221A, U+221E,
+    U+222B, U+2236, U+2248, U+2260, U+2264-2265, U+25CA, U+2713, U+274C, U+2B0E-2B11, U+ECE0,
+    U+EFCC, U+FB01-FB02;
+}
+
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/libre-baskerville-latin-39d80e8d32.woff2") format("woff2");
+  unicode-range:
+    U+20-7E, U+A0-AC, U+AE-FF, U+131, U+152-153, U+2BC, U+2C6, U+2DA, U+2DC, U+304, U+308,
+    U+2013-2014, U+2018-201A, U+201C-201E, U+2020-2022, U+2026, U+2028-2029, U+2030, U+2039-203A,
+    U+2044, U+2074, U+20A4, U+20AC, U+20B5, U+2122, U+2212, U+2215;
+}
+
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/libre-baskerville-extended-3f6c265b39.woff2") format("woff2");
+  unicode-range:
+    U+100-130, U+132-148, U+14A-151, U+154-17E, U+180-181, U+186-18A, U+18E-193, U+196-19A, U+19D,
+    U+1A4-1A5, U+1A9, U+1AC-1AE, U+1B2-1B6, U+1C4-1ED, U+1F0-1F5, U+1F8-21B, U+21E-21F, U+226-233,
+    U+237, U+23A-23E, U+241-24F, U+251, U+253-254, U+256-257, U+259, U+25B, U+260, U+265-266,
+    U+268-269, U+26B, U+272, U+27D-27E, U+283, U+288-289, U+28B-28C, U+294-295, U+2BE-2BF, U+2C7,
+    U+2D8-2D9, U+2DB, U+2DD, U+300-303, U+306-307, U+30A-30C, U+30F, U+311-312, U+323-328,
+    U+32D-32E, U+330-331, U+335-338, U+3BC, U+1D7D, U+1E00-1E9A, U+1E9E, U+1EA0-1EA1, U+1EAC-1EAD,
+    U+1EB6-1EB9, U+1EBC-1EBD, U+1EC6-1EC7, U+1ECA-1ECD, U+1ED8-1ED9, U+1EE4-1EE5, U+1EF2-1EF5,
+    U+1EF8-1EF9, U+2070, U+2075-2079, U+2080-2089, U+2116, U+2120, U+2153-2154, U+215B-215E, U+2219,
+    U+2260, U+2C60-2C66, U+2C6D, U+2C72-2C73, U+A740-A741, U+A78B-A78D, U+A792-A793, U+A7AA, U+F6C3,
+    U+FB00-FB04, U+FB06;
+}

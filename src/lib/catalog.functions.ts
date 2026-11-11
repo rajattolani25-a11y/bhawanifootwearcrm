@@ -1,4 +1,5 @@
 import { readPublicCatalog } from "./catalog-read";
+import { readCatalogBootstrap, bootstrapBargains } from "./catalog-bootstrap";
 import type { CatalogPresentation } from "./catalog-presentation";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -32,15 +33,23 @@ export async function publicClient() {
 // Public: only safe fields (no cost, no stock counts) come from the public_catalog DB function.
 export const getCatalog = createServerFn({ method: "GET" }).handler(async (): Promise<CatalogData> => {
   const { publicCatalogPhotoCache } = await import("./public-catalog-photo-cache");
-  return readPublicCatalog(await publicClient(), publicCatalogPhotoCache(`${process.env["SUPABASE_URL"]}:${process.env["SUPABASE_PUBLISHABLE_KEY"]}`));
+  const sb = await publicClient();
+  const scope = `${process.env["SUPABASE_URL"]}:${process.env["SUPABASE_PUBLISHABLE_KEY"]}`;
+  return readPublicCatalog(sb, publicCatalogPhotoCache(scope), await readCatalogBootstrap(sb, scope));
 });
 
 /** Public metadata only; existing signed photo URLs are reused when paths are unchanged. */
 export const getCatalogSnapshot = createServerFn({ method: "GET" }).handler(async (): Promise<CatalogData> => {
   const sb = await publicClient();
-  const { data, error } = await sb.rpc("public_catalog");
+  const bootstrap = await readCatalogBootstrap(sb, `${process.env["SUPABASE_URL"]}:${process.env["SUPABASE_PUBLISHABLE_KEY"]}`);
+  const { data, error } = bootstrap ? { data: bootstrap.catalog, error: null } : await sb.rpc("public_catalog");
   if (error) throw new Error("Catalog refresh is unavailable");
   const d = data as unknown as CatalogData;
+  if (!d.enabled || !d.shop) return { enabled: false };
+  if (bootstrap) {
+    const flags = bootstrapBargains(bootstrap.bargain_ids);
+    return { enabled: true, shop: { ...d.shop, cart_ready: bootstrap.cart_version === 1 || bootstrap.cart_version === 2, cart_coupon_ready: bootstrap.cart_version === 2 }, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };
+  }
   const [flags,cartReady] = await Promise.all([sb.rpc("catalog_bargain_enabled").then(({data}) => new Set(Array.isArray(data) ? data as string[] : []), () => new Set<string>()),sb.rpc("catalog_cart_version").then(({data,error})=>!error && (data === 1 || data === 2) ? data : 0,()=>0)]);
   if (!d.enabled || !d.shop) return { enabled: false };
   return { enabled: true, shop: {...d.shop,cart_ready:cartReady>=1,cart_coupon_ready:cartReady>=2}, products: (d.products ?? []).map(p => ({ ...p, bargain_enabled: flags.has(p.id), image_key: p.image, image: null })) };

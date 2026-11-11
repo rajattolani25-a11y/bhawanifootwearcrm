@@ -1,7 +1,5 @@
 import { readCartCheckout, CART_PENDING_EVENT } from "@/lib/catalog-cart-checkout";
 import { CatalogDealDock } from "@/components/catalog-commerce/CatalogDealDock";
-import { CatalogCart } from "@/components/catalog-commerce/CatalogCart";
-import { BargainSheet } from "@/components/catalog-commerce/BargainSheet";
 import { DealTimer } from "@/components/catalog-commerce/DealTimer";
 import commerce from "@/components/catalog-commerce/commerce.module.css";
 import { CART_EVENT, CART_KEY, LAST_DEAL_KEY, addToCart, readCart, removeFromCart, bargainClient, type CatalogCartItem } from "@/lib/catalog-cart";
@@ -21,6 +19,7 @@ import { catalogPresentation } from "@/lib/catalog-presentation";
 import { catalogDescription } from "@/lib/catalog-description";
 import { CouponTicket } from "@/components/CouponTicket";
 import { CatalogSpotlight } from "@/components/CatalogSpotlight";
+import { HotOfferBadge } from "@/components/HotOfferBadge";
 import { InterfaceMotion } from "@/components/motion/provider";
 import { BlurReveal } from "@/components/motion/blur-reveal";
 import { CatalogReservation } from "@/components/catalog-reservation";
@@ -42,6 +41,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const CatalogAbout = lazy(() => import("@/components/CatalogAbout").then(module => ({ default: module.CatalogAbout })));
+const loadCatalogCart = () => import("@/components/catalog-commerce/CatalogCart");
+const loadBargainSheet = () => import("@/components/catalog-commerce/BargainSheet");
+const CatalogCart = lazy(() => loadCatalogCart().then(module => ({ default: module.CatalogCart })));
+const BargainSheet = lazy(() => loadBargainSheet().then(module => ({ default: module.BargainSheet })));
+
+function CommerceLoading({ title, onClose }: { title: string; onClose: () => void }) {
+  const { t } = useLang();
+  return <Dialog open onOpenChange={open => { if (!open) onClose(); }}><DialogContent><DialogHeader><DialogTitle>{t(title)}</DialogTitle></DialogHeader><p role="status">{t("Loading…")}</p></DialogContent></Dialog>;
+}
 
 export const Route = createFileRoute("/catalog")({
   loader: () => getCatalog(),
@@ -233,7 +241,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
     </div>
   </section>;
   const spotlightFirst = presentation.gallery_enabled && products.length > 0;
-  const banner = data.hero ? <CatalogHero theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>;
+  const banner = data.hero ? <CatalogHero priority={!spotlightFirst} theme={presentation.theme ?? "studio"} hero={{ ...data.hero, motion: data.hero.motion && presentation.motion_enabled }} onAction={heroAction} fallback={introduction} /> : <BlurReveal enabled={presentation.motion_enabled}>{introduction}</BlurReveal>;
 
   return (
     <div className={styles["store"]} data-spotlight-first={spotlightFirst} data-theme={dark ? "dark" : "light"} data-palette={presentation.theme ?? "studio"} data-tone={presentation.category_accents ? filter : "All"} data-motion={presentation.motion_enabled}>
@@ -252,7 +260,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       </header>
       {cartError && <p role="alert" className="px-4 py-2 text-sm">{cartError}<button className="ml-2 min-h-11 underline" onClick={()=>{try{localStorage.removeItem(CART_KEY);window.dispatchEvent(new Event(CART_EVENT));}catch{setCartError("Device storage is unavailable.");}}}>Clear cart</button></p>}
       {activeQuote && !open && !cartOpen && <CatalogDealDock deal={activeQuote} onDismiss={dismissQuote} onReview={()=>{const p=products.find(p=>p.id===activeQuote.product_id);if(p){setCheckoutSelection({productId:p.id,variantId:activeQuote.variant_id,reviewBargain:true});setRecoveryNonce(n=>n+1);setOpen(p);}else setActiveQuote(null);}}/>}
-      {cartOpen && <CatalogCart motionEnabled={presentation.motion_enabled} items={cart} products={products} shop={shop} onClose={()=>setCartOpen(false)} onTrack={ref=>{setCartOpen(false);setTrack(ref);}}/>}
+      {cartOpen && <Suspense fallback={<CommerceLoading title="Your cart" onClose={()=>setCartOpen(false)}/>}><CatalogCart motionEnabled={presentation.motion_enabled} items={cart} products={products} shop={shop} onClose={()=>setCartOpen(false)} onTrack={ref=>{setCartOpen(false);setTrack(ref);}}/></Suspense>}
       {pendingCart && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>{t("An earlier cart order response was not confirmed. Recover it before placing another order.")}</p><Button variant="outline" onClick={()=>setCartOpen(true)}>{t("Recover saved cart order")}</Button></div>}
       {pendingOrder && <div role="alert" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm"><p>An earlier order response was not confirmed. Recover it before placing another order.</p><Button variant="outline" onClick={() => { setRecoveryNonce(n=>n+1);setOpen(pendingOrder.product); }}>Recover saved order</Button></div>}
 
@@ -285,7 +293,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         <CatalogCollectionFilters groups={sizeGroups} size={fsize} setSize={setFsize} sort={sort} setSort={setSort}
           styleGroups={styleGroups} selectedStyle={fstyle} setStyle={value => { setFstyle(value); setFsize("All"); }}
           onClear={() => { setFsize("All"); setFstyle("All"); setSort("default"); }} />
-        <CatalogProductGrid products={list} onOpen={openProduct} />
+        <CatalogProductGrid prioritizeFirst={!spotlightFirst && !data.hero} products={list} onOpen={openProduct} />
         {list.length === 0 && <div className={styles["empty"]}><Search aria-hidden="true" /><h3>No designs found.</h3><p>Try another search or category.</p><button onClick={resetFilters} data-no-translate>{copy.reset}</button></div>}
         {spotlightFirst && banner}
         <footer className={styles["footer"]}>
@@ -300,7 +308,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       <nav className={styles["bottomNav"]} aria-label={copy.navigation}>
         <a href="#catalog-collection" aria-current="page"><ShoppingBag aria-hidden="true" /><span data-no-translate>{copy.shop}</span></a>
         <button onClick={() => setTrack("")}><Package aria-hidden="true" /><span data-no-translate>{copy.orders}</span></button>
-        <button className={commerce["cartButton"]} aria-label={t("Your cart")} onClick={() => setCartOpen(true)}><span className={styles["navCartIcon"]}><ShoppingCart aria-hidden="true"/>{cart.length>0&&<sup>{cart.length}</sup>}</span><span>{t("Cart")}</span></button>
+        <button className={commerce["cartButton"]} aria-label={t("Your cart")} onPointerEnter={()=>{void loadCatalogCart().catch(()=>{});}} onFocus={()=>{void loadCatalogCart().catch(()=>{});}} onTouchStart={()=>{void loadCatalogCart().catch(()=>{});}} onClick={() => setCartOpen(true)}><span className={styles["navCartIcon"]}><ShoppingCart aria-hidden="true"/>{cart.length>0&&<sup>{cart.length}</sup>}</span><span>{t("Cart")}</span></button>
         <button onClick={() => setHelp(true)}><HelpCircle aria-hidden="true" /><span data-no-translate>{copy.help}</span></button>
         <button onClick={() => setAbout(true)}><Info aria-hidden="true" /><span data-no-translate>{copy.aboutNav}</span></button>
       </nav>
@@ -477,7 +485,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   );
 
   return (<>
-    {bargainOpen && chosen && <BargainSheet motionEnabled={motionEnabled} product={product} variantId={chosen.id} onClose={()=>setBargainOpen(false)} onListedPrice={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);setBargainOpen(false);onDiscardDeal();}} onQuote={quote=>{setLastQuote(quote);onQuote(quote);}} onAccept={quote=>{setDeal(quote);setLastQuote(quote);setDealExpiry(false);setDisc(null);setCode("");setErr("");setBargainOpen(false);setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");setStep("method");}}/>}
+    {bargainOpen && chosen && <Suspense fallback={<CommerceLoading title="Make an offer" onClose={()=>setBargainOpen(false)}/>}><BargainSheet motionEnabled={motionEnabled} product={product} variantId={chosen.id} onClose={()=>setBargainOpen(false)} onListedPrice={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);setBargainOpen(false);onDiscardDeal();}} onQuote={quote=>{setLastQuote(quote);onQuote(quote);}} onAccept={quote=>{setDeal(quote);setLastQuote(quote);setDealExpiry(false);setDisc(null);setCode("");setErr("");setBargainOpen(false);setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");setStep("method");}}/></Suspense>}
     {!bargainOpen && <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent data-product-motion={motionEnabled ? "on" : "off"} data-product-theme={dark ? "dark" : "light"} className={`${styles["dialog"]} ${styles["productModal"]} ${step === "view" ? styles["productDialog"] : commerce["checkout"]}`}>
         <DialogHeader className={step === "view" ? styles["productHeader"] : commerce["checkoutHeader"]}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}{step === "view" && <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className={styles["productShare"]} aria-label={t("Share product on WhatsApp")} title={t("Share product on WhatsApp")}><Share2 aria-hidden="true" className="h-5 w-5" /></a>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
@@ -491,7 +499,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           <p className="text-sm text-muted-foreground"><span>{categoryLabel(product.category)}</span>{product.color && <> · <span data-no-translate>{product.color}</span></>}</p>
           <div className={styles["priceOfferRow"]}>
             <p className={styles["detailPrice"]}><span className="font-display text-2xl font-bold">{inr(product.price)}</span>{product.mrp > product.price && <span className="ml-2 text-sm text-muted-foreground line-through">{inr(product.mrp)}</span>}</p>
-            {product.bargain_enabled && canOrder && hasStock && <button className={styles["priceOfferButton"]} type="button" onClick={()=>{if(!chosen){setNeedsSize(true);sizesRef.current?.scrollIntoView({block:"center"});sizesRef.current?.focus({preventScroll:true});}else setBargainOpen(true);}}><span>{t("Make an offer")}</span><ArrowRight aria-hidden="true" className="h-4 w-4"/></button>}
+            {product.bargain_enabled && canOrder && hasStock && <button className={styles["priceOfferButton"]} aria-label={t("Make an offer")} title={t("Make an offer")} type="button" onPointerEnter={()=>{void loadBargainSheet().catch(()=>{});}} onFocus={()=>{void loadBargainSheet().catch(()=>{});}} onTouchStart={()=>{void loadBargainSheet().catch(()=>{});}} onClick={()=>{if(!chosen){setNeedsSize(true);sizesRef.current?.scrollIntoView({block:"center"});sizesRef.current?.focus({preventScroll:true});}else setBargainOpen(true);}}><span>{t("Make an offer")}</span><ArrowRight aria-hidden="true" className="h-4 w-4"/><HotOfferBadge motionEnabled={motionEnabled}/></button>}
           </div>
           <section ref={sizesRef} tabIndex={-1} className={styles["detailSizes"]} data-attention={needsSize && !chosen} aria-label={t("Choose size")}>
             <p className="mb-2 text-sm font-semibold">Choose size</p>
