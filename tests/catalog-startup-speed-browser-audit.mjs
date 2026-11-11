@@ -178,9 +178,27 @@ try {
   const animations = await hot().evaluate((n) =>
     n
       .getAnimations({ subtree: true })
-      .map((a) => ({ name: a.animationName, properties: Object.keys(a.effect.getKeyframes()[0]) })),
+      .map((a) => ({
+        name: a.animationName,
+        duration: a.effect.getTiming().duration,
+        properties: Object.keys(a.effect.getKeyframes()[0]),
+      })),
   );
   assert(animations.length >= 3);
+  const tongues = animations.filter((a) => a.name.includes("hot-tongue"));
+  assert.equal(tongues.length, 3);
+  assert.equal(new Set(tongues.map((a) => a.duration)).size, 3);
+  const flameFrame = () =>
+    hot()
+      .locator("svg path")
+      .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).transform));
+  const firstFlame = await flameFrame();
+  await p.waitForTimeout(180);
+  assert.notDeepEqual(
+    await flameFrame(),
+    firstFlame,
+    "Flame tips and core actually change between frames",
+  );
   assert(
     animations.every(
       (a) => !a.properties.some((p) => ["width", "height", "filter", "boxShadow"].includes(p)),

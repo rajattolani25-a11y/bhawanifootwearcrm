@@ -49,7 +49,10 @@
   transform-origin: 50% 94%;
 }
 .inner,
-.core {
+.core,
+.tongueLeft,
+.tongueMain,
+.tongueRight {
   transform-box: fill-box;
   transform-origin: 50% 100%;
 }
@@ -67,13 +70,30 @@
   );
 }
 .fire {
-  animation: hot-flame 1500ms ease-in-out infinite;
+  animation: hot-flame 2100ms ease-in-out infinite;
+}
+.tongueLeft {
+  animation: hot-tongue 930ms ease-in-out -310ms infinite;
+}
+.tongueMain {
+  animation: hot-tongue 1270ms ease-in-out -670ms infinite reverse;
+}
+.tongueRight {
+  animation: hot-tongue 1090ms ease-in-out -180ms infinite;
+}
+.emberLeft {
+  opacity: 0;
+  animation: hot-ember 1700ms ease-out -500ms infinite;
+}
+.emberRight {
+  opacity: 0;
+  animation: hot-ember 2300ms ease-out -1200ms infinite;
 }
 .inner {
-  animation: hot-inner 1100ms ease-in-out infinite alternate;
+  animation: hot-inner 830ms ease-in-out -260ms infinite alternate;
 }
 .core {
-  animation: hot-inner 850ms ease-in-out infinite alternate-reverse;
+  animation: hot-inner 610ms ease-in-out -180ms infinite alternate-reverse;
 }
 .shine {
   animation: hot-shine 3200ms cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
@@ -84,20 +104,47 @@
 @keyframes hot-flame {
   0%,
   100% {
-    transform: rotate(-2deg) scale(0.98, 1);
+    transform: rotate(-0.6deg);
   }
   50% {
-    transform: translateY(-0.7px) rotate(2deg) scale(1.02, 0.97);
+    transform: translateY(-0.4px) rotate(0.6deg);
   }
 }
 @keyframes hot-inner {
   from {
-    transform: scale(0.96, 0.94);
-    opacity: 0.85;
+    transform: scale(0.94, 0.9) skewX(-5deg);
+    opacity: 0.88;
   }
   to {
-    transform: scale(1.03, 1.04);
+    transform: translateY(-0.5px) scale(1.04, 1.1) skewX(4deg);
     opacity: 1;
+  }
+}
+@keyframes hot-tongue {
+  0%,
+  100% {
+    transform: scale(0.96, 0.9) skewX(-5deg);
+  }
+  35% {
+    transform: translateY(-0.4px) scale(1.04, 1.1) skewX(6deg);
+  }
+  70% {
+    transform: scale(0.98, 1.02) skewX(-3deg);
+  }
+}
+@keyframes hot-ember {
+  0%,
+  15% {
+    transform: translate(0, 2px) scale(0.6);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.85;
+  }
+  80%,
+  100% {
+    transform: translate(1px, -7px) scale(0.25);
+    opacity: 0;
   }
 }
 @keyframes hot-shine {

@@ -38,9 +38,28 @@ export function HotOfferBadge({ motionEnabled }: { motionEnabled: boolean }) {
         <span className={styles["text"]}>HOT</span>
       </span>
       <svg className={styles["fire"]} viewBox="0 0 32 44" fill="none" aria-hidden="true">
+        <g className={styles["embers"]} fill="#FFCE26">
+          <circle className={styles["emberLeft"]} cx="7" cy="13" r="1.1" />
+          <circle className={styles["emberRight"]} cx="26" cy="12" r="0.9" />
+        </g>
+        <path
+          className={styles["tongueLeft"]}
+          fill="#FFCE26"
+          d="M6 32C1 25 8 20 7 13c9 7 7 14 4 19Z"
+        />
+        <path
+          className={styles["tongueMain"]}
+          fill="#FFCE26"
+          d="M12 32C5 23 17 17 12 6c13 7 13 19 7 27Z"
+        />
+        <path
+          className={styles["tongueRight"]}
+          fill="#FFCE26"
+          d="M20 33c-2-8 5-10 2-19 10 8 10 15 5 21Z"
+        />
         <path
           fill="#FFCE26"
-          d="M13 1c2 10-9 14-11 24C-1 35 6 43 16 43c10 0 17-8 15-18-1-7-5-12-9-16 1 7-1 10-3 11C21 12 19 6 13 1Z"
+          d="M4 24C0 30 1 36 6 40c6 5 15 4 21-1 5-5 5-11 1-17-1 7-4 8-7 5-4-5-10-5-13 0-2 3-3 0-4-3Z"
         />
         <path
           className={styles["inner"]}
