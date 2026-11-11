@@ -1,0 +1,192 @@
+.link {
+  display: inline;
+  min-height: 44px;
+  padding: 6px 0;
+  text-align: inherit;
+  font-size: inherit;
+  color: var(--catalog-accent, var(--primary, #33563d));
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  touch-action: manipulation;
+}
+.link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.dialog.dialog {
+  --background: #fffaf2;
+  --foreground: #20382a;
+  --muted-foreground: #626a60;
+  --border: #ded8c9;
+  --primary: #254b36;
+  --primary-foreground: white;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  width: min(600px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  background: var(--background);
+  color: var(--foreground);
+}
+.header {
+  flex: none;
+  padding: 22px 52px 16px 20px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.header h2 {
+  padding: 0;
+  font: 700 21px/1.2 var(--font-sans, sans-serif);
+}
+.header p {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin-top: 6px;
+}
+.body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px 24px;
+  overscroll-behavior: contain;
+}
+.sections {
+  list-style: decimal;
+  padding-left: 20px;
+  display: grid;
+  gap: 20px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.sections li::marker {
+  font-weight: 700;
+}
+.sections h3 {
+  font: 650 15px/1.4 var(--font-sans, sans-serif);
+  margin-bottom: 5px;
+}
+.sections p {
+  color: var(--muted-foreground);
+}
+.contact {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.contact strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.contact a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--primary);
+  text-decoration: underline;
+}
+.done,
+.retry {
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 10px 18px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 14px;
+  font-weight: 600;
+}
+.done {
+  flex: none;
+  margin: 12px 20px max(12px, env(safe-area-inset-bottom));
+}
+.retry {
+  margin-top: 12px;
+}
+.agreement {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 12px/1.5 var(--font-sans, sans-serif);
+  text-align: left;
+}
+.checkTarget {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.checkTarget input {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-width: 18px;
+  margin: 0;
+  accent-color: var(--primary, #254b36);
+  cursor: pointer;
+}
+.checkTarget input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.agreementCopy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agreementCopy > label {
+  cursor: pointer;
+}
+.agreementCopy .link {
+  min-height: 44px;
+}
+.dialog.dialog > button:last-child {
+  min-height: 44px;
+  min-width: 44px;
+  top: 8px;
+  right: 8px;
+  opacity: 1;
+  color: var(--foreground);
+}
+:global(.dark) .dialog.dialog {
+  --background: #202b24;
+  --foreground: #f5f1e6;
+  --muted-foreground: #c0c4b9;
+  --border: #485448;
+  --primary: #a9cbb1;
+  --primary-foreground: #11251a;
+}
+/* Visually quiet consent; the small square retains a comfortable invisible tap target. */
+.agreement {
+  gap: 0;
+  font-size: 11.5px;
+}
+.checkTarget {
+  width: 32px;
+  margin-left: -4px;
+}
+.checkTarget input {
+  width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-width: 14px;
+}
+.agreementCopy .link {
+  font-weight: 500;
+}
+
+/* Terms must sit above the existing z51 checkout/cart portal. */
+.overlay {
+  z-index: 60;
+}
+.dialog.dialog {
+  z-index: 61;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog.dialog, .overlay { animation:none !important; transition:none !important; }
+}

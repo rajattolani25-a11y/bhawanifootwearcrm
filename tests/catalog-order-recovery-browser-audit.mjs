@@ -131,6 +131,7 @@ async function form() {
 const checks = [];
 try {
   await form();
+  await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).check();
   await dialog().getByRole("button", { name: "Place order", exact: true }).click();
   await dialog().getByRole("button", { name: "Recover saved order", exact: true }).waitFor();
   assert.equal(calls.length, 1);

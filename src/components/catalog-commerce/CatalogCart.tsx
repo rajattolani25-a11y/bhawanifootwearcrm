@@ -1,3 +1,4 @@
+import { CatalogTermsAgreement } from "@/components/CatalogTerms";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export function CatalogCart({
 }) {
   const { t } = useLang();
   const [stage, setStage] = useState<"cart" | "method" | "form" | "done">("cart");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [selection, setSelection] = useState<Record<string, boolean>>({});
   const [method, setMethod] = useState<Fulfillment>(
     shop.booking ? "pickup" : shop.local ? "local" : "outside",
@@ -183,6 +185,7 @@ export function CatalogCart({
     subtotal > 0;
   async function order(recover = false) {
     if (sending.current) return;
+    if (!recover && !termsAccepted) { setError("Please agree to the Terms & Conditions before placing your order."); return; }
     setError("");
     sending.current = true;
     setBusy(true);
@@ -606,6 +609,7 @@ export function CatalogCart({
                   }
                   onClick={() => {
                     setError("");
+                    setTermsAccepted(false);
                     setStage("method");
                   }}
                 >
@@ -621,12 +625,14 @@ export function CatalogCart({
                   {t("Continue")}
                 </Button>
               )}
+              {stage === "form" && !pending && <CatalogTermsAgreement shop={shop} checked={termsAccepted} onChange={setTermsAccepted} disabled={busy}/>}
               {stage === "form" && !pending && (
                 <Button
                   className="h-12"
                   disabled={
                     busy ||
                     !valid ||
+                    !termsAccepted ||
                     needsReview ||
                     blocked ||
                     !shop.cart_ready ||

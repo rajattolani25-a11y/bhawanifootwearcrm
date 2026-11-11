@@ -1,3 +1,4 @@
+import { CatalogTermsLink, CatalogTermsAgreement } from "@/components/CatalogTerms";
 import { readCartCheckout, CART_PENDING_EVENT } from "@/lib/catalog-cart-checkout";
 import { CatalogDealDock } from "@/components/catalog-commerce/CatalogDealDock";
 import { DealTimer } from "@/components/catalog-commerce/DealTimer";
@@ -307,6 +308,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
           <div className={styles["footerActions"]}>
             <button onClick={() => setAbout(true)} data-no-translate>{copy.about}</button>
             <button onClick={() => setHelp(true)} data-no-translate>{copy.help}</button>
+            <CatalogTermsLink shop={shop}/>
             <button onClick={toggleTheme} aria-label="Switch theme">{dark ? <><Sun aria-hidden="true" /><span>Light</span></> : <><Moon aria-hidden="true" /><span>Dark</span></>}</button>
           </div>
         </footer>
@@ -327,6 +329,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
           {shop.phone && <Button asChild variant="outline" className="h-12"><a href={`tel:${shop.phone}`}><Phone className="h-4 w-4" /><span>Call store</span><span data-no-translate>{shop.phone}</span></a></Button>}
           {shop.phone && <Button asChild className="h-12"><a href={waTo(shop.phone, enquiryText(lang, shop.name, "", ""))!} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /><span>Ask on WhatsApp & visit store</span></a></Button>}
           <Button variant="secondary" className="h-12" onClick={() => { setHelp(false); setTrack(""); }}><Package className="h-4 w-4" /><span>Track order</span></Button>
+          <div className="text-center text-xs"><CatalogTermsLink shop={shop}/></div>
         </DialogContent>
       </Dialog>
       <ProductDialog key={`${open?.id ?? "none"}:${recoveryNonce}`} dark={dark} motionEnabled={presentation.motion_enabled} product={open} all={products} onPick={p=>{setCheckoutSelection(null);setOpen(p);}} shop={shop} offerCode={data.offer?.code ?? ""} cartItem={checkoutSelection} onQuote={rememberQuote} onDiscardDeal={dismissQuote} onClose={closeProduct} onTrack={(no) => { setOpen(null); setTrack(no); }} />
@@ -372,6 +375,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
     return product.sizes.find((s) => s.available && s.size === params.get("size"))?.id ?? null;
   });
   const [step, setStep] = useState<"view" | "method" | "form" | "done" | "recover">("view");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [method, setMethod] = useState<Fulfillment>("pickup");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -412,6 +416,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
       sizesRef.current?.focus({ preventScroll: true });
       return;
     }
+    setTermsAccepted(false);
     setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");
     setStep("method");
   }
@@ -436,6 +441,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
 
   async function order(recover = false) {
     if (!chosen || !product) return;
+    if (!recover && !termsAccepted) { setErr("Please agree to the Terms & Conditions before placing your order."); return; }
     if (!recover && activeDeal && dealSeconds(activeDeal,Date.now())===0) {setDealExpiry(true);setErr(t("This bargain price has expired. Choose the listed price to continue."));return;}
     setBusy(true); setErr("");
     try {
@@ -491,7 +497,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
   );
 
   return (<>
-    {bargainOpen && chosen && <Suspense fallback={<CommerceLoading title="Make an offer" onClose={()=>setBargainOpen(false)}/>}><BargainSheet motionEnabled={motionEnabled} product={product} variantId={chosen.id} onClose={()=>setBargainOpen(false)} onListedPrice={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);setBargainOpen(false);onDiscardDeal();}} onQuote={quote=>{setLastQuote(quote);onQuote(quote);}} onAccept={quote=>{setDeal(quote);setLastQuote(quote);setDealExpiry(false);setDisc(null);setCode("");setErr("");setBargainOpen(false);setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");setStep("method");}}/></Suspense>}
+    {bargainOpen && chosen && <Suspense fallback={<CommerceLoading title="Make an offer" onClose={()=>setBargainOpen(false)}/>}><BargainSheet motionEnabled={motionEnabled} product={product} variantId={chosen.id} onClose={()=>setBargainOpen(false)} onListedPrice={()=>{setDeal(null);setLastQuote(null);setDealExpiry(false);setBargainOpen(false);onDiscardDeal();}} onQuote={quote=>{setLastQuote(quote);onQuote(quote);}} onAccept={quote=>{setDeal(quote);setLastQuote(quote);setDealExpiry(false);setDisc(null);setCode("");setErr("");setBargainOpen(false);setTermsAccepted(false);setMethod(shop.booking ? "pickup" : shop.local ? "local" : "outside");setStep("method");}}/></Suspense>}
     {!bargainOpen && <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent data-product-motion={motionEnabled ? "on" : "off"} data-product-theme={dark ? "dark" : "light"} className={`${styles["dialog"]} ${styles["productModal"]} ${step === "view" ? styles["productDialog"] : commerce["checkout"]}`}>
         <DialogHeader className={step === "view" ? styles["productHeader"] : commerce["checkoutHeader"]}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}{step === "view" && <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className={styles["productShare"]} aria-label={t("Share product on WhatsApp")} title={t("Share product on WhatsApp")}><Share2 aria-hidden="true" className="h-5 w-5" /></a>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
@@ -578,7 +584,8 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
           {disc && <CouponTicket code={disc.code} amount={disc.amount} onRemove={() => { couponRequest.current++; setDisc(null); setCode(""); }} />}
           {cErr && <p className="text-xs text-destructive">{cErr}</p>}
           {err && <p className="text-sm text-destructive">{err}</p>}
-          <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("method")} className="h-11 flex-1">Back</Button><Button disabled={busy || !valid || !!activeDeal && dealExpiry} onClick={() => void order()} className="h-11 flex-1">{busy ? "Please wait…" : "Place order"}</Button></div>
+          <CatalogTermsAgreement shop={shop} checked={termsAccepted} onChange={setTermsAccepted} disabled={busy}/>
+          <div className="flex gap-2"><Button variant="outline" onClick={() => setStep("method")} className="h-11 flex-1">Back</Button><Button disabled={busy || !valid || !termsAccepted || !!activeDeal && dealExpiry} onClick={() => void order()} className="h-11 flex-1">{busy ? "Please wait…" : "Place order"}</Button></div>
         </div>}
         {step === "recover" && <div className="space-y-3 text-sm"><p>The order response was interrupted. Recover the original request to avoid booking the pair twice.</p><p data-no-translate>{name} · {mobile}</p>{err && <p role="alert" className="text-destructive">{err}</p>}<Button disabled={busy} onClick={() => void order(true)} className="h-11 w-full">{busy ? "Please wait…" : "Recover saved order"}</Button></div>}
 

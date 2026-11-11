@@ -175,6 +175,7 @@ try {
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByPlaceholder("Your name", { exact: true }).fill("Demo Customer");
   await page.getByPlaceholder("Mobile number", { exact: true }).fill("9999999999");
+  await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).check();
   await page.getByRole("button", { name: "Place order", exact: true }).click();
   await page.getByRole("heading", { name: "Your pair is reserved.", exact: true }).waitFor();
   const orders = await page.evaluate(() => window.__catalogOrderCalls);

@@ -353,3 +353,6 @@
 .productModal[data-product-theme="light"] .productBack { color:#111; }
 .productModal[data-product-theme="dark"] > button:last-child,
 .productModal[data-product-theme="dark"] .productBack { color:#f3f2e8; }
+
+/* Keep the small legal link inside the existing footer on narrow phones. */
+.footerActions { flex-wrap:wrap; column-gap:15px; row-gap:0; }

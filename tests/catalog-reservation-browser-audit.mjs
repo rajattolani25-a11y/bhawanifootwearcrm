@@ -113,6 +113,7 @@ async function form() {
 
 const checks = [];
 async function saved() {
+  await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).check();
   await dialog().getByRole("button", { name: "Place order", exact: true }).click();
   await page.waitForFunction(() => window.__resolveOrder);
   await page.evaluate(() => window.__resolveOrder());

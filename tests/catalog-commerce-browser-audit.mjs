@@ -176,6 +176,7 @@ try {
   const timer = await page.getByRole("dialog").locator("time").boundingBox();
   assert(timer.y + timer.height < 844);
   await page.screenshot({ path: out + "/checkout-390.png" });
+  await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).check();
   await page.getByRole("button", { name: "Place order", exact: true }).click();
   await page.getByText("CT-1234567890ABCDEF", { exact: true }).first().waitFor();
   const order = await page.evaluate(() => window.__order);

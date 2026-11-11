@@ -171,6 +171,7 @@ try {
   await dialog().getByRole("button", { name: "Continue", exact: true }).click();
   await dialog().getByPlaceholder("Your name").fill("Demo buyer");
   await dialog().getByPlaceholder("Mobile number").fill("9999999991");
+  await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).check();
   await dialog().getByRole("button", { name: "Place order", exact: true }).click();
   await page.waitForFunction(() => window.__colourOrders?.length === 1);
   const request = await page.evaluate(() => window.__colourOrders[0]);

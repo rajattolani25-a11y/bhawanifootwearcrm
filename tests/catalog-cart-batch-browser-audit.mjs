@@ -123,6 +123,15 @@ try {
   );
   await summary.scrollIntoViewIfNeeded();
   await page.screenshot({ path: out + "/checkout-390.png" });
+  assert.equal(await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).isChecked(),false);
+  assert.equal(await page.getByRole("button", { name: "Place order", exact: true }).isDisabled(),true);
+  await page.getByRole("dialog").getByRole("button", { name: "Terms & Conditions", exact: true }).click();
+  const terms = page.locator("[data-catalog-terms]");
+  await terms.getByRole("heading", { name: "Cancellations & Refunds", exact: true }).waitFor();
+  assert(await terms.evaluate(el=>{const r=el.getBoundingClientRect();return !!document.elementFromPoint(r.x+r.width/2,r.y+110)?.closest('[data-catalog-terms]');}), "Terms is above the cart checkout");
+  await terms.getByRole("button", { name: "Back", exact: true }).click();
+  assert.equal(await page.getByPlaceholder("Your name", { exact: true }).inputValue(),"Demo buyer");
+  await page.getByRole("checkbox", { name: "I agree to the Terms & Conditions", exact: true }).check();
   await page.getByRole("button", { name: "Place order", exact: true }).click();
   await page
     .getByRole("dialog")
