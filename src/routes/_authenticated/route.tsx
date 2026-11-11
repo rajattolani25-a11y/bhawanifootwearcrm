@@ -18,6 +18,7 @@ import styles from "./workspace.module.css";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    const { supabase } = await import("@/integrations/supabase/client");
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/auth" });
     return { user: data.session.user };

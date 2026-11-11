@@ -1,18 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { clearSignedImageCache } from "@/lib/signed-image-cache";
 import {
   Outlet,
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { RouteError } from "@/components/RouteError";
 
@@ -74,28 +73,22 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+const AppAuthObserver = lazy(() => import("@/components/AppAuthObserver"));
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-  useEffect(() => {
-    let identity: string | null | undefined;
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      const next = session?.user.id ?? null;
-      if (event === "SIGNED_OUT" || event === "USER_UPDATED" || (identity !== undefined && identity !== next)) {
-        clearSignedImageCache();
-        queryClient.clear();
-      }
-      identity = next;
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
-    });
-    return () => data.subscription.unsubscribe();
-  }, [router, queryClient]);
+  const pathname = useRouterState({ select: state => state.location.pathname });
+  // Public-only visitors need no auth SDK. Once opened in this document, keep
+  // the observer mounted even on the catalog so owner sign-out still clears caches.
+  const publicCatalog = pathname.replace(/\/+$/, "") === "/catalog";
+  const [observeAuth, setObserveAuth] = useState(!publicCatalog);
+  useEffect(() => { if (!publicCatalog) setObserveAuth(true); }, [publicCatalog]);
 
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
+        {observeAuth && <Suspense fallback={null}><AppAuthObserver queryClient={queryClient} router={router}/></Suspense>}
         <Outlet />
         <Toaster richColors position="top-center" />
       </QueryClientProvider>

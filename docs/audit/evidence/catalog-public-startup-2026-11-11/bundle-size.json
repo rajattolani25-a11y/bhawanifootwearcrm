@@ -1,0 +1,22 @@
+{
+  "measurement": "Production catalog component plus recursively imported static JavaScript assets; excludes dynamic chunks, CSS and images; gzip per asset. Not a page-load timing.",
+  "before": {
+    "raw": 1184666,
+    "gzip": 354192
+  },
+  "after": {
+    "raw": 968326,
+    "gzip": 300104
+  },
+  "saved": {
+    "raw": 216340,
+    "gzip": 54088
+  },
+  "authSdkInPublicStaticGraph": false,
+  "liveReadOnlyCheck": {
+    "date": "2026-11-11",
+    "bootstrapVersion": 1,
+    "publicProducts": 40,
+    "databaseWrites": 0
+  }
+}
