@@ -17,6 +17,7 @@ import { catalogProductLink, catalogShareText } from "@/lib/catalog-share";
 import { DEPARTMENTS, parseCategory, categoryLabel, categoryMatches } from "@/lib/product-categories";
 import { catalogPresentation } from "@/lib/catalog-presentation";
 import { catalogDescription } from "@/lib/catalog-description";
+import { mergeCatalogSnapshot } from "@/lib/catalog-snapshot";
 import { CouponTicket } from "@/components/CouponTicket";
 import { CatalogSpotlight } from "@/components/CatalogSpotlight";
 import { HotOfferBadge } from "@/components/HotOfferBadge";
@@ -126,10 +127,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
         const previous = snapshotRef.current;
         const oldProducts = new Map((previous.products ?? []).map(p => [p.id, p]));
         const needPhotos = (fresh.products ?? []).some(p => p.image_key && (p.image_key !== oldProducts.get(p.id)?.image_key || !oldProducts.get(p.id)?.image));
-        setData({ ...previous, ...fresh, products: (fresh.products ?? []).map(p => {
-          const old = oldProducts.get(p.id);
-          return { ...p, image: p.image_key && p.image_key===old?.image_key ? old?.image ?? null : null };
-        }) });
+        setData(current => mergeCatalogSnapshot(current, fresh));
         // Signing is needed only for a new/replaced photo, never for unchanged stock.
         if (needPhotos) { const full = await getCatalog(); if (!stopped) setData(previous => full.enabled && full.heroUnavailable && previous.hero ? { ...full, hero: previous.hero } : full); }
       } catch { /* Keep the usable snapshot; checkout independently validates the quote. */ }
@@ -168,7 +166,15 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
   const [fsize, setFsize] = useState("All");
   const [fstyle, setFstyle] = useState("All");
   const [sort, setSort] = useState<CatalogSort>("default");
-  const products = useMemo(() => (data.products ?? []).map((p) => ({ ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) })), [data.products]);
+  const sortedProducts = useRef(new WeakMap<CatalogProduct, CatalogProduct>());
+  const products = useMemo(() => (data.products ?? []).map(p => {
+    let sorted = sortedProducts.current.get(p);
+    if (!sorted) {
+      sorted = { ...p, sizes: [...p.sizes].sort((a, b) => (parseFloat(a.size) || 99) - (parseFloat(b.size) || 99) || a.size.localeCompare(b.size)) };
+      sortedProducts.current.set(p, sorted);
+    }
+    return sorted;
+  }), [data.products]);
   useEffect(() => {
     setOpen(current => current ? products.find(p => p.id===current.id) ?? { ...current, sizes: current.sizes.map(s => ({ ...s, available: false })) } : null);
   }, [products]);
@@ -491,7 +497,7 @@ export function ProductDialog({ product, all, onPick, shop, onClose, onTrack, of
         <DialogHeader className={step === "view" ? styles["productHeader"] : commerce["checkoutHeader"]}>{step === "view" && <button type="button" onClick={onClose} className={styles["productBack"]} aria-label={t("Back to catalog")}><ArrowLeft aria-hidden="true" className="h-5 w-5" /></button>}{step === "view" && <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer" className={styles["productShare"]} aria-label={t("Share product on WhatsApp")} title={t("Share product on WhatsApp")}><Share2 aria-hidden="true" className="h-5 w-5" /></a>}<DialogTitle>{step === "view" ? t("Product details") : <span data-no-translate>{label}</span>}</DialogTitle></DialogHeader>
         {step === "view" && <div className={styles["productBody"]} role="region" aria-label={t("Product information")} tabIndex={0}>
           <CatalogColourOptions product={product} products={all} onPick={onPick} />
-          <CatalogProductGallery key={product.id} productId={product.id} cover={product.image} label={label} imageClassName={styles["detailPhoto"] ?? ""} />
+          <CatalogProductGallery key={product.id} motionEnabled={motionEnabled} productId={product.id} cover={product.image} label={label} imageClassName={styles["detailPhoto"] ?? ""} />
           <div className={styles["detailHeading"]}>
             <p className={styles["detailBrand"]} data-no-translate>{product.brand}</p>
             <h3 data-no-translate>{product.article}</h3>
