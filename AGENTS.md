@@ -11,6 +11,8 @@
 
 # AGENTS
 
+- Scoped reset-state security patch is manual `docs/sql/reset-state-read-access.sql`. An anonymous production id-only read was confirmed before the patch. Revoke anon/PUBLIC table and column SELECT, replace open reset-generation read with current authenticated membership and retain restrictive SELECT guard against other permissive legacy policies. Owner AND staff need the existing direct read for StoreResetBoundary; do not make it owner-only, change generations, invoke reset or replay migrations to resolve this finding. Pending/removed/empty-identity users read no rows. Existing financial/maintenance functions and unrelated policies stay unchanged. Local full-schema audit is not live application; require both true checks and rerun security review. See docs/reset-state-read-access.md.
+
 - Stock lives in `product_variants` (article × size); sales go only through the `create_sale` DB function so stock decrement is atomic and race-safe.
 - Cost/profit are in separate owner-only tables (`product_costs`, `sale_costs`, `sale_item_costs`) because RLS can't hide columns from staff; `sale_items` SELECT is column-restricted.
 - Roles stay in `user_roles`: first signup owner, later signups get no role (pending, no data access) until an owner approves via `set_team_role`; `remove_team_access` revokes. Both keep a last owner, so browser writes stay denied.
