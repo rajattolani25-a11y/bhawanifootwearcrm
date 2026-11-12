@@ -14,18 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalog_bargain_policies: {
+        Row: {
+          enabled: boolean
+          kind: string
+          max_discount: number
+          min_discount: number
+          product_id: string
+          revision: string
+          rounding: number
+        }
+        Insert: {
+          enabled?: boolean
+          kind: string
+          max_discount?: number
+          min_discount?: number
+          product_id: string
+          revision?: string
+          rounding?: number
+        }
+        Update: {
+          enabled?: boolean
+          kind?: string
+          max_discount?: number
+          min_discount?: number
+          product_id?: string
+          revision?: string
+          rounding?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_bargain_policies_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_bargain_sessions: {
+        Row: {
+          attempts: number
+          bids: Json
+          client_hash: string
+          created_at: string
+          expires_at: string
+          generation: string
+          heading: number
+          id: string
+          listed_price: number
+          offer: number
+          order_request_id: string | null
+          policy_revision: string
+          price: number
+          product_id: string
+          quote_id: string
+          state: string
+          variant_id: string
+        }
+        Insert: {
+          attempts?: number
+          bids?: Json
+          client_hash: string
+          created_at?: string
+          expires_at?: string
+          generation: string
+          heading?: number
+          id?: string
+          listed_price: number
+          offer: number
+          order_request_id?: string | null
+          policy_revision: string
+          price: number
+          product_id: string
+          quote_id?: string
+          state?: string
+          variant_id: string
+        }
+        Update: {
+          attempts?: number
+          bids?: Json
+          client_hash?: string
+          created_at?: string
+          expires_at?: string
+          generation?: string
+          heading?: number
+          id?: string
+          listed_price?: number
+          offer?: number
+          order_request_id?: string | null
+          policy_revision?: string
+          price?: number
+          product_id?: string
+          quote_id?: string
+          state?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_bargain_sessions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_bargain_sessions_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_bookings: {
         Row: {
-          receipt_recorded: boolean | null
-          client_request_id: string | null
-          request_hash: string | null
-          refund_paid_at: string | null
-          refund_reference: string | null
-          refund_mode: string | null
           address: string | null
           advance: number
           area: string | null
+          bargain_id: string | null
           booking_no: string
+          client_request_id: string | null
           confirmed_at: string | null
           coupon_code: string | null
           coupon_discount: number
@@ -39,6 +148,11 @@ export type Database = {
           note: string | null
           price: number
           product_name: string
+          receipt_recorded: boolean | null
+          refund_mode: string | null
+          refund_paid_at: string | null
+          refund_reference: string | null
+          request_hash: string | null
           sale_id: string | null
           size: string
           status: string
@@ -46,16 +160,12 @@ export type Database = {
           variant_id: string
         }
         Insert: {
-          receipt_recorded?: boolean | null
-          client_request_id?: string | null
-          request_hash?: string | null
-          refund_paid_at?: string | null
-          refund_reference?: string | null
-          refund_mode?: string | null
           address?: string | null
           advance: number
           area?: string | null
+          bargain_id?: string | null
           booking_no: string
+          client_request_id?: string | null
           confirmed_at?: string | null
           coupon_code?: string | null
           coupon_discount?: number
@@ -69,6 +179,11 @@ export type Database = {
           note?: string | null
           price: number
           product_name: string
+          receipt_recorded?: boolean | null
+          refund_mode?: string | null
+          refund_paid_at?: string | null
+          refund_reference?: string | null
+          request_hash?: string | null
           sale_id?: string | null
           size: string
           status?: string
@@ -76,16 +191,12 @@ export type Database = {
           variant_id: string
         }
         Update: {
-          receipt_recorded?: boolean | null
-          client_request_id?: string | null
-          request_hash?: string | null
-          refund_paid_at?: string | null
-          refund_reference?: string | null
-          refund_mode?: string | null
           address?: string | null
           advance?: number
           area?: string | null
+          bargain_id?: string | null
           booking_no?: string
+          client_request_id?: string | null
           confirmed_at?: string | null
           coupon_code?: string | null
           coupon_discount?: number
@@ -99,6 +210,11 @@ export type Database = {
           note?: string | null
           price?: number
           product_name?: string
+          receipt_recorded?: boolean | null
+          refund_mode?: string | null
+          refund_paid_at?: string | null
+          refund_reference?: string | null
+          request_hash?: string | null
           sale_id?: string | null
           size?: string
           status?: string
@@ -324,51 +440,55 @@ export type Database = {
       }
       credit_payments: {
         Row: {
-          entry_kind: string | null
-          booking_id: string | null
-          operation_id: string | null
-          request_hash: string | null
-
           amount: number
+          booking_id: string | null
           collected_by: string | null
           customer_id: string | null
+          entry_kind: string | null
           id: string
           note: string | null
+          operation_id: string | null
           paid_at: string
           payment_mode: string
+          request_hash: string | null
           sale_id: string | null
         }
         Insert: {
-          entry_kind?: string | null
-          booking_id?: string | null
-          operation_id?: string | null
-          request_hash?: string | null
-
           amount: number
+          booking_id?: string | null
           collected_by?: string | null
           customer_id?: string | null
+          entry_kind?: string | null
           id?: string
           note?: string | null
+          operation_id?: string | null
           paid_at?: string
           payment_mode?: string
-          sale_id: string | null
+          request_hash?: string | null
+          sale_id?: string | null
         }
         Update: {
-          entry_kind?: string | null
-          booking_id?: string | null
-          operation_id?: string | null
-          request_hash?: string | null
-
           amount?: number
+          booking_id?: string | null
           collected_by?: string | null
           customer_id?: string | null
+          entry_kind?: string | null
           id?: string
           note?: string | null
+          operation_id?: string | null
           paid_at?: string
           payment_mode?: string
+          request_hash?: string | null
           sale_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "credit_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "credit_payments_customer_id_fkey"
             columns: ["customer_id"]
@@ -387,8 +507,6 @@ export type Database = {
       }
       customers: {
         Row: {
-          opening_initial: number | null
-
           brand_preference: string | null
           created_at: string
           id: string
@@ -398,6 +516,7 @@ export type Database = {
           mobile: string
           name: string
           opening_balance: number
+          opening_initial: number | null
           premium_stamps: number
           premium_visits: number
           regular_stamps: number
@@ -405,8 +524,6 @@ export type Database = {
           shoe_size: string | null
         }
         Insert: {
-          opening_initial?: number | null
-
           brand_preference?: string | null
           created_at?: string
           id?: string
@@ -416,6 +533,7 @@ export type Database = {
           mobile: string
           name?: string
           opening_balance?: number
+          opening_initial?: number | null
           premium_stamps?: number
           premium_visits?: number
           regular_stamps?: number
@@ -423,8 +541,6 @@ export type Database = {
           shoe_size?: string | null
         }
         Update: {
-          opening_initial?: number | null
-
           brand_preference?: string | null
           created_at?: string
           id?: string
@@ -434,6 +550,7 @@ export type Database = {
           mobile?: string
           name?: string
           opening_balance?: number
+          opening_initial?: number | null
           premium_stamps?: number
           premium_visits?: number
           regular_stamps?: number
@@ -525,12 +642,12 @@ export type Database = {
       }
       loyalty_rewards: {
         Row: {
-          earned_sale_id: string | null
-          earned_visit_number: number | null
           amount: number
           card: string
           created_at: string
           customer_id: string
+          earned_sale_id: string | null
+          earned_visit_number: number | null
           expires_at: string
           id: string
           milestone: number
@@ -539,12 +656,12 @@ export type Database = {
           used_sale_id: string | null
         }
         Insert: {
-          earned_sale_id?: string | null
-          earned_visit_number?: number | null
           amount: number
           card: string
           created_at?: string
           customer_id: string
+          earned_sale_id?: string | null
+          earned_visit_number?: number | null
           expires_at?: string
           id?: string
           milestone: number
@@ -553,12 +670,12 @@ export type Database = {
           used_sale_id?: string | null
         }
         Update: {
-          earned_sale_id?: string | null
-          earned_visit_number?: number | null
           amount?: number
           card?: string
           created_at?: string
           customer_id?: string
+          earned_sale_id?: string | null
+          earned_visit_number?: number | null
           expires_at?: string
           id?: string
           milestone?: number
@@ -572,6 +689,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_earned_sale_id_fkey"
+            columns: ["earned_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
           {
@@ -608,12 +732,11 @@ export type Database = {
       }
       product_variants: {
         Row: {
-          label_code: string | null
-
           barcode: string | null
           created_at: string
           damaged_stock: number
           id: string
+          label_code: string | null
           legacy_id: string | null
           min_stock: number
           product_id: string
@@ -623,12 +746,11 @@ export type Database = {
           stock: number
         }
         Insert: {
-          label_code?: string | null
-
           barcode?: string | null
           created_at?: string
           damaged_stock?: number
           id?: string
+          label_code?: string | null
           legacy_id?: string | null
           min_stock?: number
           product_id: string
@@ -638,12 +760,11 @@ export type Database = {
           stock?: number
         }
         Update: {
-          label_code?: string | null
-
           barcode?: string | null
           created_at?: string
           damaged_stock?: number
           id?: string
+          label_code?: string | null
           legacy_id?: string | null
           min_stock?: number
           product_id?: string
@@ -739,19 +860,18 @@ export type Database = {
       }
       purchases: {
         Row: {
-          operation_id: string | null
-          request_hash: string | null
-
           free_sample: boolean
           gst_amount: number | null
           gst_rate: number | null
           id: string
           invoice_no: string | null
           legacy_id: string | null
+          operation_id: string | null
           paid_amount: number | null
           purchase_date: string
           purchase_price: number
           quantity: number
+          request_hash: string | null
           status: string | null
           supplier_id: string | null
           supplier_name: string | null
@@ -759,19 +879,18 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
-          operation_id?: string | null
-          request_hash?: string | null
-
           free_sample?: boolean
           gst_amount?: number | null
           gst_rate?: number | null
           id?: string
           invoice_no?: string | null
           legacy_id?: string | null
+          operation_id?: string | null
           paid_amount?: number | null
           purchase_date?: string
           purchase_price?: number
           quantity?: number
+          request_hash?: string | null
           status?: string | null
           supplier_id?: string | null
           supplier_name?: string | null
@@ -779,19 +898,18 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
-          operation_id?: string | null
-          request_hash?: string | null
-
           free_sample?: boolean
           gst_amount?: number | null
           gst_rate?: number | null
           id?: string
           invoice_no?: string | null
           legacy_id?: string | null
+          operation_id?: string | null
           paid_amount?: number | null
           purchase_date?: string
           purchase_price?: number
           quantity?: number
+          request_hash?: string | null
           status?: string | null
           supplier_id?: string | null
           supplier_name?: string | null
@@ -920,10 +1038,6 @@ export type Database = {
       }
       sale_returns: {
         Row: {
-          replacement_variant_id: string | null
-          replacement_size: string | null
-          refund_mode: string | null
-          operation_id: string | null
           cash_refund: number
           cost_reversal: number
           created_at: string
@@ -932,9 +1046,13 @@ export type Database = {
           id: string
           kind: string
           note: string | null
+          operation_id: string | null
           product_name: string
           qty: number
           refund: number
+          refund_mode: string | null
+          replacement_size: string | null
+          replacement_variant_id: string | null
           sale_id: string | null
           sale_item_id: string | null
           size: string
@@ -943,10 +1061,6 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
-          replacement_variant_id?: string | null
-          replacement_size?: string | null
-          refund_mode?: string | null
-          operation_id?: string | null
           cash_refund?: number
           cost_reversal?: number
           created_at?: string
@@ -955,9 +1069,13 @@ export type Database = {
           id?: string
           kind?: string
           note?: string | null
+          operation_id?: string | null
           product_name?: string
           qty: number
           refund?: number
+          refund_mode?: string | null
+          replacement_size?: string | null
+          replacement_variant_id?: string | null
           sale_id?: string | null
           sale_item_id?: string | null
           size?: string
@@ -966,10 +1084,6 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
-          replacement_variant_id?: string | null
-          replacement_size?: string | null
-          refund_mode?: string | null
-          operation_id?: string | null
           cash_refund?: number
           cost_reversal?: number
           created_at?: string
@@ -978,9 +1092,13 @@ export type Database = {
           id?: string
           kind?: string
           note?: string | null
+          operation_id?: string | null
           product_name?: string
           qty?: number
           refund?: number
+          refund_mode?: string | null
+          replacement_size?: string | null
+          replacement_variant_id?: string | null
           sale_id?: string | null
           sale_item_id?: string | null
           size?: string
@@ -989,6 +1107,13 @@ export type Database = {
           variant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sale_returns_replacement_variant_id_fkey"
+            columns: ["replacement_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sale_returns_sale_id_fkey"
             columns: ["sale_id"]
@@ -1014,24 +1139,15 @@ export type Database = {
       }
       sales: {
         Row: {
-          delivery_charge: number | null
-          voided_at: string | null
-          voided_by: string | null
-          void_reason: string | null
-          void_refund_mode: string | null
-          void_metadata: Json | null
-          client_request_id: string | null
-          request_hash: string | null
-          request_result: Json | null
-          stamp_regular_reversed: boolean | null
-          stamp_premium_reversed: boolean | null
           bill_no: string
           bill_type: string
+          client_request_id: string | null
           coupon_amount: number
           coupon_code: string | null
           coupon_id: string | null
           customer_id: string | null
           customer_name: string | null
+          delivery_charge: number | null
           discount: number
           due_amount: number
           give_stamp: boolean
@@ -1041,37 +1157,37 @@ export type Database = {
           legacy_id: string | null
           paid_amount: number
           payment_mode: string
+          request_hash: string | null
+          request_result: Json | null
           reward_amount: number
           reward_id: string | null
           sale_date: string
           split_cash: number | null
           staff_id: string | null
           stamp_premium: boolean
+          stamp_premium_reversed: boolean | null
           stamp_regular: boolean
+          stamp_regular_reversed: boolean | null
           subtotal: number
           tax_mode: string
           taxable: number
           total: number
+          void_metadata: Json | null
+          void_reason: string | null
+          void_refund_mode: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
-          delivery_charge?: number | null
-          voided_at?: string | null
-          voided_by?: string | null
-          void_reason?: string | null
-          void_refund_mode?: string | null
-          void_metadata?: Json | null
-          client_request_id?: string | null
-          request_hash?: string | null
-          request_result?: Json | null
-          stamp_regular_reversed?: boolean | null
-          stamp_premium_reversed?: boolean | null
           bill_no: string
           bill_type?: string
+          client_request_id?: string | null
           coupon_amount?: number
           coupon_code?: string | null
           coupon_id?: string | null
           customer_id?: string | null
           customer_name?: string | null
+          delivery_charge?: number | null
           discount?: number
           due_amount?: number
           give_stamp?: boolean
@@ -1081,37 +1197,37 @@ export type Database = {
           legacy_id?: string | null
           paid_amount?: number
           payment_mode?: string
-          reward_amount?: number
-          reward_id?: string | null
-          sale_date?: string
-          split_cash?: number | null
-          staff_id?: string | null
-          stamp_premium?: boolean
-          stamp_regular?: boolean
-          subtotal?: number
-          tax_mode?: string
-          taxable?: number
-          total?: number
-        }
-        Update: {
-          delivery_charge?: number | null
-          voided_at?: string | null
-          voided_by?: string | null
-          void_reason?: string | null
-          void_refund_mode?: string | null
-          void_metadata?: Json | null
-          client_request_id?: string | null
           request_hash?: string | null
           request_result?: Json | null
-          stamp_regular_reversed?: boolean | null
+          reward_amount?: number
+          reward_id?: string | null
+          sale_date?: string
+          split_cash?: number | null
+          staff_id?: string | null
+          stamp_premium?: boolean
           stamp_premium_reversed?: boolean | null
+          stamp_regular?: boolean
+          stamp_regular_reversed?: boolean | null
+          subtotal?: number
+          tax_mode?: string
+          taxable?: number
+          total?: number
+          void_metadata?: Json | null
+          void_reason?: string | null
+          void_refund_mode?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
           bill_no?: string
           bill_type?: string
+          client_request_id?: string | null
           coupon_amount?: number
           coupon_code?: string | null
           coupon_id?: string | null
           customer_id?: string | null
           customer_name?: string | null
+          delivery_charge?: number | null
           discount?: number
           due_amount?: number
           give_stamp?: boolean
@@ -1121,17 +1237,26 @@ export type Database = {
           legacy_id?: string | null
           paid_amount?: number
           payment_mode?: string
+          request_hash?: string | null
+          request_result?: Json | null
           reward_amount?: number
           reward_id?: string | null
           sale_date?: string
           split_cash?: number | null
           staff_id?: string | null
           stamp_premium?: boolean
+          stamp_premium_reversed?: boolean | null
           stamp_regular?: boolean
+          stamp_regular_reversed?: boolean | null
           subtotal?: number
           tax_mode?: string
           taxable?: number
           total?: number
+          void_metadata?: Json | null
+          void_reason?: string | null
+          void_refund_mode?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -1152,13 +1277,13 @@ export type Database = {
       }
       stock_movements: {
         Row: {
-          operation_id: string | null
-          operation_hash: string | null
-          operation_result: Json | null
           id: string
           legacy_id: string | null
           moved_at: string
           note: string | null
+          operation_hash: string | null
+          operation_id: string | null
+          operation_result: Json | null
           product_name: string | null
           qty_in: number
           qty_out: number
@@ -1167,13 +1292,13 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
-          operation_id?: string | null
-          operation_hash?: string | null
-          operation_result?: Json | null
           id?: string
           legacy_id?: string | null
           moved_at?: string
           note?: string | null
+          operation_hash?: string | null
+          operation_id?: string | null
+          operation_result?: Json | null
           product_name?: string | null
           qty_in?: number
           qty_out?: number
@@ -1182,13 +1307,13 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
-          operation_id?: string | null
-          operation_hash?: string | null
-          operation_result?: Json | null
           id?: string
           legacy_id?: string | null
           moved_at?: string
           note?: string | null
+          operation_hash?: string | null
+          operation_id?: string | null
+          operation_result?: Json | null
           product_name?: string | null
           qty_in?: number
           qty_out?: number
@@ -1250,9 +1375,6 @@ export type Database = {
       }
       store_settings: {
         Row: {
-          default_bill_type: string | null
-          default_tax_mode: string | null
-          default_gst_rate: number | null
           advance_percent: number
           bill_design: string
           bill_footer: string | null
@@ -1262,6 +1384,9 @@ export type Database = {
           business_phone: string | null
           catalog_enabled: boolean
           daily_target: number | null
+          default_bill_type: string | null
+          default_gst_rate: number | null
+          default_tax_mode: string | null
           delivery_enabled: boolean
           delivery_note: string | null
           free_delivery_above: number | null
@@ -1272,6 +1397,8 @@ export type Database = {
           offer_card: boolean
           offer_coupon: string | null
           offer_enabled: boolean
+          offer_promotion: Json | null
+          offer_showcase: Json | null
           offer_subtitle: string | null
           offer_title: string | null
           outside_charge: number
@@ -1283,9 +1410,6 @@ export type Database = {
           upi_id: string | null
         }
         Insert: {
-          default_bill_type?: string | null
-          default_tax_mode?: string | null
-          default_gst_rate?: number | null
           advance_percent?: number
           bill_design?: string
           bill_footer?: string | null
@@ -1295,6 +1419,9 @@ export type Database = {
           business_phone?: string | null
           catalog_enabled?: boolean
           daily_target?: number | null
+          default_bill_type?: string | null
+          default_gst_rate?: number | null
+          default_tax_mode?: string | null
           delivery_enabled?: boolean
           delivery_note?: string | null
           free_delivery_above?: number | null
@@ -1305,6 +1432,8 @@ export type Database = {
           offer_card?: boolean
           offer_coupon?: string | null
           offer_enabled?: boolean
+          offer_promotion?: Json | null
+          offer_showcase?: Json | null
           offer_subtitle?: string | null
           offer_title?: string | null
           outside_charge?: number
@@ -1316,9 +1445,6 @@ export type Database = {
           upi_id?: string | null
         }
         Update: {
-          default_bill_type?: string | null
-          default_tax_mode?: string | null
-          default_gst_rate?: number | null
           advance_percent?: number
           bill_design?: string
           bill_footer?: string | null
@@ -1328,6 +1454,9 @@ export type Database = {
           business_phone?: string | null
           catalog_enabled?: boolean
           daily_target?: number | null
+          default_bill_type?: string | null
+          default_gst_rate?: number | null
+          default_tax_mode?: string | null
           delivery_enabled?: boolean
           delivery_note?: string | null
           free_delivery_above?: number | null
@@ -1338,6 +1467,8 @@ export type Database = {
           offer_card?: boolean
           offer_coupon?: string | null
           offer_enabled?: boolean
+          offer_promotion?: Json | null
+          offer_showcase?: Json | null
           offer_subtitle?: string | null
           offer_title?: string | null
           outside_charge?: number
@@ -1352,45 +1483,42 @@ export type Database = {
       }
       supplier_payments: {
         Row: {
-          operation_id: string | null
-          request_hash: string | null
-          opening_amount: number | null
-
           amount: number
           id: string
           note: string
+          opening_amount: number | null
+          operation_id: string | null
           paid_at: string
           payment_mode: string
           purchase_id: string | null
           recorded_by: string | null
+          request_hash: string | null
           supplier_id: string
         }
         Insert: {
-          operation_id?: string | null
-          request_hash?: string | null
-          opening_amount?: number | null
-
           amount: number
           id?: string
           note?: string
+          opening_amount?: number | null
+          operation_id?: string | null
           paid_at?: string
           payment_mode: string
           purchase_id?: string | null
           recorded_by?: string | null
+          request_hash?: string | null
           supplier_id: string
         }
         Update: {
-          operation_id?: string | null
-          request_hash?: string | null
-          opening_amount?: number | null
-
           amount?: number
           id?: string
           note?: string
+          opening_amount?: number | null
+          operation_id?: string | null
           paid_at?: string
           payment_mode?: string
           purchase_id?: string | null
           recorded_by?: string | null
+          request_hash?: string | null
           supplier_id?: string
         }
         Relationships: [
@@ -1412,8 +1540,6 @@ export type Database = {
       }
       suppliers: {
         Row: {
-          opening_initial: number | null
-
           address: string | null
           created_at: string
           gstin: string | null
@@ -1421,11 +1547,10 @@ export type Database = {
           legacy_id: string | null
           name: string
           opening_balance: number
+          opening_initial: number | null
           phone: string | null
         }
         Insert: {
-          opening_initial?: number | null
-
           address?: string | null
           created_at?: string
           gstin?: string | null
@@ -1433,11 +1558,10 @@ export type Database = {
           legacy_id?: string | null
           name: string
           opening_balance?: number
+          opening_initial?: number | null
           phone?: string | null
         }
         Update: {
-          opening_initial?: number | null
-
           address?: string | null
           created_at?: string
           gstin?: string | null
@@ -1445,6 +1569,7 @@ export type Database = {
           legacy_id?: string | null
           name?: string
           opening_balance?: number
+          opening_initial?: number | null
           phone?: string | null
         }
         Relationships: []
@@ -1472,27 +1597,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      ensure_variant_label_code: { Args: { _variant_id: string }; Returns: string }
-      adjust_inventory: { Args: { _variant_id: string; _expected_stock: number; _expected_damaged: number; _stock?: number | null; _min?: number | null; _rack?: string | null; _disposition?: string | null; _reason?: string }; Returns: Json }
-      set_party_opening: { Args: { _kind: string; _id: string; _amount: number }; Returns: undefined }
-      receive_customer_payment: { Args: { _customer_id: string; _amount: number; _mode: string; _note: string; _request_id: string }; Returns: Json }
-      collect_credit_payment_v2: { Args: { _sale_id: string; _amount: number; _mode: string; _note: string; _request_id: string }; Returns: Json }
-      record_supplier_payment_v2: { Args: { _supplier_id: string; _amount: number; _mode: string; _note: string; _request_id: string; _purchase_id?: string | null }; Returns: number }
-      receive_stock_v2: { Args: { _supplier_id: string | null; _supplier_name: string; _invoice: string; _items: Json; _request_id: string }; Returns: number }
-      record_catalog_refund: { Args: { _id: string; _mode: string; _reference: string; _request_id: string }; Returns: Json }
-
-      stored_bill_line_count:{Args:never;Returns:number}
-      void_sale:{Args:{_sale_id:string;_confirmation:string;_reason:string;_payment_settled:boolean;_refund_mode?:string|null};Returns:Json}
-      list_void_sales:{Args:{_offset?:number;_limit?:number};Returns:Json}
-      edit_product_variant: {Args:{_product_id:string;_variant_id:string|null;_size:string;_stock:number;_expected_stock?:number|null;_remove?:boolean;_reason?:string};Returns:Json}
-      retail_integrity_version: { Args: never; Returns: number }
-      return_cost_reversals: { Args: { _ids: string[] }; Returns: { id: string; cost_reversal: number }[] }
-      sale_return_positions: { Args: { _item: string }; Returns: { variant_id: string | null; size: string; qty: number }[] }
-      process_sale_return: { Args: { _sale_item_id: string; _variant_id: string | null; _qty: number; _damaged: boolean; _kind: string; _note?: string; _refund_mode?: string | null; _replacement_variant_id?: string | null; _operation_id?: string }; Returns: Json }
-      import_stock_csv: { Args: { _rows: Json; _mode: string; _preview?: boolean; _operation_id?: string; _expected?: Json }; Returns: Json }
       ack_store_file_cleanup: {
         Args: { _bucket: string; _paths: string[] }
         Returns: undefined
+      }
+      adjust_inventory: {
+        Args: {
+          _disposition?: string
+          _expected_damaged: number
+          _expected_stock: number
+          _min?: number
+          _rack?: string
+          _reason?: string
+          _stock?: number
+          _variant_id: string
+        }
+        Returns: Json
       }
       backup_sale_items: {
         Args: { _limit?: number; _offset?: number }
@@ -1502,6 +1622,48 @@ export type Database = {
         Args: { _id: string; _note: string }
         Returns: undefined
       }
+      catalog_bargain_bid: {
+        Args: { _client: string; _offer: number; _variant_id: string }
+        Returns: Json
+      }
+      catalog_bargain_bid_v2: {
+        Args: {
+          _client: string
+          _offer: number
+          _restart: boolean
+          _variant_id: string
+        }
+        Returns: Json
+      }
+      catalog_bargain_enabled: { Args: never; Returns: Json }
+      catalog_bargain_result: {
+        Args: {
+          _duplicate?: boolean
+          _s: Database["public"]["Tables"]["catalog_bargain_sessions"]["Row"]
+        }
+        Returns: Json
+      }
+      catalog_bargain_result_v2: {
+        Args: {
+          _duplicate?: boolean
+          _s: Database["public"]["Tables"]["catalog_bargain_sessions"]["Row"]
+        }
+        Returns: Json
+      }
+      catalog_bargain_state: {
+        Args: { _client: string; _variant_id: string }
+        Returns: Json
+      }
+      catalog_bargain_state_v2: {
+        Args: { _client: string; _variant_id: string }
+        Returns: Json
+      }
+      catalog_cart_payment_summary: {
+        Args: { _cart_no: string }
+        Returns: Json
+      }
+      catalog_cart_result: { Args: { _request_id: string }; Returns: Json }
+      catalog_cart_version: { Args: never; Returns: number }
       catalog_coupon_amount: {
         Args: {
           _code: string
@@ -1512,8 +1674,20 @@ export type Database = {
         Returns: Json
       }
       catalog_hero_storage_usage: { Args: never; Returns: Json }
+      check_catalog_cart_coupon: {
+        Args: { _code: string; _mobile: string; _variant_ids: string[] }
+        Returns: Json
+      }
       check_catalog_coupon: {
         Args: { _code: string; _mobile: string; _variant_id: string }
+        Returns: Json
+      }
+      check_legacy_money: {
+        Args: { _keys: string[]; _row: Json }
+        Returns: undefined
+      }
+      checked_sale_payload: {
+        Args: { _coupon: number; _items: Json; _reward: number; _sale: Json }
         Returns: Json
       }
       collect_credit_payment: {
@@ -1525,26 +1699,136 @@ export type Database = {
         }
         Returns: Json
       }
+      collect_credit_payment_v2: {
+        Args: {
+          _amount: number
+          _mode: string
+          _note: string
+          _request_id: string
+          _sale_id: string
+        }
+        Returns: Json
+      }
       complete_catalog_booking: {
         Args: { _id: string; _items: Json; _sale: Json }
         Returns: Json
       }
       confirm_catalog_booking: { Args: { _id: string }; Returns: undefined }
+      confirm_catalog_cart_payment: {
+        Args: { _cart_no: string; _expected_advance: number; _settled: boolean }
+        Returns: Json
+      }
       coupon_discount: {
         Args: { _code: string; _customer: string; _subtotal: number }
+        Returns: Json
+      }
+      coupon_usage_count: {
+        Args: { _code: string; _id: string }
+        Returns: number
+      }
+      create_catalog_bargain_order: {
+        Args: {
+          _address: string
+          _area: string
+          _client: string
+          _coupon: string
+          _deal_id: string
+          _fulfillment: string
+          _mobile: string
+          _name: string
+          _quote: Json
+          _request_id: string
+          _variant_id: string
+        }
         Returns: Json
       }
       create_catalog_booking: {
         Args: { _mobile: string; _name: string; _variant_id: string }
         Returns: Json
       }
-      create_catalog_order: { Args: { _address: string; _area: string; _coupon: string; _fulfillment: string; _mobile: string; _name: string; _variant_id: string; _request_id: string; _quote: Json }; Returns: Json }
-      resolve_pending_operation: { Args: { _request_id: string; _abandon?: boolean; _confirmation?: string }; Returns: Json }
-      import_legacy_store: { Args: { _payload: Json; _request_id: string }; Returns: Json }
-      owner_cash_today: { Args: never; Returns: Json }
-      operational_safety_version: { Args: never; Returns: number }
+      create_catalog_cart_order: {
+        Args: {
+          _address: string
+          _area: string
+          _fulfillment: string
+          _items: Json
+          _mobile: string
+          _name: string
+          _quote: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
+      create_catalog_cart_order_v2: {
+        Args: {
+          _address: string
+          _area: string
+          _coupon: string
+          _fulfillment: string
+          _items: Json
+          _mobile: string
+          _name: string
+          _quote: Json
+          _request_id: string
+        }
+        Returns: Json
+      }
+      create_catalog_order:
+        | {
+            Args: {
+              _address: string
+              _area: string
+              _fulfillment: string
+              _mobile: string
+              _name: string
+              _variant_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _address: string
+              _area: string
+              _coupon: string
+              _fulfillment: string
+              _mobile: string
+              _name: string
+              _variant_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _address: string
+              _area: string
+              _coupon: string
+              _fulfillment: string
+              _mobile: string
+              _name: string
+              _quote: Json
+              _request_id: string
+              _variant_id: string
+            }
+            Returns: Json
+          }
       create_sale: { Args: { _items: Json; _sale: Json }; Returns: Json }
+      edit_product_variant: {
+        Args: {
+          _expected_stock?: number
+          _product_id: string
+          _reason?: string
+          _remove?: boolean
+          _size: string
+          _stock: number
+          _variant_id: string
+        }
+        Returns: Json
+      }
       ensure_variant_code: { Args: { _variant_id: string }; Returns: string }
+      ensure_variant_label_code: {
+        Args: { _variant_id: string }
+        Returns: string
+      }
       expire_catalog_bookings: { Args: never; Returns: number }
       has_role: {
         Args: {
@@ -1553,16 +1837,49 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_legacy_store: {
+        Args: { _payload: Json; _request_id: string }
+        Returns: Json
+      }
+      import_stock_csv: {
+        Args: {
+          _expected?: Json
+          _mode: string
+          _operation_id?: string
+          _preview?: boolean
+          _rows: Json
+        }
+        Returns: Json
+      }
       is_catalog_hero_image: { Args: { _name: string }; Returns: boolean }
       is_catalog_image: { Args: { _name: string }; Returns: boolean }
+      is_catalog_promotion_photo: { Args: { _path: string }; Returns: boolean }
+      is_catalog_showcase_photo: { Args: { _path: string }; Returns: boolean }
       is_member: { Args: { _user_id: string }; Returns: boolean }
       is_saved_hero_image: { Args: { _name: string }; Returns: boolean }
+      list_void_sales: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: Json
+      }
       maintenance_business_tables: { Args: never; Returns: string[] }
       maintenance_file_in_use: {
         Args: { _bucket: string; _path: string }
         Returns: boolean
       }
       maintenance_lock_store: { Args: never; Returns: undefined }
+      operational_safety_version: { Args: never; Returns: number }
+      owner_cash_today: { Args: never; Returns: Json }
+      owner_catalog_bargain_policy: {
+        Args: { _product_id: string }
+        Returns: Json
+      }
+      owner_catalog_promotion: { Args: never; Returns: Json }
+      owner_catalog_promotion_storage: { Args: never; Returns: Json }
+      owner_catalog_showcase: { Args: never; Returns: Json }
+      prepare_catalog_promotion_photo: {
+        Args: { _audience: string; _slot: string }
+        Returns: string
+      }
       process_return: {
         Args: {
           _damaged: boolean
@@ -1573,11 +1890,43 @@ export type Database = {
         }
         Returns: number
       }
+      process_sale_return: {
+        Args: {
+          _damaged: boolean
+          _kind: string
+          _note?: string
+          _operation_id?: string
+          _qty: number
+          _refund_mode?: string
+          _replacement_variant_id?: string
+          _sale_item_id: string
+          _variant_id: string
+        }
+        Returns: Json
+      }
+      promotion_photo_in_use: { Args: { _path: string }; Returns: boolean }
       public_catalog: { Args: never; Returns: Json }
+      public_catalog_bootstrap: { Args: never; Returns: Json }
       public_catalog_hero: { Args: never; Returns: Json }
       public_catalog_offer: { Args: never; Returns: Json }
+      public_catalog_photos: {
+        Args: { _product_id: string }
+        Returns: string[]
+      }
+      public_catalog_promotion: { Args: never; Returns: Json }
+      public_catalog_showcase: { Args: { _audience: string }; Returns: Json }
       quick_add_product: {
         Args: { _cost?: number; _product: Json; _sizes: Json }
+        Returns: Json
+      }
+      receive_customer_payment: {
+        Args: {
+          _amount: number
+          _customer_id: string
+          _mode: string
+          _note: string
+          _request_id: string
+        }
         Returns: Json
       }
       receive_stock: {
@@ -1589,12 +1938,42 @@ export type Database = {
         }
         Returns: number
       }
+      receive_stock_v2: {
+        Args: {
+          _invoice: string
+          _items: Json
+          _request_id: string
+          _supplier_id: string
+          _supplier_name: string
+        }
+        Returns: number
+      }
+      record_catalog_refund: {
+        Args: {
+          _id: string
+          _mode: string
+          _reference: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       record_supplier_payment: {
         Args: {
           _amount: number
           _mode: string
           _note?: string
           _purchase_id?: string
+          _supplier_id: string
+        }
+        Returns: number
+      }
+      record_supplier_payment_v2: {
+        Args: {
+          _amount: number
+          _mode: string
+          _note: string
+          _purchase_id?: string
+          _request_id: string
           _supplier_id: string
         }
         Returns: number
@@ -1612,11 +1991,56 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_pending_operation: {
+        Args: {
+          _abandon?: boolean
+          _confirmation?: string
+          _request_id: string
+        }
+        Returns: Json
+      }
       restore_store_backup_v2: {
         Args: { _confirmation: string; _snapshot: Json }
         Returns: undefined
       }
+      retail_integrity_version: { Args: never; Returns: number }
+      return_cost_reversals: {
+        Args: { _ids: string[] }
+        Returns: {
+          cost_reversal: number
+          id: string
+        }[]
+      }
+      revalidate_catalog_cart_coupon: {
+        Args: { _booking_id: string }
+        Returns: undefined
+      }
       reward_amount: { Args: { _card: string; _m: number }; Returns: number }
+      sale_is_active: { Args: { _id: string }; Returns: boolean }
+      sale_return_positions: {
+        Args: { _item: string }
+        Returns: {
+          qty: number
+          size: string
+          variant_id: string
+        }[]
+      }
+      save_catalog_bargain_policy: {
+        Args: { _expected_revision: string; _policy: Json; _product_id: string }
+        Returns: Json
+      }
+      save_catalog_promotion: {
+        Args: { _expected: Json; _settings: Json }
+        Returns: Json
+      }
+      save_catalog_showcase: {
+        Args: { _expected: Json; _settings: Json }
+        Returns: Json
+      }
+      set_party_opening: {
+        Args: { _amount: number; _id: string; _kind: string }
+        Returns: undefined
+      }
       set_team_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1624,9 +2048,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      showcase_photo_in_use: { Args: { _path: string }; Returns: boolean }
       stage_store_restore_files: { Args: { _assets: Json }; Returns: undefined }
       store_backup_snapshot_v2: { Args: never; Returns: Json }
       store_usage: { Args: never; Returns: Json }
+      stored_bill_line_count: { Args: never; Returns: number }
+      track_catalog_cart_order: {
+        Args: { _cart_no: string; _mobile: string }
+        Returns: Json
+      }
       track_catalog_order: {
         Args: { _booking_no: string; _mobile: string }
         Returns: Json
@@ -1635,9 +2065,23 @@ export type Database = {
         Args: { _confirmation: string; _email: string }
         Returns: undefined
       }
+      unused_catalog_showcase_photos: {
+        Args: { _paths?: string[] }
+        Returns: Json
+      }
       update_catalog_order_status: {
         Args: { _id: string; _status: string }
         Returns: undefined
+      }
+      void_sale: {
+        Args: {
+          _confirmation: string
+          _payment_settled: boolean
+          _reason: string
+          _refund_mode?: string
+          _sale_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {
