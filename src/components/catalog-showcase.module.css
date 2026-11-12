@@ -1,0 +1,318 @@
+.entrySection {
+  margin: 1.1rem 0 1.5rem;
+  color: var(--catalog-ink, #203e2c);
+}
+.entrySection[data-theme="dark"] {
+  color: #f4efdf;
+}
+.entry {
+  display: grid;
+  grid-template-columns: minmax(95px, 40%) minmax(0, 1fr) 40px;
+  gap: 0.65rem;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: auto;
+  padding: 0.45rem 0.25rem;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  color: inherit;
+  border-radius: 12px;
+}
+.entry:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 6px;
+}
+.stack {
+  position: relative;
+  display: block;
+  height: 125px;
+  max-width: 185px;
+  width: 100%;
+  margin: auto;
+}
+.paper {
+  position: absolute;
+  left: 4%;
+  top: 2px;
+  height: 116px;
+  width: 80px;
+  padding: 4px;
+  background: #fffaf0;
+  box-shadow: 0 5px 9px #28251d26;
+  transform: rotate(-9deg);
+  border: 1px solid #efe8dc;
+  transition: transform 200ms ease;
+}
+.paper:nth-child(2) {
+  left: 43%;
+  top: 7px;
+  transform: rotate(8deg);
+}
+.paper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.paper > span {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 11px;
+  color: #243b2b;
+}
+.entryCopy {
+  display: grid;
+  position: relative;
+  gap: 0.35rem;
+}
+.entryCopy strong {
+  font-family: "Libre Baskerville", Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1.3rem, 4.3vw, 2.1rem);
+  line-height: 1.16;
+  letter-spacing: -0.05em;
+}
+.entryCopy > span:not(.spark) {
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.spark {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  font-size: 24px;
+}
+.entryCopy i {
+  display: block;
+  height: 2px;
+  max-width: 95px;
+  margin-top: 0.1rem;
+  background: #a87d38;
+  transform: rotate(-4deg);
+}
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #24432e;
+  color: #fff8e7;
+  font-size: 27px;
+  line-height: 1;
+}
+.loading {
+  text-align: center;
+  font-size: 0.8rem;
+}
+.loading button {
+  min-height: 44px;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+}
+.gallery {
+  --showcase-bg: #fbf6ec;
+  --showcase-ink: #233e2d;
+  background: var(--showcase-bg) !important;
+  color: var(--showcase-ink) !important;
+  width: min(920px, calc(100vw - 24px)) !important;
+  max-width: 920px !important;
+  height: min(88dvh, 1000px);
+  max-height: 90dvh;
+  display: flex !important;
+  flex-direction: column;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+  transition: none !important;
+}
+.gallery[data-motion="false"] {
+  animation: none !important;
+}
+.gallery[data-theme="dark"] {
+  --showcase-bg: #17231f;
+  --showcase-ink: #f6efdf;
+}
+.gallery > button:last-child {
+  color: var(--showcase-ink);
+  opacity: 1;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  top: 12px;
+  right: 12px;
+}
+.galleryHeader {
+  flex: none;
+  padding: 22px 55px 18px 22px;
+  border-bottom: 1px solid #8b8c752c;
+  text-align: left;
+}
+.galleryHeader h2 {
+  font:
+    italic 700 clamp(1.3rem, 4vw, 1.8rem)/1.2 "Libre Baskerville",
+    Georgia,
+    serif;
+}
+.galleryHeader p {
+  font-size: 0.75rem;
+  color: inherit;
+  opacity: 0.75;
+}
+.posters {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 16px;
+  align-items: start;
+}
+.posters[hidden] {
+  display: none;
+}
+.gallery[data-zoom="true"] {
+  --showcase-bg: #141c18;
+  --showcase-ink: #fff9ed;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  border: 0;
+  border-radius: 0 !important;
+}
+.gallery[data-zoom="true"] .galleryHeader {
+  padding-top: max(10px, env(safe-area-inset-top));
+  padding-bottom: 10px;
+}
+.gallery[data-zoom="true"] .galleryHeader h2 {
+  padding-inline: 0;
+  font-size: 1rem;
+}
+.gallery[data-zoom="true"] .galleryHeader p {
+  font-size: 0.65rem;
+}
+.zoomBack {
+  width: fit-content;
+  min-height: 40px;
+  font-size: 0.8rem;
+  text-align: left;
+}
+.fullPoster {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  overflow: hidden;
+}
+.fullPoster img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  display: block;
+}
+.zoomActions {
+  flex: none;
+  padding: 0 20px max(10px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+}
+.zoomActions button {
+  min-height: 44px;
+  padding: 8px 24px;
+  background: #f7f0df;
+  color: #203e2c;
+  border-radius: 7px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.poster {
+  min-width: 0;
+}
+.artwork {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: #e4e0d6;
+  display: block;
+  cursor: pointer;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.artwork img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.poster h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0.5rem 0 0;
+}
+.posterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: 0.7rem;
+}
+.posterActions button,
+.posterActions a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .entrySection[data-motion="true"] .entry:hover .paper:first-child {
+    transform: rotate(-12deg) translateY(-3px);
+  }
+  .entrySection[data-motion="true"] .entry:hover .paper:nth-child(2) {
+    transform: rotate(12deg) translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paper {
+    transition: none;
+  }
+  .entrySection .entry:hover .paper:first-child {
+    transform: rotate(-9deg);
+  }
+  .entrySection .entry:hover .paper:nth-child(2) {
+    transform: rotate(8deg);
+  }
+}
+@media (max-width: 359px) {
+  .entry {
+    gap: 0.4rem;
+    grid-template-columns: 39% minmax(0, 1fr) 34px;
+  }
+  .paper {
+    width: 67px;
+    height: 103px;
+  }
+  .stack {
+    height: 112px;
+  }
+  .arrow {
+    width: 34px;
+    height: 34px;
+  }
+  .entryCopy strong {
+    font-size: 1.2rem;
+  }
+  .posters {
+    padding: 12px;
+    gap: 20px 10px;
+  }
+}

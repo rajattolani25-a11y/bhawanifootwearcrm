@@ -19,6 +19,7 @@ import {
   trackOrder,
 } from "/src/lib/catalog.functions.ts";
 import { getCatalogPromotion } from "/src/lib/catalog-promotion.functions.ts";
+import { getCatalogShowcase } from "/src/lib/catalog-showcase.functions.ts";
 import { getBargain, makeBargain } from "/src/lib/catalog-bargain.functions.ts";
 import { checkCartCoupon, createCartOrder } from "/src/lib/catalog-cart.functions.ts";
 import { requireOwnerRoute } from "/src/lib/owner-route.ts";
@@ -53,6 +54,7 @@ window.__authBoundary = {
     getCatalogSnapshot,
     getCatalogPhotos,
     getCatalogPromotion,
+    getCatalogShowcase,
     getBargain,
     makeBargain,
     createBooking,

@@ -62,7 +62,7 @@ try {
     }
     return results;
   });
-  assert.equal(publicCalls.length, 11);
+  assert.equal(publicCalls.length, 12);
   assert(publicCalls.every((r) => !r.headers.Authorization));
   assert.equal(
     await page.evaluate(() => window.__sdkLoads),

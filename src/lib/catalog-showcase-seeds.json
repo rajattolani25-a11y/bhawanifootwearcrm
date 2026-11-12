@@ -1,0 +1,74 @@
+{
+  "tradition": {
+    "id": "50000000-0000-4000-8000-000000000001",
+    "title": "Tradition in Every Step",
+    "audience": "women",
+    "productId": null,
+    "src": "/media/showcase/tradition-47a3f31519.webp",
+    "thumbnail": "/media/showcase/tradition-47a3f31519-thumb.webp",
+    "bytes": 232970,
+    "thumbnailBytes": 18694,
+    "width": 960,
+    "height": 1280
+  },
+  "desi": {
+    "id": "50000000-0000-4000-8000-000000000002",
+    "title": "Desi Drip",
+    "audience": "women",
+    "productId": null,
+    "src": "/media/showcase/desi-f88e19b833.webp",
+    "thumbnail": "/media/showcase/desi-f88e19b833-thumb.webp",
+    "bytes": 253868,
+    "thumbnailBytes": 17350,
+    "width": 1024,
+    "height": 1280
+  },
+  "yorker": {
+    "id": "50000000-0000-4000-8000-000000000003",
+    "title": "TRV Yorker-1",
+    "audience": "men",
+    "productId": "7d19b792-38e2-4ed0-b977-9df8cb5ec420",
+    "src": "/media/showcase/yorker-5d6e8a9214.webp",
+    "thumbnail": "/media/showcase/yorker-5d6e8a9214-thumb.webp",
+    "bytes": 169038,
+    "thumbnailBytes": 12614,
+    "width": 960,
+    "height": 1280
+  },
+  "boldfit": {
+    "id": "50000000-0000-4000-8000-000000000004",
+    "title": "Boldfit SG26",
+    "audience": "men",
+    "productId": "7d925562-9e60-40a7-bbf0-64b1f0041f42",
+    "src": "/media/showcase/boldfit-86779efed1.webp",
+    "thumbnail": "/media/showcase/boldfit-86779efed1-thumb.webp",
+    "bytes": 175560,
+    "thumbnailBytes": 11994,
+    "width": 1024,
+    "height": 1280
+  },
+  "hetro": {
+    "id": "50000000-0000-4000-8000-000000000005",
+    "title": "HETRO Eden-1",
+    "audience": "women",
+    "productId": "b1abecdb-63a1-41e0-ae64-4c7319f5334e",
+    "src": "/media/showcase/hetro-fb3a580e0f.webp",
+    "thumbnail": "/media/showcase/hetro-fb3a580e0f-thumb.webp",
+    "bytes": 150406,
+    "thumbnailBytes": 12442,
+    "width": 715,
+    "height": 1280
+  },
+  "flyo": {
+    "id": "50000000-0000-4000-8000-000000000006",
+    "title": "Lakhani FLYO Wood-1",
+    "audience": "men",
+    "productId": "d073c273-08d9-4b5d-81a6-16b03e0f818b",
+    "src": "/media/showcase/flyo-a95830a9cb.webp",
+    "thumbnail": "/media/showcase/flyo-a95830a9cb-thumb.webp",
+    "bytes": 192920,
+    "thumbnailBytes": 12418,
+    "width": 960,
+    "height": 1280
+  }
+}

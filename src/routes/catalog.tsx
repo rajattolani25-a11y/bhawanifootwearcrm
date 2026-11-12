@@ -28,6 +28,7 @@ import { CatalogReservation } from "@/components/catalog-reservation";
 import reservationStyles from "@/components/catalog-reservation.module.css";
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+const CatalogShowcase = lazy(() => import("@/components/CatalogShowcase").then(module => ({ default: module.CatalogShowcase })));
 import { ArrowLeft, ArrowRight, Camera, Check, Clock, Globe, HelpCircle, Info, Share2, MapPin, MessageCircle, Moon, Package, Phone, Search, ShieldCheck, ShoppingBag, ShoppingCart, Sun, Store, Truck, X } from "lucide-react";
 import styles from "./catalog.module.css";
 import { PhotoSearch } from "@/components/PhotoSearch";
@@ -293,6 +294,7 @@ export function CatalogView({ data: initialData }: { data: CatalogData }) {
       {sharedUnavailable && <p role="status" className="mx-auto max-w-6xl px-4 py-3 text-sm">This shared product is currently unavailable. Please browse the collection or contact the store.</p>}
       <main id="catalog-collection" className={styles["collection"]}>
         {presentation.gallery_enabled && list.length > 0 && <CatalogSpotlight key={`${filter}-${fsize}-${fstyle}-${deferredQuery}`} products={list} categoryAccents={presentation.category_accents} motionEnabled={presentation.motion_enabled} onOpen={openProduct} />}
+        {(filter === "Men" || filter === "Women") && <Suspense fallback={null}><CatalogShowcase key={filter} audience={filter === "Men" ? "men" : "women"} products={products} onProduct={openProduct} dark={dark} motionEnabled={presentation.motion_enabled} /></Suspense>}
         <CatalogPromotions offer={data.offer ?? null} products={products} department={filter} motionEnabled={presentation.motion_enabled} onProduct={openProduct} onShop={audience=>{setQ("");setFilter(audience === "men" ? "Men" : audience === "women" ? "Women" : "All");setFsize("All");setFstyle("All");window.requestAnimationFrame(()=>document.getElementById("catalog-products")?.scrollIntoView({behavior: presentation.motion_enabled && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto", block:"start"}));}} />
         <div className={styles["collectionHeader"]}>
           <h2 id="catalog-products">Shop the collection</h2>

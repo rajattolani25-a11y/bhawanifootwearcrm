@@ -142,7 +142,7 @@ export function StorageMeter() {
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="flex items-center gap-1.5 font-medium">
               <ImageIcon className="h-4 w-4" />
-              {photos.complete ? "Product, hero & promo photos" : "Product photos"}
+              {photos.complete ? "Product, hero, promo & showcase photos" : "Product photos"}
             </span>
             <b data-no-translate>{storageBytes(photos.bytes)}</b>
           </div>

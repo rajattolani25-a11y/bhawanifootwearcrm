@@ -18,6 +18,7 @@ import type { CatalogThemeId } from "@/lib/catalog-themes";
 const CatalogPromotionSettings = lazy(()=>import("./CatalogPromotionSettings").then(module=>({default:module.CatalogPromotionSettings})));
 
 const CatalogHeroPreview = lazy(()=>import("./CatalogHeroPreview").then(module=>({default:module.CatalogHeroPreview})));
+const CatalogShowcaseSettings = lazy(()=>import("./CatalogShowcaseSettings").then(module=>({default:module.CatalogShowcaseSettings})));
 
 const CatalogProductControls = lazy(()=>import("./CatalogProductControls").then(module=>({default:module.CatalogProductControls})));
 
@@ -186,7 +187,7 @@ export function CatalogSettings() {
       <Tabs value={section} onValueChange={setSection}>
         <TabsList
           aria-label="Catalog settings sections"
-          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-5"
+          className="mt-4 grid h-auto w-full grid-cols-3 gap-1 sm:grid-cols-6"
         >
           <TabsTrigger value="appearance" className="min-h-11 whitespace-normal text-xs">
             Appearance
@@ -194,6 +195,7 @@ export function CatalogSettings() {
           <TabsTrigger value="design" className="min-h-11 whitespace-normal text-xs">
             Design & hero
           </TabsTrigger>
+          <TabsTrigger value="showcase" className="min-h-11 whitespace-normal text-xs">Showcase</TabsTrigger>
           <TabsTrigger value="orders" className="min-h-11 whitespace-normal text-xs">
             Orders & delivery
           </TabsTrigger>
@@ -215,6 +217,9 @@ export function CatalogSettings() {
           <div id="catalog-hero-controls" className="scroll-mt-20">
             <Suspense fallback={<p role="status">Loading hero editor…</p>}><CatalogHeroPreview previewTheme={previewTheme} /></Suspense>
           </div>
+        </VisitedTabsContent>
+        <VisitedTabsContent visited={visited.has("showcase")} value="showcase" forceMount className="data-[state=inactive]:hidden">
+          <Suspense fallback={<p role="status">Loading Showcase editor…</p>}><CatalogShowcaseSettings /></Suspense>
         </VisitedTabsContent>
         <VisitedTabsContent visited={visited.has("orders")} value="orders" forceMount className="data-[state=inactive]:hidden">
           <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
