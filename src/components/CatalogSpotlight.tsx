@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ArrowLeft, ArrowRight, ShoppingBag } from "lucide-react";
 import { decodeImage } from "@/lib/decode-image";
+import { warmProductPhotos } from "@/lib/catalog-photo-intent";
 import { spotlightLabel, spotlightStyle } from "@/lib/catalog-spotlight-style";
 import type { CatalogProduct } from "@/lib/catalog.functions";
 import { useLang } from "@/lib/i18n";
@@ -286,6 +287,11 @@ export function CatalogSpotlight({
           <button
             type="button"
             onClick={() => onOpen(current)}
+            onPointerEnter={(event) => {
+              if (event.pointerType === "mouse") warmProductPhotos(current.id, current.image);
+            }}
+            onPointerDown={() => warmProductPhotos(current.id, current.image)}
+            onFocus={() => warmProductPhotos(current.id, current.image)}
             className={styles["mainPhoto"]}
             aria-label={`${t("View pair")}: ${current.brand} ${current.article}`}
           />
@@ -307,7 +313,16 @@ export function CatalogSpotlight({
           <h3 data-no-translate>{current.article}</h3>
           <strong>{inr(current.price)}</strong>
         </div>
-        <button type="button" className={styles["open"]} onClick={() => onOpen(current)}>
+        <button
+          type="button"
+          className={styles["open"]}
+          onClick={() => onOpen(current)}
+          onPointerEnter={(event) => {
+            if (event.pointerType === "mouse") warmProductPhotos(current.id, current.image);
+          }}
+          onPointerDown={() => warmProductPhotos(current.id, current.image)}
+          onFocus={() => warmProductPhotos(current.id, current.image)}
+        >
           {t("View pair")} <ArrowRight aria-hidden="true" />
         </button>
       </div>

@@ -1,0 +1,11 @@
+# Catalog loading and photo transitions
+
+Product intent (mouse hover, keyboard focus or pointer down) starts a fresh public gallery read and warms the cover/next angle. At most two speculative reads may be pending. Opening coalesces an already pending read; responses are discarded when complete, so a later opening revalidates through the existing public RPC. No product/price/availability response cache, new public handler, storage upload or SQL is added.
+
+The main cover appears independently of extra-angle loading. Matching signed-token changes do not reset the selected angle. The next angle is decoded after the visible photo and touch intent warms it too. Selection keeps the current image until decode succeeds; failures retain that photo and Retry. The outgoing photograph keeps its actual DOM image rather than being recreated. A 260ms opacity fade retains an opaque backing image, with at most two layers. Rapid taps complete the current fade before the latest decoded selection; late selections cannot affect another product/unmounted gallery. Owner motion OFF and device reduced motion keep immediate swaps.
+
+English entry uses the existing lightweight legacy English aliases. Hindi/Hinglish dictionaries now load on selection or restoration of a saved non-English preference. The last language choice wins if loading finishes late; a failed import retains the working language with retry feedback. English aliases are unit-checked against the full dictionary. Translations, unknown-copy fallback, dynamic text/attributes and protected product/code subtrees remain.
+
+Same-build production translation module: before 209,833 bytes (50,855 gzip); eager after7,703 bytes (3,465 gzip), with the full dictionary deferred. This is a module-size reduction, not a whole-site speed percentage or a guaranteed load time on every phone. Hindi/Hinglish still need the full dictionary. No photo quality is reduced.
+
+Local checks cover real delayed/failed images, retained image DOM, rapid selection, signed URL renewal, product-switch cancellation, motion controls; English cold entry has zero full-dictionary requests, and all languages/saved preference work. Existing startup priority/lazy loading, fresh price/stock reconciliation, cart, Terms, public auth, promotions and Showcase checks remain. Production requires Publish/Update.

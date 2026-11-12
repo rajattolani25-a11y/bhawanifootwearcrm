@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import assert from "node:assert/strict";
+import { PNG } from "pngjs";
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 const out = "/tmp/solestack-audit/catalog-gallery";
 await fs.mkdir(out, { recursive: true });
@@ -76,17 +77,14 @@ await page.route("**/*", async (route) => {
       contentType: "image/png",
       body: process.env.PREVIEW_SHOE
         ? await fs.readFile(process.env.PREVIEW_SHOE)
-        : Buffer.from(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aOUkAAAAASUVORK5CYII=",
-            "base64",
-          ),
+        : PNG.sync.write({ width: 2, height: 2, data: Buffer.alloc(16, 255) }),
     });
   if (["localhost", "127.0.0.1"].includes(u.hostname)) return route.continue();
   external.push(u.pathname);
   return route.abort();
 });
 try {
-  await page.goto("http://localhost:8080/catalog-ui.html");
+  await page.goto("http://127.0.0.1:3000/catalog-ui.html");
   const card = page.getByRole("button", { name: "Demo Daily Comfort", exact: true });
   await card.waitFor();
   for (const width of [320, 390, 768, 1440]) {
@@ -114,7 +112,9 @@ try {
   );
   assert(
     (
-      await dialog.getByAltText("Demo Daily Comfort — view 3", { exact: true }).getAttribute("src")
+      await dialog
+        .getByAltText("Demo Daily Comfort · Cream — view 3", { exact: true })
+        .getAttribute("src")
     ).includes("angle=3"),
   );
   for (const width of [320, 390, 768, 1440]) {
@@ -137,7 +137,7 @@ try {
   assert.equal(
     await page
       .getByRole("dialog")
-      .getByAltText("Demo Daily Comfort — view 1", { exact: true })
+      .getByAltText("Demo Daily Comfort · Cream — view 1", { exact: true })
       .count(),
     1,
   );
@@ -154,6 +154,12 @@ try {
   };
   await fs.writeFile(out + "/checks.json", JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
+} catch (error) {
+  console.error(
+    errors,
+    await page.getByLabel("Product photo gallery", { exact: true }).innerHTML(),
+  );
+  throw error;
 } finally {
   await browser.close();
 }

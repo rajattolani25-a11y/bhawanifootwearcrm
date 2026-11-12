@@ -34,6 +34,7 @@ await p.route("**/*", async (r) => {
     });
   if (u.pathname.startsWith("/smooth-")) {
     requests.push(u.pathname);
+    if (u.searchParams.get("token") === "expired") return r.abort();
     if (u.pathname === "/smooth-slow-a.svg" && holdA)
       await new Promise((resolve) => (releaseA = resolve));
     if (u.pathname === "/smooth-slow-b.svg" && holdB)
@@ -56,6 +57,9 @@ const mainImage = () => gallery().locator("img:not([aria-hidden])").first();
 try {
   await p.goto("http://127.0.0.1:3000/gallery-smooth.html");
   await p.getByRole("button", { name: "View photo 4", exact: true }).waitFor();
+  await mainImage().evaluate((node) => {
+    window.__originalCover = node;
+  });
   await p.getByRole("button", { name: "View photo 2", exact: true }).click();
   await p.waitForTimeout(120);
   assert.equal(await mainImage().getAttribute("src"), "/smooth-one-cover.svg");
@@ -69,14 +73,49 @@ try {
         .querySelector('[aria-label="Product photo gallery"] img:not([aria-hidden])')
         ?.getAttribute("src") === "/smooth-slow-b.svg",
   );
+  assert(
+    await gallery()
+      .locator("img[aria-hidden=true]")
+      .evaluate((node) => node === window.__originalCover),
+    "The outgoing photo retains its actual decoded DOM image",
+  );
   const frame = await mainImage().evaluate((n) => ({
     duration: getComputedStyle(n).animationDuration,
     name: getComputedStyle(n).animationName,
   }));
-  assert.equal(frame.duration, "0.2s");
+  assert.equal(frame.duration, "0.26s");
   assert(frame.name.includes("photo-in"));
-  await p.waitForTimeout(240);
+  await p.waitForTimeout(300);
   assert.equal(await gallery().locator("img[aria-hidden=true]").count(), 0);
+  await p.getByRole("button", { name: "Renew cover token", exact: true }).click();
+  await p.waitForTimeout(50);
+  assert.equal(
+    await mainImage().getAttribute("src"),
+    "/smooth-slow-b.svg",
+    "Signed URL renewal must not reset the selected angle",
+  );
+  await p.getByRole("button", { name: "View photo 1", exact: true }).click();
+  await p.waitForFunction(
+    () =>
+      document
+        .querySelector('[aria-label="Product photo gallery"] img:not([aria-hidden])')
+        ?.getAttribute("src") === "/smooth-one-cover.svg",
+  );
+  await p.getByRole("button", { name: "View photo 3", exact: true }).click();
+  await p.waitForTimeout(30);
+  assert.equal(
+    await mainImage().getAttribute("src"),
+    "/smooth-one-cover.svg",
+    "Rapid taps finish the existing fade without snapping",
+  );
+  await p.waitForFunction(
+    () =>
+      document
+        .querySelector('[aria-label="Product photo gallery"] img:not([aria-hidden])')
+        ?.getAttribute("src") === "/smooth-slow-b.svg",
+  );
+  assert((await gallery().locator("img[aria-hidden=true]").count()) <= 1);
+  await p.waitForTimeout(300);
   await p.getByRole("button", { name: "View photo 4", exact: true }).click();
   await p.getByText("Showing available product photo.", { exact: true }).waitFor();
   assert.equal(await mainImage().getAttribute("src"), "/smooth-slow-b.svg");
@@ -105,6 +144,18 @@ try {
     );
     assert.equal(await mainImage().evaluate((n) => n.getAnimations().length), 0);
   }
+  await p.goto("http://127.0.0.1:3000/gallery-smooth.html?cover=expired");
+  await p.waitForFunction(
+    () =>
+      document
+        .querySelector('[aria-label="Product photo gallery"] img:not([aria-hidden])')
+        ?.getAttribute("src") === "/smooth-one-cover.svg",
+  );
+  assert.equal(
+    await mainImage().evaluate((node) => node.complete && node.naturalWidth > 0),
+    true,
+    "An expired cover is replaced by the fresh authorized gallery URL",
+  );
   assert.deepEqual(errors, []);
   assert.deepEqual(external, []);
   console.log(
@@ -112,7 +163,11 @@ try {
       passed: true,
       oldPhotoRetainedUntilDecode: true,
       latestTapWins: true,
-      crossFadeMs: 200,
+      crossFadeMs: 260,
+      retainedDecodedDom: true,
+      rapidTapFadeGuard: true,
+      signedTokenKeepsSelectedAngle: true,
+      expiredCoverRecoversFreshUrl: true,
       failedPhotoPreservesCurrent: true,
       productSwitchCancelsLateSelection: true,
       prefetchCoalesced: true,
@@ -120,6 +175,15 @@ try {
       liveWrites: 0,
     }),
   );
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      errors,
+      current: await mainImage().getAttribute("src"),
+      buttons: await p.getByRole("button").allTextContents(),
+    }),
+  );
+  throw error;
 } finally {
   holdA = holdB = false;
   releaseA?.();

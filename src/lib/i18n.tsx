@@ -1,92 +1,80 @@
-import { COMMERCE } from "./i18n-commerce";
-import { OPERATIONS } from "./i18n-operations";
-import { CATEGORY_TRANSLATIONS } from "@/lib/i18n-categories";
-import { EXTRA, GENERATED } from "@/lib/i18n-dict";
-import { ORDERS } from "@/lib/i18n-orders";
-import { POSTERS } from "@/lib/i18n-posters";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { ENGLISH } from "./i18n-english";
+import { toast } from "sonner";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type AppLanguage = "english" | "hindi" | "hinglish";
 
-// Keyed by the English text shown in the app. Missing phrases fall back to English.
-const DICT: Record<string, { english?: string; hindi: string; hinglish: string }> = {
-  ...GENERATED,
-  ...EXTRA,
-  ...ORDERS,
-  ...POSTERS,
-  ...CATEGORY_TRANSLATIONS,
-  ...OPERATIONS,
-  ...COMMERCE,
-  "SoleStack": { hindi: "SoleStack", hinglish: "SoleStack" },
-  "Summary": { hindi: "सारांश", hinglish: "Summary" },
-  "Profit & Loss": { hindi: "लाभ और हानि", hinglish: "Munafa-Nuksaan" },
-  "Cash Book": { hindi: "नकद बही", hinglish: "Cash Khata" },
-  "Tax & Payables": { hindi: "टैक्स और देनदारी", hinglish: "Tax aur Dena" },
-  "Dashboard": { hindi: "डैशबोर्ड", hinglish: "Dashboard" },
-  "POS Billing": { hindi: "नया बिल", hinglish: "Naya Bill" },
-  "Products": { hindi: "सामान", hinglish: "Saman" },
-  "Purchase": { hindi: "माल आया (स्टॉक)", hinglish: "Naya Maal Aaya" },
-  "Sales History": { hindi: "बिक्री इतिहास", hinglish: "Bikri History" },
-  "Suppliers": { hindi: "सप्लायर", hinglish: "Supplier" },
-  "Customers": { hindi: "ग्राहक", hinglish: "Grahak" },
-  "Khatabook": { hindi: "खाता बही", hinglish: "Khatabook" },
-  "Size Finder": { hindi: "साइज़ खोजें", hinglish: "Size Dhundo" },
-  "Rewards & Coupons": { hindi: "इनाम और कूपन", hinglish: "Inaam & Coupon" },
-  "Inventory Control": { hindi: "स्टॉक नियंत्रण", hinglish: "Stock Control" },
-  "Reports": { hindi: "रिपोर्ट", hinglish: "Hisaab-Kitab" },
-  "Accounting": { hindi: "हिसाब", hinglish: "Hisaab" },
-  "Barcodes": { hindi: "बारकोड", hinglish: "Barcode" },
-  "Settings": { hindi: "सेटिंग्स", hinglish: "Settings" },
-  "WhatsApp & Posters": { hindi: "व्हाट्सऐप और पोस्टर", hinglish: "WhatsApp & Poster" },
-  "Stock Ledger": { hindi: "स्टॉक खाता", hinglish: "Stock Khata" },
-  "Guide": { hindi: "गाइड", hinglish: "Guide" },
-  "Sign out": { hindi: "लॉग आउट", hinglish: "Log out" },
-  "Language": { hindi: "भाषा", hinglish: "Bhasha" },
-  "Customer Ledger": { hindi: "ग्राहक खाता", hinglish: "Grahak Khata" },
-  "Supplier Ledger": { hindi: "सप्लायर खाता", hinglish: "Supplier Khata" },
-  "Due Balance": { hindi: "उधार बकाया", hinglish: "Udhar Baaki" },
-  "Returns": { hindi: "वापसी", hinglish: "Return" },
-  "Stock In": { hindi: "माल आया", hinglish: "Naya Maal Aaya" },
-  "New Bill": { hindi: "नया बिल", hinglish: "Naya Bill" },
-  "Date": { hindi: "तारीख", hinglish: "Tareekh" },
-  "Details": { hindi: "विवरण", hinglish: "Detail" },
-  "Debit": { hindi: "नामे", hinglish: "Naame" },
-  "Credit": { hindi: "जमा", hinglish: "Jama" },
-  "Balance": { hindi: "बकाया", hinglish: "Baaki" },
-  "Opening balance": { hindi: "पुराना बकाया", hinglish: "Purana Baaki" },
-  "Share on WhatsApp": { hindi: "व्हाट्सऐप पर भेजें", hinglish: "WhatsApp pe bhejo" },
-  "Search": { hindi: "खोजें", hinglish: "Dhundo" },
-  "Store details, team and data.": { hindi: "दुकान की जानकारी, टीम और डेटा।", hinglish: "Dukaan ki details, team aur data." },
-  "Who you buy from, how much is pending.": { hindi: "किससे माल लेते हैं, कितना बाकी है।", hinglish: "Kisse maal lete ho, kitna baaki hai." },
-  "Every entry with running balance for customers and suppliers.": { hindi: "ग्राहक और सप्लायर की हर एंट्री, चलते बकाये के साथ।", hinglish: "Grahak aur supplier ki har entry, chalte baaki ke saath." },
-  "Pick a size, see what is in stock, and send it on WhatsApp.": { hindi: "साइज़ चुनें, स्टॉक देखें और व्हाट्सऐप पर भेजें।", hinglish: "Size chuno, stock dekho aur WhatsApp pe bhejo." },
-  "Credit received": { hindi: "उधार जमा", hinglish: "Udhar jama" },
-  "Goods received": { hindi: "माल आया", hinglish: "Maal aaya" },
-  "Payment made": { hindi: "भुगतान दिया", hinglish: "Payment diya" },
-  "Paid at billing": { hindi: "बिल के समय दिया", hinglish: "Bill ke time diya" },
-  "Total to receive (from customers)": { hindi: "कुल लेना है (ग्राहकों से)", hinglish: "Total lena hai (grahak se)" },
-  "Total to pay (to suppliers)": { hindi: "कुल देना है (सप्लायर को)", hinglish: "Total dena hai (supplier ko)" },
-  "days": { hindi: "दिन", hinglish: "din" },
-  "Balance is only": { english: "Balance is only", hindi: "बाकी सिर्फ", hinglish: "Baaki sirf" },
-};
-
-const Ctx = createContext<{ lang: AppLanguage; setLang: (l: AppLanguage) => void }>({ lang: "english", setLang: () => {} });
+const Ctx = createContext<{ lang: AppLanguage; setLang: (l: AppLanguage) => void }>({
+  lang: "english",
+  setLang: () => {},
+});
 const KEY = "solestack-language";
-// Some older screens use Hinglish as the source key. Also recognise their
-// explicit English copy, so a React-rendered translation can switch back.
-const BY_ENGLISH = Object.fromEntries(Object.values(DICT).filter(v => v.english).map(v => [v.english!, v]));
+// The full dictionary is needed only for Hindi/Hinglish. English legacy
+// aliases stay eager so existing screens keep their original English copy.
+let translations: typeof import("./i18n-data") | undefined;
+let translationRequest: Promise<void> | undefined;
+function loadTranslations() {
+  if (!translationRequest) {
+    translationRequest = import("./i18n-data")
+      .then((module) => {
+        translations = module;
+      })
+      .catch((error) => {
+        translationRequest = undefined;
+        throw error;
+      });
+  }
+  return translationRequest;
+}
 function phrase(text: string, lang: AppLanguage) {
-  return (DICT[text] ?? BY_ENGLISH[text])?.[lang] ?? text;
+  return lang === "english"
+    ? (ENGLISH[text] ?? text)
+    : (translations?.translatePhrase(text, lang) ?? text);
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<AppLanguage>("english");
-  useEffect(() => {
-    let v: string | null = null;
-    try { v = localStorage.getItem(KEY); } catch { /* restricted device storage */ }
-    if (v === "hindi" || v === "hinglish" || v === "english") setLangState(v);
+  const request = useRef(0);
+  const setLang = useCallback((next: AppLanguage) => {
+    const id = ++request.current;
+    const apply = () => {
+      if (id !== request.current) return;
+      try {
+        localStorage.setItem(KEY, next);
+      } catch {
+        /* session-only selection */
+      }
+      setLangState(next);
+    };
+    if (next === "english" || translations) apply();
+    else
+      void loadTranslations()
+        .then(apply)
+        .catch(() => {
+          if (id === request.current) toast.error("Could not load language. Please try again.");
+        });
   }, []);
-  const setLang = (l: AppLanguage) => { try { localStorage.setItem(KEY, l); } catch { /* session-only selection */ } setLangState(l); };
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(KEY);
+    } catch {
+      /* restricted device storage */
+    }
+    if (saved === "hindi" || saved === "hinglish" || saved === "english") setLang(saved);
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- Numeric generation invalidates late language imports after unmount.
+      request.current++;
+    };
+  }, [setLang]);
   useEffect(() => translateDom(lang), [lang]);
   return <Ctx.Provider value={{ lang, setLang }}>{children}</Ctx.Provider>;
 }
@@ -101,9 +89,22 @@ export function LanguageSelect() {
   const { lang, setLang, t } = useLang();
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label={t("Language")}>
-      {([["english", "English"], ["hindi", "हिंदी"], ["hinglish", "Hinglish"]] as const).map(([v, l]) => (
-        <button key={v} type="button" onClick={() => setLang(v)} aria-pressed={lang === v}
-          className={`rounded-md border px-4 py-2 text-sm ${lang === v ? "border-primary bg-primary text-primary-foreground" : "bg-card text-card-foreground"}`}>{l}</button>
+      {(
+        [
+          ["english", "English"],
+          ["hindi", "हिंदी"],
+          ["hinglish", "Hinglish"],
+        ] as const
+      ).map(([v, l]) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => setLang(v)}
+          aria-pressed={lang === v}
+          className={`rounded-md border px-4 py-2 text-sm ${lang === v ? "border-primary bg-primary text-primary-foreground" : "bg-card text-card-foreground"}`}
+        >
+          {l}
+        </button>
       ))}
     </div>
   );
@@ -131,11 +132,15 @@ function translateText(node: Text, lang: AppLanguage) {
 function translateAttrs(el: Element, lang: AppLanguage) {
   if (el.closest("[data-no-translate]")) return;
   for (const a of ["placeholder", "title", "aria-label"]) {
-    const v = el.getAttribute(a); if (v === null) continue;
+    const v = el.getAttribute(a);
+    if (v === null) continue;
     const key = `data-i18n-${a}`;
     let orig = el.getAttribute(key);
     const shown = el.getAttribute(`${key}-shown`);
-    if (orig === null || shown !== v) { orig = v; el.setAttribute(key, v); }
+    if (orig === null || shown !== v) {
+      orig = v;
+      el.setAttribute(key, v);
+    }
     const next = lookup(orig, lang) ?? orig;
     el.setAttribute(`${key}-shown`, next);
     if (next !== v) el.setAttribute(a, next);
@@ -149,7 +154,11 @@ function walk(root: Node, lang: AppLanguage) {
   translateAttrs(el, lang);
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
     acceptNode(node) {
-      if (node.nodeType === 1 && (SKIP.has((node as Element).tagName) || (node as Element).hasAttribute("data-no-translate"))) return NodeFilter.FILTER_REJECT;
+      if (
+        node.nodeType === 1 &&
+        (SKIP.has((node as Element).tagName) || (node as Element).hasAttribute("data-no-translate"))
+      )
+        return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -175,4 +184,10 @@ function translateDom(lang: AppLanguage) {
   observer.observe(document.body, OPTS);
   return () => observer?.disconnect();
 }
-const OPTS: MutationObserverInit = { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["placeholder", "title", "aria-label"] };
+const OPTS: MutationObserverInit = {
+  subtree: true,
+  childList: true,
+  characterData: true,
+  attributes: true,
+  attributeFilter: ["placeholder", "title", "aria-label"],
+};

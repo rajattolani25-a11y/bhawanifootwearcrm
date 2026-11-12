@@ -57,7 +57,7 @@ export const getCatalogSnapshot = createServerFn({ method: "GET" }).handler(asyn
 
 const mobileRx = /^(\+?91)?[6-9]\d{9}$/;
 
-/** Extra angles are fetched only when a customer opens a product. Cover fallback on older DBs. */
+/** Extra angles use a fresh public read on product intent/open. Cover fallback on older DBs. */
 export const getCatalogPhotos = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ productId: z.string().uuid() }).parse(input))
   .handler(async ({ data: input }): Promise<{ images: string[]; available: boolean }> => {

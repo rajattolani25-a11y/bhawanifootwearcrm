@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-12",
+  "liveWrites": 0,
+  "languageModules": {
+    "before": {
+      "file": "i18n-BknnDmhx.js",
+      "rawBytes": 209833,
+      "gzipBytes": 50855
+    },
+    "after": {
+      "file": "i18n-Jk-HtYj-.js",
+      "rawBytes": 7703,
+      "gzipBytes": 3465
+    },
+    "onDemandDictionary": {
+      "file": "i18n-data-BbFJ_3Mz.js",
+      "rawBytes": 207092,
+      "gzipBytes": 49492
+    },
+    "limits": "Module sizes; not a measured whole-site percentage. On-demand chunk is requested for Hindi/Hinglish."
+  },
+  "pureUnitTests": {
+    "passed": 89,
+    "failed": 0
+  },
+  "gallery": {
+    "retainedDecodedImage": true,
+    "latestTapWins": true,
+    "rapidFadeGuard": true,
+    "transitionMs": 260,
+    "signedTokenPreservesAngle": true,
+    "expiredCoverRecovers": true,
+    "failedImageRetainsCurrent": true,
+    "switchUnmountGuards": true,
+    "ownerAndReducedMotion": true
+  },
+  "browserRegressions": [
+    "English cold entry/no full dictionary request",
+    "Hindi/Hinglish/saved preference/late choice guard",
+    "public auth SDK boundary",
+    "catalog startup",
+    "fresh price/stock structural sharing",
+    "cart checkout and restart",
+    "Terms consent",
+    "Men/Women Showcase",
+    "promotions",
+    "downloaded label PDFs QR and Code128 at203dpi"
+  ],
+  "resetReview": {
+    "isolatedMaintenance": "PASS",
+    "isolatedBargainingIntegration": "PASS",
+    "isolatedShowcaseIntegration": "PASS",
+    "productionResetExecuted": false,
+    "productionDefinitionVerified": false
+  },
+  "securityRegistry": {
+    "resolvedPackageNames": 545,
+    "reportedPackageAdvisories": 0,
+    "criticalAdvisories": 0,
+    "remainingDevelopmentPackages": ["brace-expansion", "esbuild", "minimatch"]
+  },
+  "hostedPublicationVerified": false
+}

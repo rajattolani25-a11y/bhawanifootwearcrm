@@ -3,6 +3,7 @@ import { ArrowRight, ShoppingBag } from "lucide-react";
 import type { CatalogProduct } from "@/lib/catalog.functions";
 import { inr } from "@/lib/modules";
 import styles from "@/routes/catalog.module.css";
+import { warmProductPhotos } from "@/lib/catalog-photo-intent";
 
 export const CatalogProductGrid = memo(function CatalogProductGrid({
   products,
@@ -41,6 +42,11 @@ const CatalogProductCard = memo(function CatalogProductCard({
   return (
     <button
       onClick={() => onOpen(p)}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") warmProductPhotos(p.id, p.image);
+      }}
+      onPointerDown={() => warmProductPhotos(p.id, p.image)}
+      onFocus={() => warmProductPhotos(p.id, p.image)}
       className={styles["productCard"]}
       aria-label={`${p.brand} ${p.article}`}
     >
