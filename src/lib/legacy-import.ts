@@ -14,7 +14,18 @@ export async function importLegacy(db: any, log: (m: string) => void) {
   log("Validating and importing the supported offline backup in one transaction…");
   const { data, error } = await runOperationalRequest("legacy-import", "import_legacy_store", { _payload: db });
   if (error) throw new Error(error.message);
-  const result = data as { products: number; sizes: number; sales: number; purchases: number; replayed?: boolean };
+  const payload: unknown = data;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload))
+    throw new Error("The import completed, but its summary could not be verified. Check the import history before retrying.");
+  const result = payload as { products?: unknown; sizes?: unknown; sales?: unknown; purchases?: unknown; replayed?: unknown };
+  if (
+    typeof result.products !== "number" ||
+    typeof result.sizes !== "number" ||
+    typeof result.sales !== "number" ||
+    typeof result.purchases !== "number" ||
+    (result.replayed !== undefined && typeof result.replayed !== "boolean")
+  )
+    throw new Error("The import completed, but its summary was invalid. Check the import history before retrying.");
   log(`${result.products} articles, ${result.sizes} sizes, ${result.sales} bills, ${result.purchases} purchases — ${result.replayed ? "already imported; no changes" : "committed successfully"}`);
 
 }

@@ -39,10 +39,10 @@ export function ProductSizesEditor({ id, variants }: { id: string; variants: Var
         _variant_id: selected || null,
         _size: size.trim(),
         _stock: Number(stock),
-        _expected_stock: current?.stock ?? null,
+        ...(current ? { _expected_stock: current.stock } : {}),
         _remove: remove,
         _reason: reason.trim(),
-      });
+      } as never);
       if (error)
         throw new Error(
           error.code === "PGRST202"

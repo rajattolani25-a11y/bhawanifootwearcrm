@@ -41,8 +41,10 @@ function Control() {
   async function adjust(p: Product, v: Variant, patch: Partial<Variant>, note: string, disposition: string | null = null) {
     const { error } = await supabase.rpc("adjust_inventory", {
       _variant_id: v.id, _expected_stock: v.stock, _expected_damaged: v.damaged_stock,
-      _stock: patch.stock ?? null, _min: patch.min_stock ?? null, _rack: patch.rack ?? null,
-      _disposition: disposition, _reason: note,
+      ...(patch.stock !== undefined ? { _stock: patch.stock } : {}),
+      ...(patch.min_stock !== undefined ? { _min: patch.min_stock } : {}),
+      ...(patch.rack != null ? { _rack: patch.rack } : {}),
+      ...(disposition ? { _disposition: disposition } : {}), _reason: note,
     });
     if (error) { toast.error(error.code === "PGRST202" ? "Apply database update 0035 before adjusting stock." : error.message); return false; }
     toast.success("Saved");

@@ -418,7 +418,17 @@ function ReturnDialog({ sale, onClose, onDone }: { sale: SaleRow | null; onClose
   }
   const go = (item: string, variant: string | null, kind: string) => {
     const replacement = chosen[`${item}:${variant}`];
-    void execute({ _sale_item_id: item, _variant_id: variant, _qty: 1, _damaged: kind === "defect", _kind: kind, _note: `${kind} from ${sale?.bill_no}`, _refund_mode: kind === "exchange" ? null : mode, _replacement_variant_id: kind === "exchange" ? replacement ?? null : null, _operation_id: crypto.randomUUID() });
+    void execute({
+      _sale_item_id: item,
+      _variant_id: variant,
+      _qty: 1,
+      _damaged: kind === "defect",
+      _kind: kind,
+      _note: `${kind} from ${sale?.bill_no}`,
+      _refund_mode: kind === "exchange" ? undefined : mode,
+      _replacement_variant_id: kind === "exchange" ? replacement : undefined,
+      _operation_id: crypto.randomUUID(),
+    } as never);
   };
   return <Dialog open={!!sale} onOpenChange={(o) => !o && !busy && !recover && onClose()}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto" onEscapeKeyDown={(e) => { if (busy || recover) e.preventDefault(); }} onPointerDownOutside={(e) => { if (busy || recover) e.preventDefault(); }}>
