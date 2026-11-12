@@ -1,3 +1,23 @@
+/** Quote CSV cells and force formula-like user text to remain text in spreadsheets.
+ * Keep actual numeric amounts numeric, including legitimate negative balances.
+ */
+export function serializeCsv(
+  rows: readonly (readonly (string | number | null | undefined)[])[],
+): string {
+  return rows
+    .map((row) =>
+      row
+        .map((value) => {
+          let text = String(value ?? "");
+          if (typeof value === "string" && /^[=+\-@]/.test(text.replace(/^[\s\p{Cf}\p{Cc}]*/u, "")))
+            text = "'" + text;
+          return `"${text.replace(/"/g, '""')}"`;
+        })
+        .join(","),
+    )
+    .join("\r\n");
+}
+
 /** RFC 4180 records: escaped quotes, embedded newlines, CRLF and UTF-8 BOM. */
 export function parseCsv(text: string): Record<string, string>[] {
   const input = text.replace(/^\uFEFF/, "");

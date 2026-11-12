@@ -57,8 +57,8 @@ export function OwnershipTransfer() {
           too, use Make Owner above instead of transferring.
         </p>
         <p className="text-muted-foreground">
-          A genuinely separate, empty remix backend gives its first signup Owner. Verify the backend
-          ID and Auth users first; do not reset the original shop just to remix it.
+          For a separate backend, its initial owner must be verified and provisioned through trusted
+          backend administration. Do not reset the original shop just to remix it.
         </p>
         <Label htmlFor="new-owner-email">New owner’s verified email</Label>
         <Input

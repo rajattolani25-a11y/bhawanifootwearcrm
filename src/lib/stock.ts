@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { watchInventory } from "./inventory-live";
+import { serializeCsv } from "./csv";
 
 export type Variant = {
   id: string;
@@ -75,13 +76,13 @@ export function useStock(options?: { activeOnly?: boolean; order?: "id" }) {
 }
 
 export function downloadCsv(name: string, rows: (string | number)[][]) {
-  const csv = rows
-    .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
-    .join("\n");
+  const csv = serializeCsv(rows);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.href = url;
   a.download = name;
   a.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export { parseCsv } from "./csv";
