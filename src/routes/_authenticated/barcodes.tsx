@@ -16,22 +16,22 @@ export const Route = createFileRoute("/_authenticated/barcodes")({ head: () => (
 
 type Layout = "sheet" | "roll";
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
-const rs = (n: number) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+const rs = (n: number) => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
 const LABEL_CSS = `
 *{box-sizing:border-box}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .sheet{width:202mm}.grid{display:grid;grid-template-columns:repeat(3,64mm);gap:2mm;padding:3mm}
-.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:1mm;overflow:hidden;display:grid;grid-template-rows:1fr 17mm;page-break-inside:avoid;background:#fff}
+.label{width:64mm;height:38mm;border:0.3mm solid #111;border-radius:0;overflow:hidden;display:grid;grid-template-rows:1fr 17mm;page-break-inside:avoid;background:#fff}
 .mid{display:grid;grid-template-columns:1fr 15mm;gap:1.5mm;padding:1.2mm 2mm 0}
 .brand{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#111;border-bottom:0.2mm solid #aaa;padding-bottom:.6mm;margin-bottom:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .art{font-size:13px;font-weight:800;line-height:1.05;margin:.3mm 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
 .meta{font-size:6.5px;color:#555;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.price{display:flex;align-items:baseline;gap:1.5mm;margin-top:.8mm}.price b{font-size:14px;font-weight:900}.price s{font-size:7px;color:#777}.price small{font-size:5.5px;color:#777;letter-spacing:.6px}
+.price{display:flex;flex-direction:column;align-items:flex-start;gap:.2mm;margin-top:.8mm}.price b{font-size:14px;font-weight:900}.price small{font-size:5.5px;color:#777;letter-spacing:.6px}
 .size{border:0.5mm solid #111;border-radius:1mm;text-align:center;display:flex;flex-direction:column;justify-content:center;height:14mm}
 .size span{font-size:5.5px;letter-spacing:1.4px;font-weight:700}.size b{font-size:17px;line-height:1;font-weight:900}
 .codes{display:grid;grid-template-columns:minmax(0,1fr) 16mm;gap:1.5mm;align-items:center;padding:0 2mm 1mm;border-top:0.2mm dashed #999}
 .codes>div{min-width:0}.codes svg{display:block;width:100%;height:11mm}.codes img{display:block;width:16mm;height:16mm;background:#fff}
-.roll .grid{grid-template-columns:50mm;gap:0;padding:0}.roll .label{width:50mm;height:38mm;border-radius:0;border:0;border-bottom:0.2mm dashed #bbb}
+.roll .grid{grid-template-columns:50mm;gap:0;padding:0}.roll .label{width:50mm;height:38mm;border-radius:0;border:0.3mm solid #111}
 .roll .mid{grid-template-columns:1fr 12mm}.roll .art{font-size:11px}.roll .size b{font-size:14px}
 @page{size:A4;margin:4mm}
 
@@ -72,8 +72,7 @@ function Barcodes() {
         const qrSvg = await QRCode.toString(code, { type: "svg", width: 256, margin: 4, errorCorrectionLevel: "M", color: { dark: "#000000ff", light: "#ffffffff" } });
         const qr = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(qrSvg);
         const meta = [categoryLabel(p.category), p.color, v.rack ? `Rack ${v.rack}` : ""].filter(Boolean).map(esc).join(" · ");
-        const mrp = Number(p.mrp) > Number(p.selling_price) ? `<s>MRP ${esc(rs(p.mrp))}</s>` : `<small>MRP INCL. OF ALL TAXES</small>`;
-        const html = `<div class="label"><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>${esc(rs(p.selling_price))}</b>${mrp}</div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
+        const html = `<div class="label"><div class="mid"><div style="min-width:0"><div class="brand">${esc(p.brand || "—")}</div><div class="art">${esc(p.article)}</div><div class="meta">${meta || "&nbsp;"}</div><div class="price"><b>MRP ${esc(rs(p.mrp))}</b><small>INCL. OF ALL TAXES</small></div></div><div class="size"><span>SIZE</span><b>${esc(v.size)}</b></div></div><div class="codes"><div>${svgFor(code)}</div><img src="${qr}" alt="QR"></div></div>`;
         for (let i = 0; i < n; i++) labels.push(html);
       }
       void qc.invalidateQueries({queryKey:["stock-all"]});
@@ -97,7 +96,7 @@ function Barcodes() {
           <div key={p.id} className={`rounded-lg border bg-card p-3 ${p.product_variants.some(v => normalize(pick[v.id] ?? 0) > 0) ? "ring-1 ring-primary bg-primary/5" : ""}`}>
             <label className="mb-2 inline-flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={p.product_variants.length > 0 && p.product_variants.every(v => normalize(pick[v.id] ?? 0) > 0)} aria-label={`Select ${p.brand} ${p.article} labels`} onChange={e => { const checked = e.target.checked; setPick(prev => ({ ...prev, ...Object.fromEntries(p.product_variants.map(v => [v.id, checked ? Math.max(1, normalize(prev[v.id] ?? 0)) : 0])) })); }} />Select article</label>
             <div className="flex justify-between gap-2">
-              <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-widest text-primary">{p.brand}</p><p className="truncate font-semibold">{p.article}</p><p className="text-xs text-muted-foreground">{inr(p.selling_price)}{p.color ? ` · ${p.color}` : ""}</p></div>
+              <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-widest text-primary">{p.brand}</p><p className="truncate font-semibold">{p.article}</p><p className="text-xs text-muted-foreground">MRP {inr(p.mrp)}{p.color ? ` · ${p.color}` : ""}</p></div>
               <Button variant="link" size="sm" onClick={() => setPick((x) => ({ ...x, ...Object.fromEntries(p.product_variants.map((v) => [v.id, normalize(v.stock)])) }))}>Use stock qty</Button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">

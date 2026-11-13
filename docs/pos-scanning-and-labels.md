@@ -12,3 +12,5 @@ Frontend changes only; no migration or database function edit. Codes keep their 
 - Shared product-add form now uses English source copy for descriptions, size hints, placeholders, cost warnings and validation, with Hindi/Hinglish translations retained.
 
 Verification uses intercepted synthetic backends only: `camera-scanner-browser-audit.mjs`, `pos-scanner-browser-audit.mjs`, `label-dock-audit.mjs`, `label-pdf-decoding-audit.mjs` (requires Poppler after the dock test). The label tests decode both QR andCode128 using ZXing, inspect clipping/geometry and inspect downloaded PDFs at203dpi. Existing retail/category/PDF/browser checks cover adjacent flows. No live sale, stock mutation or customer message is created.
+
+Owner update13 November2026: printed labels and the Barcodes selection list show MRP only, without selling price or strikethrough. Every A4/roll label has a complete square0.3mm black cutting border; existing label dimensions, QR quiet zones and scan identities remain. Print at100%/Actual size.

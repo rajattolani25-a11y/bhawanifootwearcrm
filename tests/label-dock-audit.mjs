@@ -163,6 +163,16 @@ await p.waitForFunction(
 async function inspectLabel(kind) {
   const frame = p.frameLocator("#print-preview iframe");
   const label = frame.locator(".label").first();
+  for (const item of await frame.locator(".label").all()) {
+    assert.equal(await item.locator(".price b").innerText(), "MRP ₹999");
+    assert.equal(await item.locator(".price s").count(), 0);
+    assert(!(await item.innerText()).includes("799"), "Selling price must not appear on the printed label");
+    const border = await item.evaluate(el => {
+      const s = getComputedStyle(el);
+      return [s.borderTopWidth,s.borderRightWidth,s.borderBottomWidth,s.borderLeftWidth].every(w => parseFloat(w) > 0) && s.borderRadius === "0px";
+    });
+    assert(border, "Every printed label needs a complete square cutting border");
+  }
   await frame
     .locator(".codes img")
     .first()
